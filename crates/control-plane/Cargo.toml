@@ -1,0 +1,12 @@
+[package]
+name = "ha-rust-bridge"
+version = "0.1.0"
+edition = "2021"
+description = "Read-only lab Docker Apps discovery (not a HAOS replacement)"
+
+[dependencies]
+ed25519-dalek = "2"
+hex = "0.4"
+serde_json = "1.0"
+sha2 = "0.10"
+hars-python-bridge = { path = "../python-bridge" }

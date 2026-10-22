@@ -1,0 +1,20 @@
+[package]
+name = "hars-ha-compat"
+version = "0.1.0"
+edition = "2024"
+license = "MIT"
+publish = false
+description = "Lab-only read-only Home Assistant WebSocket adapter, reusing hass-rs"
+
+[dependencies]
+hass-rs = "=0.5.0"
+chrono = "0.4"
+tokio = { version = "1", features = ["rt", "time", "sync"] }
+url = "2.5"
+anyhow = "1"
+
+[dev-dependencies]
+tokio = { version = "1", features = ["rt-multi-thread", "macros", "time", "net", "sync"] }
+tokio-tungstenite = "0.29"
+futures-util = "0.3"
+serde_json = "1"

@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8"><meta name="theme-color" content="#081a2c"><meta name="description" content="Rusty Home experimental Rust-first home automation lab; not production-ready."><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Rusty Home — prototype domotique natif Rust</title>
+<style>
+:root{font:16px system-ui,sans-serif;color:#e8edf6;background:#10151e}
+*{box-sizing:border-box}body{max-width:1160px;margin:auto;padding:2rem 1.3rem}
+.brand-mark{float:left;width:60px;height:60px;margin:0 1rem 0 0;flex-shrink:0}header{display:flex;align-items:center;justify-content:space-between;gap:1rem;padding-bottom:1.2rem;border-bottom:1px solid #313f50}
+h1{font-size:1.9rem;letter-spacing:-.03em;margin:.5rem 0}h2{font-size:1.3rem}
+p{color:#aebccd}header p{margin:.3rem 0}.pill{display:inline-block;border-radius:3rem;background:#193e35;color:#7de4b1;padding:.35rem .65rem;text-transform:uppercase;letter-spacing:.05em;font-size:.72rem;font-weight:750}
+button{background:#156b80;border:0;color:white;border-radius:.55rem;padding:.7rem 1.1rem;font:inherit;font-weight:650;cursor:pointer}
+button:hover{background:#1b94ab}button:focus-visible{outline:3px solid #9dbffb;outline-offset:3px}
+#sources{display:flex;gap:.65rem;flex-wrap:wrap;margin:1.2rem 0}
+.source{background:#1c2937;border:1px solid #344459;border-radius:12px;padding:.8rem .95rem;min-width:210px;font-size:.9rem}
+.source strong{display:block;margin-bottom:.25rem}.muted{color:#9eafc2}.error{color:#e7b2a2}
+.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(265px,1fr));gap:1rem}
+.card{background:#1a2532;border:1px solid #344459;border-radius:12px;padding:1.1rem;min-width:0}
+.card h3{font-size:1.03rem;margin:.3rem 0 .7rem;overflow-wrap:anywhere}.card p{font-size:.88rem;margin:.45rem 0;overflow-wrap:anywhere}
+.state{font-size:.75rem;color:#f0bf90;float:right}.state.started,.state.running{color:#87e5b7}
+.label{font-size:.78rem;color:#a3bad1}.update{color:#edc57e}
+.sectionhead{display:flex;align-items:center;justify-content:space-between;gap:1rem;margin:1.3rem 0 1rem}
+#status{font-size:.9rem;color:#b7c4d4}
+footer{border-top:1px solid #313f50;margin-top:2.5rem;padding-top:1rem;font-size:.87rem;color:#aab8cd}
+@media(max-width:600px){body{padding:1rem}header{align-items:flex-start}h1{font-size:1.55rem}}
+</style>
+</head>
+<body>
+<header>
+<div><svg class="brand-mark" role="img" aria-label="Rusty Home icon" viewBox="0 0 96 96">
+<rect width="96" height="96" rx="19" fill="#081a2c"/>
+<path d="M13 45 48 14l35 31v37H13Z" fill="none" stroke="#e67836" stroke-width="5"/>
+<path d="M48 14 83 45v37H48" fill="none" stroke="#18bcd8" stroke-width="4"/>
+<path d="M31 70V42h19q12 0 12 11 0 8-9 11l12 11" stroke="#f6a25a" stroke-width="6" stroke-linejoin="round" fill="none"/>
+</svg><span class="pill">Prototype — lecture seule</span><h1>Rusty Home</h1><p>Domotique native Rust — état, automatisations et extensions en développement. Vue Apps Docker/HAOS : module expérimental.</p></div>
+<button id="refresh" type="button">Actualiser</button>
+</header>
+<section aria-labelledby="readiness-title"><div class="sectionhead"><h2 id="readiness-title">Certification et migration</h2></div><p id="readiness" aria-live="polite">Vérification des critères de production…</p><p id="core-ipc" aria-live="polite">Pont Python Home Assistant : vérification…</p></section>
+<section><div class="sectionhead"><h2>Sources</h2><span id="status" aria-live="polite">Chargement…</span></div><p id="proof">Authenticité des données : vérification en cours</p><div id="sources" aria-live="polite"></div></section>
+<section><div class="sectionhead"><h2>Applications <span id="count">—</span></h2><label for="filter">Afficher <select id="filter"><option value="recognized" selected>Apps reconnues</option><option value="all">Tous les conteneurs</option></select></label></div><div class="cards" id="apps" aria-live="polite"></div></section>
+<footer>Prototype sans commandes de pilotage. Les Apps HAOS proviennent d'un instantané hors ligne, non d'une connexion directe au Supervisor. HACS et la migration complète ne sont pas encore disponibles.</footer>
+<script>
+const select=q=>document.querySelector(q);
+const node=(tag,value,cls)=>{const n=document.createElement(tag);if(value!==undefined)n.textContent=value;if(cls)n.className=cls;return n};
+async function load(){
+ select("#status").textContent="Chargement…";select("#apps").replaceChildren();select("#sources").replaceChildren();
+ try{
+  const readyResponse=await fetch("/api/readiness",{cache:"no-store"});
+  if(readyResponse.ok){
+   const ready=await readyResponse.json();
+   select("#readiness").textContent=ready.production_ready
+    ?"Certification de production à confirmer indépendamment"
+    :"Laboratoire — "+ready.release_gates_blocked+" / "+ready.release_gates_total+" critères ouverts · "+ready.haos_apps_not_production_qualified+" / "+ready.haos_apps_total+" Apps à qualifier";
+  }else{select("#readiness").textContent="Certification non vérifiable";}
+  try{
+   const coreResponse=await fetch("/api/python-core",{cache:"no-store"});
+   if(coreResponse.ok){
+    const core=await coreResponse.json();
+    if(!core.read_only||core.contains_entity_values!==false)throw Error("non conforme");
+    select("#core-ipc").textContent="Pont Python local authentifié · "+core.entities_count+" états consultables · génération "+core.generation+" (laboratoire)";
+   }else if(coreResponse.status===404){
+    select("#core-ipc").textContent="Pont Python Home Assistant : non configuré";
+   }else{select("#core-ipc").textContent="Pont Python Home Assistant : indisponible";}
+  }catch(e){select("#core-ipc").textContent="Pont Python Home Assistant : non vérifiable";}
+  const response=await fetch("/api/apps",{cache:"no-store"});
+  if(!response.ok)throw Error("HTTP "+response.status);
+  const data=await response.json();if(data.read_only!==true)throw Error("mode inattendu");
+  const sources=Array.isArray(data.sources)?data.sources:[],apps=Array.isArray(data.apps)?data.apps:[];
+  const att=data.attestation||{};
+  select("#proof").textContent=att.status==="verified"
+    ?"Inventaire signé par sample lab host · valide jusqu’au "+new Date(att.expires_at*1000).toLocaleString("fr-FR")
+    :"Inventaire non signé : mode laboratoire";
+  const visible=apps.filter(a=>select("#filter").value==="all"||a.backend==="supervisor"||a.app_type!=="generic_container");
+  select("#count").textContent=visible.length===apps.length?String(apps.length):visible.length+" / "+apps.length;
+  select("#status").textContent=data.degraded?"Certaines sources sont indisponibles":"Inventaire disponible";
+  for(const src of sources){
+   const card=node("div",undefined,"source");
+   card.append(node("strong",src.host+" · "+src.kind),
+    node("div",src.status==="ok"?(src.live?"Temps réel":"Instantané / fixture"):"Indisponible",src.status==="ok"?"muted":"error"),
+    node("div",String(src.count)+" application(s)","muted"));
+   select("#sources").append(card);
+  }
+  for(const app of visible){
+   const card=node("article",undefined,"card");
+   const state=node("span",app.state||"inconnu","state "+app.state);
+   const heading=node("h3",app.display_name||"Application");
+   const host=node("div",app.host+" / "+app.backend,"label");
+   const type=node("p",app.app_type+" · "+app.classification);
+   const version=app.version?node("p","Version : "+app.version):node("p","Image : "+(app.image||"—"));
+   card.append(state,heading,host,type,version);
+   if(app.update_available===true)card.append(node("p","Mise à jour disponible (information uniquement)","update"));
+   select("#apps").append(card);
+  }
+ }catch(e){select("#status").textContent="Impossible de charger l'inventaire";select("#proof").textContent="Authenticité ou fraîcheur non vérifiable";select("#count").textContent="—";}
+}
+select("#refresh").addEventListener("click",load);select("#filter").addEventListener("change",load);load();
+</script>
+</body>
+</html>

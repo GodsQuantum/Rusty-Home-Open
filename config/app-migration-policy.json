@@ -1,0 +1,143 @@
+{
+  "schema_version": 1,
+  "mode": "planning_only_no_runtime_permissions",
+  "source": "synthetic, fictional sample app matrix (not actual HAOS inventory)",
+  "single_writer_policy": "do not attach to real radios or fabric",
+  "apps": [
+    {
+      "slug": "demo_app_01",
+      "label": "Demo Matter",
+      "target_kind": "lab_only",
+      "risk": "critical",
+      "required_checks": [
+        "fixture_isolation",
+        "app_data_restore",
+        "rollback",
+        "auth",
+        "radio_owner"
+      ],
+      "qualification": "blocked",
+      "evidence": []
+    },
+    {
+      "slug": "demo_app_02",
+      "label": "Demo ESPHome",
+      "target_kind": "lab_only",
+      "risk": "high",
+      "required_checks": [
+        "fixture_isolation",
+        "app_data_restore",
+        "rollback",
+        "auth",
+        "radio_owner"
+      ],
+      "qualification": "blocked",
+      "evidence": []
+    },
+    {
+      "slug": "demo_app_03",
+      "label": "Demo Terminal",
+      "target_kind": "lab_only",
+      "risk": "high",
+      "required_checks": [
+        "fixture_isolation",
+        "app_data_restore",
+        "rollback",
+        "auth",
+        "radio_owner"
+      ],
+      "qualification": "blocked",
+      "evidence": []
+    },
+    {
+      "slug": "demo_app_04",
+      "label": "Demo File Editor",
+      "target_kind": "lab_only",
+      "risk": "high",
+      "required_checks": [
+        "fixture_isolation",
+        "app_data_restore",
+        "rollback",
+        "auth",
+        "radio_owner"
+      ],
+      "qualification": "blocked",
+      "evidence": []
+    },
+    {
+      "slug": "demo_app_05",
+      "label": "Demo Zigbee",
+      "target_kind": "lab_only",
+      "risk": "critical",
+      "required_checks": [
+        "fixture_isolation",
+        "app_data_restore",
+        "rollback",
+        "auth",
+        "radio_owner"
+      ],
+      "qualification": "blocked",
+      "evidence": []
+    },
+    {
+      "slug": "demo_app_06",
+      "label": "Demo Camera",
+      "target_kind": "lab_only",
+      "risk": "high",
+      "required_checks": [
+        "fixture_isolation",
+        "app_data_restore",
+        "rollback",
+        "auth",
+        "radio_owner"
+      ],
+      "qualification": "blocked",
+      "evidence": []
+    },
+    {
+      "slug": "demo_app_07",
+      "label": "Music Assistant",
+      "target_kind": "lab_only",
+      "risk": "critical",
+      "required_checks": [
+        "fixture_isolation",
+        "app_data_restore",
+        "rollback",
+        "auth",
+        "radio_owner"
+      ],
+      "qualification": "blocked",
+      "evidence": []
+    },
+    {
+      "slug": "demo_app_08",
+      "label": "Demo Provider",
+      "target_kind": "lab_only",
+      "risk": "high",
+      "required_checks": [
+        "fixture_isolation",
+        "app_data_restore",
+        "rollback",
+        "auth",
+        "radio_owner"
+      ],
+      "qualification": "blocked",
+      "evidence": []
+    },
+    {
+      "slug": "demo_app_09",
+      "label": "Demo Monitoring",
+      "target_kind": "lab_only",
+      "risk": "medium",
+      "required_checks": [
+        "fixture_isolation",
+        "app_data_restore",
+        "rollback",
+        "auth",
+        "radio_owner"
+      ],
+      "qualification": "blocked",
+      "evidence": []
+    }
+  ]
+}

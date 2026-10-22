@@ -1,0 +1,16 @@
+name: "Rusty Home — Version Rollback Lab"
+slug: hars_version_fixture
+version: "1.0.0"
+description: "Isolated HAOS 18.3 two-version update/rollback fixture"
+url: "https://github.com/GodsQuantum/Rusty-Home-Open"
+arch: ["amd64"]
+startup: services
+boot: manual
+init: false
+hassio_api: true
+hassio_role: manager
+protected: true
+host_network: false
+homeassistant_api: false
+docker_api: false
+full_access: false

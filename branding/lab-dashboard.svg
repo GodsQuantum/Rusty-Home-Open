@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="725" viewBox="0 0 1200 725" role="img" aria-labelledby="title desc">
+<title id="title">Rusty Home current read-only laboratory UI — schematic mockup</title>
+<desc id="desc">Illustration based on the prototype dashboard structure, only fictitious applications and data</desc>
+<rect width="1200" height="725" rx="20" fill="#10151e"/>
+<rect width="1200" height="78" fill="#162232"/>
+<rect x="29" y="18" width="45" height="45" rx="11" fill="#081a2c"/>
+<path d="M37 43 52 29l15 14v14H37Z" fill="none" stroke="#e67836" stroke-width="2.6"/>
+<path d="M48 54V39h10q8 0 8 7 0 5-7 7l7 5" fill="none" stroke="#18bcd8" stroke-width="2.8"/>
+<g font-family="Arial,sans-serif">
+<text x="91" y="43" font-size="28" fill="#f6fbff" font-weight="700">Rusty Home</text>
+<text x="91" y="63" font-size="12" fill="#9db6c9">Read-only laboratory — simulation</text>
+<rect x="994" y="20" width="176" height="38" rx="10" fill="#16586c"/>
+<text x="1033" y="45" fill="#fff" font-size="15">REFRESH</text>
+<rect x="27" y="100" width="1145" height="119" rx="13" fill="#1a2532" stroke="#324358"/>
+<text x="50" y="134" fill="#f6fbff" font-weight="700" font-size="23">Certification &amp; migration</text>
+<text x="50" y="166" fill="#f5bb7f" font-size="19">Laboratory · 15 / 15 production gates not certified</text>
+<text x="50" y="195" fill="#b0becd" font-size="16">9 / 9 Apps require qualification   ·   HA Core compatibility: experimental</text>
+<text x="29" y="269" fill="#f6fbff" font-weight="700" font-size="25">Sources</text>
+<rect x="29" y="286" width="548" height="100" rx="12" fill="#1d2b3a" stroke="#344459"/>
+<rect x="594" y="286" width="578" height="100" rx="12" fill="#1d2b3a" stroke="#344459"/>
+<text x="52" y="317" fill="#fff" font-weight="700" font-size="19">lab-alpha · synthetic fixture</text>
+<text x="52" y="349" fill="#a7bfce" font-size="16">Isolated snapshot · 3 demo apps</text>
+<text x="618" y="317" fill="#fff" font-weight="700" font-size="19">lab-beta · synthetic fixture</text>
+<text x="618" y="349" fill="#a7bfce" font-size="16">Isolated snapshot · 1 demo app</text>
+<text x="29" y="444" fill="#f6fbff" font-weight="700" font-size="25">Applications</text>
+<rect x="29" y="461" width="548" height="97" rx="11" fill="#1a2532" stroke="#344459"/><text x="49" y="491" fill="#fff" font-size="19" font-weight="700">Demo ESPHome</text><text x="474" y="489" fill="#86debb" font-size="14">running</text><text x="49" y="517" fill="#9fb7c8" font-size="15">lab-alpha / supervisor</text><text x="49" y="540" fill="#bfccd7" font-size="14">esphome · demonstration</text><rect x="594" y="461" width="548" height="97" rx="11" fill="#1a2532" stroke="#344459"/><text x="614" y="491" fill="#fff" font-size="19" font-weight="700">Demo Music Assistant</text><text x="1039" y="489" fill="#86debb" font-size="14">running</text><text x="614" y="517" fill="#9fb7c8" font-size="15">lab-alpha / supervisor</text><text x="614" y="540" fill="#bfccd7" font-size="14">music assistant · demonstration</text><rect x="29" y="573" width="548" height="97" rx="11" fill="#1a2532" stroke="#344459"/><text x="49" y="603" fill="#fff" font-size="19" font-weight="700">Demo Matter</text><text x="474" y="601" fill="#dfb080" font-size="14">stopped</text><text x="49" y="629" fill="#9fb7c8" font-size="15">lab-alpha / supervisor</text><text x="49" y="652" fill="#bfccd7" font-size="14">matter · demonstration</text><rect x="594" y="573" width="548" height="97" rx="11" fill="#1a2532" stroke="#344459"/><text x="614" y="603" fill="#fff" font-size="19" font-weight="700">Demo File Editor</text><text x="1039" y="601" fill="#86debb" font-size="14">running</text><text x="614" y="629" fill="#9fb7c8" font-size="15">lab-beta / supervisor</text><text x="614" y="652" fill="#bfccd7" font-size="14">editor · demonstration</text><rect x="0" y="694" width="1200" height="31" fill="#432b22"/>
+<text x="27" y="715" font-family="Arial,sans-serif" fill="#ffe0c4" font-size="13">ILLUSTRATIVE MOCKUP · Synthetic data only · Not a screenshot of a real household</text>
+</g></svg>

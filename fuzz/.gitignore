@@ -1,0 +1,10 @@
+/target/
+/artifacts/
+/coverage/
+!fuzz_targets/
+# libFuzzer automatically grows corpus with binary, machine-generated inputs.
+/corpus/core_user_snapshot/*
+!/corpus/core_user_snapshot/valid-blank-users.json
+!/corpus/core_user_snapshot/valid-admin-user.json
+!/corpus/core_user_snapshot/disabled-user.json
+!/corpus/core_user_snapshot/duplicate-keys.json

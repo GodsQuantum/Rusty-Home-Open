@@ -1,0 +1,16 @@
+name: "Rusty Home — Core WebSocket Lab"
+slug: hars_core_ws_probe
+version: "0.1.0"
+description: "Read-only Core WS probe in disposable HAOS QEMU"
+url: "https://github.com/GodsQuantum/Rusty-Home-Open"
+arch: ["amd64"]
+startup: services
+boot: manual
+init: false
+hassio_api: false
+hassio_role: default
+homeassistant_api: true
+protected: true
+host_network: false
+docker_api: false
+full_access: false

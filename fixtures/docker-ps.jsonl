@@ -1,0 +1,4 @@
+{"Names":"esphome-lab","Image":"ghcr.io/esphome/esphome:stable","State":"running","Status":"Up 3 hours","Labels":"com.docker.compose.service=esphome,com.docker.compose.project=smart-home"}
+{"Names":"music-assistant","Image":"ghcr.io/music-assistant/server:stable","State":"running","Status":"Up 2 hours","Labels":"com.docker.compose.service=music-assistant"}
+{"Names":"matter-server","Image":"ghcr.io/home-assistant-libs/python-matter-server:stable","State":"exited","Status":"Exited (0)","Labels":"io.hass.name=Matter Server"}
+{"Names":"custom-rust-service","Image":"test/native:v1","State":"running","Status":"Up 1 minute","Labels":"com.docker.compose.service=custom"}

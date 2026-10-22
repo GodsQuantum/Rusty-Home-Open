@@ -1,0 +1,16 @@
+name: "Rusty Home — Supervisor Manager Lab"
+slug: hars_rust_probe
+version: "0.1.0"
+description: "Disposable rust-to-supervisor manager-role read-only certification"
+url: "https://github.com/GodsQuantum/Rusty-Home-Open"
+arch: ["amd64"]
+startup: services
+boot: manual
+init: false
+hassio_api: true
+hassio_role: manager
+protected: true
+host_network: false
+homeassistant_api: false
+docker_api: false
+full_access: false

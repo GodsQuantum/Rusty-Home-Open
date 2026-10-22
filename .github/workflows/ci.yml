@@ -1,0 +1,42 @@
+name: Rusty Home public CI
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  native-rust-and-security-labs:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+      - name: Format, full Rust workspace and strict clippy
+        run: |
+          cargo fmt --all -- --check
+          cargo test --locked --all
+          cargo clippy --locked --workspace --all-targets -- -D warnings
+      - name: Test the isolated 9-App migration policy
+        run: python3 scripts/test_app_migration_policy.py
+      - name: Synthetic inventory and loopback HTTP integration
+        run: |
+          bash scripts/test-lab.sh
+          bash scripts/smoke-http.sh
+      - name: P19 real TCP slow-client worker admission
+        run: |
+          cargo build --locked -p ha-rust-bridge
+          python3 scripts/test_p19_bounded_http_workers.py
+      - name: P20 Linux flock interprocess denial and SIGKILL recovery
+        run: |
+          cargo build --locked -p hars-native-kernel
+          python3 scripts/test_p20_radio_exclusivity.py
+      - name: Public fixtures and source privacy check
+        run: python3 scripts/test_public_redaction.py
+      - name: Assert no deployment authorization
+        run: python3 scripts/check_release_gate.py --expect-blocked

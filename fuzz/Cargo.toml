@@ -1,0 +1,22 @@
+[package]
+name = "rusty-home-security-fuzz"
+version = "0.0.0"
+publish = false
+edition = "2021"
+
+[package.metadata]
+cargo-fuzz = true
+
+[dependencies]
+libfuzzer-sys = "=0.4.13"
+hars-supervisor-apps = { path = "../crates/supervisor-apps", features = ["core-user-snapshot-lab"] }
+
+[[bin]]
+name = "core_user_snapshot"
+path = "fuzz_targets/core_user_snapshot.rs"
+test = false
+doc = false
+bench = false
+
+# Keep fuzz-only dependencies and compiler flags out of production Cargo.lock.
+[workspace]

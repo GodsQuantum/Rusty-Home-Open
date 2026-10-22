@@ -1,0 +1,86 @@
+{
+  "source": "SYNTHETIC_PUBLIC_EXAMPLES_ONLY_NOT_REAL_HOME",
+  "apps": [
+    {
+      "name": "Demo Matter",
+      "slug": "demo_app_01",
+      "version": "0.0.0-synthetic",
+      "state": "stopped",
+      "repository": "synthetic_lab",
+      "system_managed": false,
+      "url": null
+    },
+    {
+      "name": "Demo ESPHome",
+      "slug": "demo_app_02",
+      "version": "0.0.0-synthetic",
+      "state": "stopped",
+      "repository": "synthetic_lab",
+      "system_managed": false,
+      "url": null
+    },
+    {
+      "name": "Demo Terminal",
+      "slug": "demo_app_03",
+      "version": "0.0.0-synthetic",
+      "state": "stopped",
+      "repository": "synthetic_lab",
+      "system_managed": false,
+      "url": null
+    },
+    {
+      "name": "Demo File Editor",
+      "slug": "demo_app_04",
+      "version": "0.0.0-synthetic",
+      "state": "stopped",
+      "repository": "synthetic_lab",
+      "system_managed": false,
+      "url": null
+    },
+    {
+      "name": "Demo Zigbee",
+      "slug": "demo_app_05",
+      "version": "0.0.0-synthetic",
+      "state": "stopped",
+      "repository": "synthetic_lab",
+      "system_managed": false,
+      "url": null
+    },
+    {
+      "name": "Demo Camera",
+      "slug": "demo_app_06",
+      "version": "0.0.0-synthetic",
+      "state": "stopped",
+      "repository": "synthetic_lab",
+      "system_managed": false,
+      "url": null
+    },
+    {
+      "name": "Music Assistant",
+      "slug": "demo_app_07",
+      "version": "0.0.0-synthetic",
+      "state": "stopped",
+      "repository": "synthetic_lab",
+      "system_managed": false,
+      "url": null
+    },
+    {
+      "name": "Demo Provider",
+      "slug": "demo_app_08",
+      "version": "0.0.0-synthetic",
+      "state": "stopped",
+      "repository": "synthetic_lab",
+      "system_managed": false,
+      "url": null
+    },
+    {
+      "name": "Demo Monitoring",
+      "slug": "demo_app_09",
+      "version": "0.0.0-synthetic",
+      "state": "stopped",
+      "repository": "synthetic_lab",
+      "system_managed": false,
+      "url": null
+    }
+  ]
+}

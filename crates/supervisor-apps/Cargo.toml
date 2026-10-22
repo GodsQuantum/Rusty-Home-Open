@@ -1,0 +1,47 @@
+[package]
+name = "hars-supervisor-apps"
+version = "0.1.0"
+edition = "2024"
+license = "MIT"
+publish = false
+description = "Read-only dynamic Home Assistant Supervisor app repository inspector"
+
+[features]
+# This gated proof may mutate only the fixture App core_ssh on disposable HAOS.
+# Default builds contain NO supervisor lifecycle write code.
+lab-app-actions = []
+# Preview API operations are disabled in the default production build.
+managed-apps-preview = ["dep:getrandom", "dep:sha2"]
+# Explicit test-only ACID state; no production IdP or gateway.
+persistent-session-lab = ["managed-apps-preview", "dep:redb"]
+# Pure claim verifier only; no user authentication and no HTTP listener.
+ingress-identity-lab = []
+# Information-only Core user status; fixture WS result, no trusted IdP.
+core-user-snapshot-lab = ["ingress-identity-lab"]
+# QEMU-only Core WS reader; one fixed internal endpoint, no mutations.
+core-user-live-lab = ["core-user-snapshot-lab", "dep:tungstenite"]
+
+[dependencies]
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+serde_yaml_ng = "=0.10.0"
+nix = { version = "0.31", features = ["user"] }
+getrandom = { version = "0.4", optional = true }
+sha2 = { version = "0.10", optional = true }
+redb = { version = "4.4.0", optional = true }
+tungstenite = { version = "0.29", default-features = false, features = ["handshake"], optional = true }
+
+[dev-dependencies]
+tempfile = "3"
+
+[[example]]
+name = "guest_supervisor_lab_lifecycle"
+required-features = ["lab-app-actions"]
+
+[[example]]
+name = "guest_supervisor_managed_preview"
+required-features = ["managed-apps-preview"]
+
+[[example]]
+name = "guest_core_users_probe"
+required-features = ["core-user-live-lab"]

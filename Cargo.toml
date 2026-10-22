@@ -1,0 +1,3 @@
+[workspace]
+members = ["crates/control-plane", "crates/interop-moli", "crates/native-hub", "crates/ha-compat", "crates/python-bridge", "crates/community-packages", "crates/native-kernel", "crates/supervisor-apps"]
+resolver = "2"

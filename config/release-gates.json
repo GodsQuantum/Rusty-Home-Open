@@ -1,0 +1,127 @@
+{
+  "schema_version": 1,
+  "publication": "public_alpha_lab_only",
+  "safety_note": "All public tests use synthetic isolated laboratory fixtures. Never assume production safety.",
+  "required_gates": [
+    {
+      "id": "authenticated_host_transport",
+      "status": "blocked",
+      "blocked_reason": [
+        "Synthetic public alpha: independent end-to-end production qualification incomplete."
+      ],
+      "certification_artifact": null
+    },
+    {
+      "id": "ha_core_hacs_29_runtime",
+      "status": "lab_partial",
+      "blocked_reason": [
+        "Synthetic public alpha: independent end-to-end production qualification incomplete."
+      ],
+      "certification_artifact": null
+    },
+    {
+      "id": "hacs_github_oauth",
+      "status": "lab_partial",
+      "blocked_reason": [
+        "Synthetic public alpha: independent end-to-end production qualification incomplete."
+      ],
+      "certification_artifact": null
+    },
+    {
+      "id": "apps_9_lifecycle",
+      "status": "blocked",
+      "blocked_reason": [
+        "Synthetic public alpha: independent end-to-end production qualification incomplete."
+      ],
+      "certification_artifact": null
+    },
+    {
+      "id": "supervisor_apps_restore",
+      "status": "blocked",
+      "blocked_reason": [
+        "Synthetic public alpha: independent end-to-end production qualification incomplete."
+      ],
+      "certification_artifact": null
+    },
+    {
+      "id": "haos_backup_restore",
+      "status": "lab_partial",
+      "blocked_reason": [
+        "Synthetic public alpha: independent end-to-end production qualification incomplete."
+      ],
+      "certification_artifact": null
+    },
+    {
+      "id": "rollback_verified",
+      "status": "blocked",
+      "blocked_reason": [
+        "Synthetic public alpha: independent end-to-end production qualification incomplete."
+      ],
+      "certification_artifact": null
+    },
+    {
+      "id": "single_radio_owner",
+      "status": "blocked",
+      "blocked_reason": [
+        "Synthetic public alpha: independent end-to-end production qualification incomplete."
+      ],
+      "certification_artifact": null
+    },
+    {
+      "id": "ha_ws_reconnection",
+      "status": "lab_partial",
+      "blocked_reason": [
+        "Synthetic public alpha: independent end-to-end production qualification incomplete."
+      ],
+      "certification_artifact": null
+    },
+    {
+      "id": "production_ui_auth",
+      "status": "blocked",
+      "blocked_reason": [
+        "Synthetic public alpha: independent end-to-end production qualification incomplete."
+      ],
+      "certification_artifact": null
+    },
+    {
+      "id": "native_drivers_services",
+      "status": "blocked",
+      "blocked_reason": [
+        "Synthetic public alpha: independent end-to-end production qualification incomplete."
+      ],
+      "certification_artifact": null
+    },
+    {
+      "id": "performance_full_stack",
+      "status": "blocked",
+      "blocked_reason": [
+        "Synthetic public alpha: independent end-to-end production qualification incomplete."
+      ],
+      "certification_artifact": null
+    },
+    {
+      "id": "packaging_updates",
+      "status": "blocked",
+      "blocked_reason": [
+        "Synthetic public alpha: independent end-to-end production qualification incomplete."
+      ],
+      "certification_artifact": null
+    },
+    {
+      "id": "third_party_licenses",
+      "status": "lab_partial",
+      "blocked_reason": [
+        "Synthetic public alpha: independent end-to-end production qualification incomplete."
+      ],
+      "certification_artifact": null
+    },
+    {
+      "id": "security_stress_fuzz",
+      "status": "blocked",
+      "blocked_reason": [
+        "Synthetic public alpha: independent end-to-end production qualification incomplete."
+      ],
+      "certification_artifact": null
+    }
+  ]
+}
