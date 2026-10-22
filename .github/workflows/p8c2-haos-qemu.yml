@@ -1,0 +1,144 @@
+name: P8c2 — genuine isolated HAOS Supervisor repository catalogue
+on:
+  workflow_dispatch:
+  # Run independent real HAOS KVM only when the App lifecycle proof changes.
+  # GitHub token is read-only; never use pull_request_target for test execution.
+  pull_request:
+    paths:
+      - "scripts/p8c2_real_haos_supervisor_pytest.py"
+      - "scripts/p8j_supervisor_store_recovery.py"
+      - "scripts/test_p8j_supervisor_store_recovery.py"
+      - ".github/workflows/p8c2-haos-qemu.yml"
+      - "packaging/supervisor-app/**"
+      - "crates/supervisor-apps/**"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: hars-p8c2-real-haos
+  cancel-in-progress: false
+
+jobs:
+  real-haos-supervisor:
+    name: Official HAOS 18.3 KVM and genuine Supervisor Store
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7 immutable pin
+        with:
+          persist-credentials: false
+      - name: Install stable Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Compile Rust parser and verify its offline contract
+        run: |
+          cargo build --locked -p hars-supervisor-apps --example parse_official_store
+          cargo test --locked -p hars-supervisor-apps --test supervisor_local_transport
+          python3 scripts/test_p8c2_workflow_contract.py
+
+      - name: Install official HAOS QEMU upstream test dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends qemu-system-x86 ovmf xz-utils jq
+          python3 -m venv "$RUNNER_TEMP/haos-test-venv"
+
+      - name: Build static native Rust Supervisor App client for HAOS guest
+        run: |
+          sudo apt-get install -y --no-install-recommends musl-tools
+          rustup target add x86_64-unknown-linux-musl
+          cargo build --locked -p hars-supervisor-apps --example guest_supervisor_live --target x86_64-unknown-linux-musl
+          cargo build --locked -p hars-supervisor-apps --target x86_64-unknown-linux-musl --features lab-app-actions --example guest_supervisor_lab_lifecycle
+          cargo build --locked -p hars-supervisor-apps --target x86_64-unknown-linux-musl --features managed-apps-preview --example guest_supervisor_managed_preview
+          cargo build --locked -p hars-supervisor-apps --target x86_64-unknown-linux-musl --features core-user-live-lab --example guest_core_users_probe
+          BINARY=target/x86_64-unknown-linux-musl/debug/examples/guest_supervisor_live
+          test -x "$BINARY"
+          if readelf -l "$BINARY" | grep -q 'INTERP'; then
+            echo "::error::Guest client is not static; refusing unsupported binary"
+            exit 1
+          fi
+
+      - name: Pin and retrieve upstream official HAOS QEMU integration harness
+        run: |
+          git clone -q --depth 1 --filter=blob:none --sparse https://github.com/home-assistant/operating-system.git "$RUNNER_TEMP/haos-upstream"
+          git -C "$RUNNER_TEMP/haos-upstream" fetch -q --depth 1 origin 90fa213c3441e585d5a60387e9244d0ed38efaf8
+          git -C "$RUNNER_TEMP/haos-upstream" checkout -q 90fa213c3441e585d5a60387e9244d0ed38efaf8
+          git -C "$RUNNER_TEMP/haos-upstream" sparse-checkout set tests
+          test "$(git -C "$RUNNER_TEMP/haos-upstream" rev-parse HEAD)" = 90fa213c3441e585d5a60387e9244d0ed38efaf8
+          "$RUNNER_TEMP/haos-test-venv/bin/python" -m pip install --disable-pip-version-check -r "$RUNNER_TEMP/haos-upstream/tests/requirements.txt"
+
+      - name: Confirm hardware isolation and KVM availability
+        run: |
+          if [ ! -c /dev/kvm ]; then
+            echo "::error::Hosted runner has no /dev/kvm. Refusing TCG fallback."
+            exit 1
+          fi
+          sudo chmod 0666 /dev/kvm
+          test -r /usr/share/ovmf/OVMF.fd
+
+      - name: Download genuine HAOS release image with pinned SHA-256
+        run: |
+          curl -fLSs --retry 3 --retry-delay 5 -o "$RUNNER_TEMP/haos_ova-18.3.qcow2.xz" \
+            "https://github.com/home-assistant/operating-system/releases/download/18.3/haos_ova-18.3.qcow2.xz"
+          cd "$RUNNER_TEMP"
+          echo "fae6a728768cc10aff60d4820bfcd40d64cd77fab82c8bd92af13b3d9d414090  haos_ova-18.3.qcow2.xz" | sha256sum -c
+          xz -T2 -dc haos_ova-18.3.qcow2.xz > haos-upstream/tests/haos.qcow2
+          rm haos_ova-18.3.qcow2.xz
+
+      - name: Real official QEMU HAOS boot and third-party Supervisor repository
+        timeout-minutes: 34
+        run: |
+          set -euo pipefail
+          export HARS_SUPERVISOR_PARSER="$GITHUB_WORKSPACE/target/debug/examples/parse_official_store"
+          # Make ONLY the static, nonsecret Rust executable reachable through
+          # the QEMU usermode NAT host gateway. No LAN listener or host devices.
+          mkdir -p "$RUNNER_TEMP/hars-app-assets/hars_rust_probe"
+          cp "$GITHUB_WORKSPACE/packaging/supervisor-app/hars_rust_probe/config.yaml" "$RUNNER_TEMP/hars-app-assets/hars_rust_probe/"
+          cp "$GITHUB_WORKSPACE/packaging/supervisor-app/hars_rust_probe/Dockerfile" "$RUNNER_TEMP/hars-app-assets/hars_rust_probe/"
+          mkdir -p "$RUNNER_TEMP/hars-app-assets/hars_rust_probe/audit_layer"
+          cp "$GITHUB_WORKSPACE/packaging/supervisor-app/hars_rust_probe/audit_layer/.seed" "$RUNNER_TEMP/hars-app-assets/hars_rust_probe/audit_layer/.seed"
+          cp "$GITHUB_WORKSPACE/target/x86_64-unknown-linux-musl/debug/examples/guest_supervisor_live" "$RUNNER_TEMP/hars-app-assets/guest_supervisor_live"
+          cp "$RUNNER_TEMP/hars-app-assets/guest_supervisor_live" "$RUNNER_TEMP/hars-app-assets/hars_rust_probe/guest_supervisor_live"
+          cp "$GITHUB_WORKSPACE/target/x86_64-unknown-linux-musl/debug/examples/guest_supervisor_lab_lifecycle" "$RUNNER_TEMP/hars-app-assets/hars_rust_probe/guest_supervisor_lab_lifecycle"
+          cp "$GITHUB_WORKSPACE/target/x86_64-unknown-linux-musl/debug/examples/guest_supervisor_managed_preview" "$RUNNER_TEMP/hars-app-assets/hars_rust_probe/guest_supervisor_managed_preview"
+          mkdir -p "$RUNNER_TEMP/hars-app-assets/hars_core_ws_probe"
+          cp "$GITHUB_WORKSPACE/packaging/supervisor-app/hars_core_ws_probe/config.yaml" "$RUNNER_TEMP/hars-app-assets/hars_core_ws_probe/config.yaml"
+          cp "$GITHUB_WORKSPACE/packaging/supervisor-app/hars_core_ws_probe/Dockerfile" "$RUNNER_TEMP/hars-app-assets/hars_core_ws_probe/Dockerfile"
+          cp "$GITHUB_WORKSPACE/target/x86_64-unknown-linux-musl/debug/examples/guest_core_users_probe" "$RUNNER_TEMP/hars-app-assets/hars_core_ws_probe/guest_core_users_probe"
+          mkdir -p "$RUNNER_TEMP/hars-app-assets/hars_version_fixture"
+          cp "$GITHUB_WORKSPACE/packaging/supervisor-app/hars_version_fixture/config.yaml" "$RUNNER_TEMP/hars-app-assets/hars_version_fixture/config.yaml"
+          cp "$GITHUB_WORKSPACE/packaging/supervisor-app/hars_version_fixture/Dockerfile" "$RUNNER_TEMP/hars-app-assets/hars_version_fixture/Dockerfile"
+          cp "$GITHUB_WORKSPACE/target/x86_64-unknown-linux-musl/debug/examples/guest_supervisor_live" "$RUNNER_TEMP/hars-app-assets/hars_version_fixture/guest_supervisor_live"
+          python3 -m http.server 18673 --bind 127.0.0.1 \
+            --directory "$RUNNER_TEMP/hars-app-assets" \
+            > "$RUNNER_TEMP/hars-p8e-artifact-http.log" 2>&1 &
+          HARS_GUEST_ARTIFACT_SERVER_PID=$!
+          trap 'kill "$HARS_GUEST_ARTIFACT_SERVER_PID" 2>/dev/null || true' EXIT
+          sleep 1
+          curl --fail --silent --show-error http://127.0.0.1:18673/guest_supervisor_live -o /dev/null
+          # Official upstream QEMU strategy uses -snapshot, user-mode NAT,
+          # a disposable guest disk and no physical radio passthrough.
+          grep -q -- '-snapshot -accel kvm' "$RUNNER_TEMP/haos-upstream/tests/qemu-strategy.yaml"
+          sed -i 's/memory: 1G/memory: 3G/' "$RUNNER_TEMP/haos-upstream/tests/qemu-strategy.yaml"
+          cat scripts/p8c2_real_haos_supervisor_pytest.py >> "$RUNNER_TEMP/haos-upstream/tests/supervisor_test/test_supervisor.py"
+          source "$RUNNER_TEMP/haos-test-venv/bin/activate"
+          cd "$RUNNER_TEMP/haos-upstream/tests"
+          ./run_tests.sh \
+            supervisor_test/test_supervisor.py::test_start_supervisor \
+            supervisor_test/test_supervisor.py::test_check_supervisor \
+            supervisor_test/test_supervisor.py::test_supervisor_is_updated \
+            supervisor_test/test_supervisor.py::test_hars_real_supervisor_store \
+            supervisor_test/test_supervisor.py::test_hars_real_official_file_editor_app_lifecycle_qemu \
+            supervisor_test/test_supervisor.py::test_hars_rust_supervisor_direct \
+            supervisor_test/test_supervisor.py::test_hars_manager_role_app \
+            supervisor_test/test_supervisor.py::test_app_install \
+            supervisor_test/test_supervisor.py::test_create_backup \
+            supervisor_test/test_supervisor.py::test_app_uninstall \
+            supervisor_test/test_supervisor.py::test_restore_backup \
+            supervisor_test/test_supervisor.py::test_hars_full_backup_archive_qemu \
+            supervisor_test/test_supervisor.py::test_hars_full_restore_archive_qemu \
+            supervisor_test/test_supervisor.py::test_hars_protected_full_backup_restore_qemu \
+            supervisor_test/test_supervisor.py::test_hars_protected_full_restore_wrong_password_rejected_qemu \
+            supervisor_test/test_supervisor.py::test_hars_real_official_file_editor_partial_restore_bytes_qemu \
+          # Fail-closed: pytest exits successfully even if dependency-marked tests were skipped.
+          python3 "$GITHUB_WORKSPACE/scripts/check_p8d_junit.py" junit_reports/tests.xml
