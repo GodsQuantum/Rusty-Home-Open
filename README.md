@@ -28,7 +28,7 @@ Rusty Home is an independent Rust-first exploration of durable local state, safe
 ## The laboratory interface
 
 <p align="center"><img src="branding/lab-dashboard.png" width="940" alt="Rusty Home read-only dashboard with synthetic fixture data"/></p>
-<p align="center"><sub>Illustrative mockup of the current read-only UI structure with fictional laboratory data; not an actual device screenshot.</sub></p>
+<p align="center"><sub>Actual Rusty Home web frontend captured via Playwright on a free GitHub-hosted Ubuntu runner, with four synthetic Apps and no household data.</sub></p>
 
 ## Architecture
 

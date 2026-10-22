@@ -18,3 +18,5 @@ The files here are original source vector artwork, not third-party assets.
 
 The project-authored visual assets are covered by the root MIT license;
 third-party project names and logos remain their respective owners' marks.
+
+Desktop and mobile PNG dashboards are rendered from the actual web frontend\nusing isolated synthetic data on GitHub Actions. The SVG lab dashboard remains\nan explicitly illustrative vector mockup.\n

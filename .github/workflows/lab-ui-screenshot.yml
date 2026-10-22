@@ -29,6 +29,8 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: rusty-home-isolated-synthetic-dashboard
-          path: branding/lab-dashboard.png
+          path: |
+            branding/lab-dashboard.png
+            branding/lab-dashboard-mobile.png
           if-no-files-found: error
           retention-days: 7

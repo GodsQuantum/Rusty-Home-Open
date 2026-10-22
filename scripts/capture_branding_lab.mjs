@@ -39,6 +39,12 @@ try {
   if(!(await page.locator('#readiness').innerText()).includes('15 / 15'))throw Error('Synthetic readiness not visible');
   if((await page.locator('.card').count())!==4)throw Error('Unexpected synthetic app count');
   await page.screenshot({path:'branding/lab-dashboard.png',fullPage:true,animations:'disabled'});
-  console.log('BRANDING_SCREENSHOT_PASS: actual HTML, 4 synthetic apps, zero production data');
+  const mobile = await browser.newPage({viewport:{width:390,height:844},deviceScaleFactor:1});
+  await mobile.goto('http://127.0.0.1:'+port+'/',{waitUntil:'load'});
+  await mobile.waitForFunction(()=>document.querySelector('#status')?.textContent==='Inventaire disponible');
+  if(!(await mobile.locator('#readiness').innerText()).includes('15 / 15'))throw Error('Mobile release gate state not visible');
+  if((await mobile.locator('.card').count())!==4)throw Error('Mobile synthetic app count incorrect');
+  await mobile.screenshot({path:'branding/lab-dashboard-mobile.png',fullPage:true,animations:'disabled'});
+  console.log('BRANDING_SCREENSHOTS_PASS: actual desktop and mobile HTML, 4 synthetic apps, zero production data');
  } finally { await browser.close(); }
 } finally {await new Promise(r=>server.close(r));}
