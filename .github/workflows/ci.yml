@@ -36,6 +36,8 @@ jobs:
         run: |
           cargo build --locked -p hars-native-kernel
           python3 scripts/test_p20_radio_exclusivity.py
+      - name: Real generated dashboard screenshots (desktop and mobile)
+        run: python3 scripts/test_branding_assets.py
       - name: Public fixtures and source privacy check
         run: python3 scripts/test_public_redaction.py
       - name: Assert no deployment authorization
