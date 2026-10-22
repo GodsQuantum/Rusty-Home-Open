@@ -48,6 +48,8 @@ jobs:
         run: |
           python3 scripts/test_native_mqtt_discovery.py
           python3 scripts/test_native_automation_yaml.py
+      - name: Real generated dashboard screenshots (desktop and mobile)
+        run: python3 scripts/test_branding_assets.py
       - name: Public fixtures and source privacy check
         run: python3 scripts/test_public_redaction.py
       - name: Assert no deployment authorization
