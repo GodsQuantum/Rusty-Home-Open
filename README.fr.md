@@ -27,7 +27,8 @@ Rusty Home est un projet **indépendant, Rust-first** : moteur d'état local et 
 
 ## Aperçu de l'interface
 
-<p align="center"><img src="branding/lab-dashboard.png" width="940" alt="Interface de laboratoire Rusty Home avec données fictives"/></p>
+<p align="center"><img src="branding/lab-dashboard.png" width="760" alt="Interface de laboratoire Rusty Home avec données fictives"/>
+  <img src="branding/lab-dashboard-mobile.png" width="220" alt="Rusty Home read-only synthetic lab dashboard on mobile" /></p>
 <p align="center"><sub>Capture réelle du frontend Rusty Home sous Playwright sur un runner GitHub gratuit, avec quatre Apps fictives et aucune donnée domestique.</sub></p>
 
 ## Architecture

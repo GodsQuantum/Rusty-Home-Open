@@ -27,7 +27,8 @@ Rusty Home 是一个**独立的 Rust 优先项目**，研究持久化本地状�
 
 ## 实验室界面
 
-<p align="center"><img src="branding/lab-dashboard.png" width="940" alt="使用模拟数据运行的 Rusty Home 只读实验仪表盘"/></p>
+<p align="center"><img src="branding/lab-dashboard.png" width="760" alt="使用模拟数据运行的 Rusty Home 只读实验仪表盘"/>
+  <img src="branding/lab-dashboard-mobile.png" width="220" alt="Rusty Home read-only synthetic lab dashboard on mobile" /></p>
 <p align="center"><sub>真实 Rusty Home 网页前端的 Playwright 截图（在 GitHub 免费运行器上生成），仅含四个模拟应用，没有连接任何真实家庭设备。</sub></p>
 
 ## 架构概览

@@ -20,3 +20,6 @@ The project-authored visual assets are covered by the root MIT license;
 third-party project names and logos remain their respective owners' marks.
 
 Desktop and mobile PNG dashboards are rendered from the actual web frontend\nusing isolated synthetic data on GitHub Actions. The SVG lab dashboard remains\nan explicitly illustrative vector mockup.\n
+Screenshot provenance: GitHub Actions screenshot run 39866324084, source
+commit f022b8bc012b142ac155be3fa1ed2646528e5ba7. These images were
+captured from the actual frontend, but all Apps and host names are fictional.
