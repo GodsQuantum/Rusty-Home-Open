@@ -1,0 +1,54 @@
+name: Real isolated Debian and signed APT package lifecycle
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: public-debian-package-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  reproducible-package:
+    name: Real dpkg install, upgrade, downgrade, purge and reproduction
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Public source and synthetic fixtures verification
+        run: python3 scripts/test_public_redaction.py
+      - name: Rebuild exact release .deb, test actual offline dpkg lifecycle
+        run: bash scripts/test_debian_lab_upgrade.sh
+      - name: Refuse surviving packaging containers
+        if: always()
+        run: |
+          if docker ps -a --format '{{.Names}}' | grep '^rusty-home-lab-upgrade-'; then
+            echo 'Unclean Debian lab container'; exit 1
+          fi
+  signed-apt-negative:
+    name: Actual offline signed APT install, update and tamper refusal
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Install standard APT repository build tools on disposable runner
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq apt-utils dpkg-dev gnupg
+      - name: Public source and synthetic fixtures verification
+        run: python3 scripts/test_public_redaction.py
+      - name: Build disposable signed APT repository, reject tampered InRelease
+        run: bash scripts/test_signed_apt_lab.sh
+      - name: Refuse surviving APT lab containers
+        if: always()
+        run: |
+          if docker ps -a --format '{{.Names}}' | grep '^rusty-home-lab-apt-'; then
+            echo 'Unclean signed APT test container'; exit 1
+          fi
