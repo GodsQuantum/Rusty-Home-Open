@@ -52,5 +52,7 @@ jobs:
         run: python3 scripts/test_branding_assets.py
       - name: Public fixtures and source privacy check
         run: python3 scripts/test_public_redaction.py
+      - name: Verify public certification gate ledger
+        run: python3 scripts/test_public_certification_ledger.py
       - name: Assert no deployment authorization
         run: python3 scripts/check_release_gate.py --expect-blocked
