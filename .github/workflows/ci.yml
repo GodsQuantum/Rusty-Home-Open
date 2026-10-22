@@ -36,6 +36,18 @@ jobs:
         run: |
           cargo build --locked -p hars-native-kernel
           python3 scripts/test_p20_radio_exclusivity.py
+      - name: Native bearer-auth daemon, state persistence and restart
+        run: python3 scripts/test_native_daemon_http.py
+      - name: Durable command idempotency and real crash quarantine
+        run: |
+          python3 scripts/test_durable_command_kill9.py
+          python3 scripts/test_native_reconciliation.py
+      - name: Stalled old-controller epoch fenced after SIGSTOP
+        run: python3 scripts/test_native_fencing.py
+      - name: Offline MQTT discovery and safe YAML automation compiler
+        run: |
+          python3 scripts/test_native_mqtt_discovery.py
+          python3 scripts/test_native_automation_yaml.py
       - name: Public fixtures and source privacy check
         run: python3 scripts/test_public_redaction.py
       - name: Assert no deployment authorization
