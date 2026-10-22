@@ -16,12 +16,15 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           persist-credentials: false
-      - name: Install disposable browser for real HTML
+      - name: Use preinstalled Google Chrome on ubuntu-24.04 (no browser downloads)
         run: |
+          command -v google-chrome
+          google-chrome --version
           mkdir -p runtime/brandshot
           npm --prefix runtime/brandshot install --no-audit --no-fund playwright@1.57.0
-          runtime/brandshot/node_modules/.bin/playwright install --with-deps chromium
       - name: Render real web frontend with fictional Apps
+        env:
+          RUSTY_HOME_CHROME_CHANNEL: chrome
         run: node scripts/capture_branding_lab.mjs
       - name: Ensure source contains only synthetic sample inventory
         run: python3 scripts/test_public_redaction.py

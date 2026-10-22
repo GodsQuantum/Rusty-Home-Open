@@ -23,3 +23,7 @@ Desktop and mobile PNG dashboards are rendered from the actual web frontend\nusi
 Screenshot provenance: GitHub Actions screenshot run 39866324084, source
 commit f022b8bc012b142ac155be3fa1ed2646528e5ba7. These images were
 captured from the actual frontend, but all Apps and host names are fictional.
+
+Screenshot workflows use the preinstalled Google Chrome supplied by
+standard GitHub Ubuntu 24.04 runners; Playwright is installed in a
+throwaway runtime directory, with no browser binary download or sudo apt.

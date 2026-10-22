@@ -31,7 +31,7 @@ const server=createServer((req,res)=>{
 try {
  await new Promise(r=>server.listen(0,'127.0.0.1',r));
  const port=server.address().port;
- const browser=await chromium.launch({headless:true,args:['--no-sandbox']});
+ const browser=await chromium.launch({headless:true,...(process.env.RUSTY_HOME_CHROME_CHANNEL ? {channel:process.env.RUSTY_HOME_CHROME_CHANNEL}:{}),args:['--no-sandbox']});
  try {
   const page=await browser.newPage({viewport:{width:1365,height:860},deviceScaleFactor:1});
   await page.goto('http://127.0.0.1:'+port+'/',{waitUntil:'load'});
