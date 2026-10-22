@@ -20,9 +20,9 @@ jobs:
           persist-credentials: false
       - name: Public privacy guard
         run: python3 scripts/test_public_redaction.py
-      - name: Card Builder: upstream release asset and real Core config lifecycle
+      - name: Card Builder upstream release asset and real Core config lifecycle
         run: bash scripts/run_p6g_real_card_builder_core.sh
-      - name: Smart Announcements: true Core config lifecycle
+      - name: Smart Announcements true Core config lifecycle
         run: bash scripts/run_p6f_real_smart_core.sh
   adaptive-and-universal:
     name: Genuine Adaptive Lighting 1.32.0 and Universal Media Player 1.9.0
@@ -34,9 +34,9 @@ jobs:
           persist-credentials: false
       - name: Public privacy guard
         run: python3 scripts/test_public_redaction.py
-      - name: Adaptive Lighting: true Core config lifecycle with switches
+      - name: Adaptive Lighting true Core config lifecycle with switches
         run: bash scripts/run_p6f_real_adaptive_core.sh
-      - name: Universal Media Player: pinned public release with real Core
+      - name: Universal Media Player pinned public release with real Core
         env:
           GH_TOKEN: ${{ github.token }}
         run: bash scripts/run_p6h_universal_core.sh
