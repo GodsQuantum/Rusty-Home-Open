@@ -6,10 +6,9 @@ CI provenance, threat modeling, reproducible build and deployment tests.
 """
 from __future__ import annotations
 import argparse
-import hashlib
 import json
 from pathlib import Path
-import re
+from release_attestation import verified_release_artifact
 
 ROOT=Path(__file__).resolve().parent.parent
 EXPECTED_GATES=frozenset((
@@ -41,26 +40,13 @@ def audit(config: dict, root: Path=ROOT)->dict:
             observed[status]+=1
             blocked.append(key)
             continue
-        # A status toggle is NOT enough: each certified gate needs a pinned
-        # immutable evidence file under project docs/certifications, and hash.
-        if not isinstance(proof,dict):
+        # A local SHA-256 never proves an external run or independent review.
+        # Require strict scoped evidence and two distinct registered Ed25519
+        # reviewers over exact bytes before recognizing production evidence.
+        if not verified_release_artifact(root,key,proof):
             observed["blocked"]+=1
-            blocked.append(key);continue
-        name=proof.get("name")
-        digest=proof.get("sha256")
-        if (not isinstance(name,str)
-            or not re.fullmatch(r"[a-zA-Z0-9][a-zA-Z0-9_.-]*\.json",name)
-            or not isinstance(digest,str)
-            or not re.fullmatch(r"[0-9a-f]{64}",digest)):
-            observed["blocked"]+=1
-            blocked.append(key);continue
-        path=root/"docs/certifications"/name
-        if path.is_symlink() or not path.is_file():
-            observed["blocked"]+=1
-            blocked.append(key);continue
-        if hashlib.sha256(path.read_bytes()).hexdigest()!=digest:
-            observed["blocked"]+=1
-            blocked.append(key);continue
+            blocked.append(key)
+            continue
         observed["certified"]+=1
     if seen!=EXPECTED_GATES:
         raise InvalidGate("release gate manifest schema mismatch")
