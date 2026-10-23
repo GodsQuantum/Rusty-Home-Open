@@ -18,6 +18,6 @@ class BrandIdentity(unittest.TestCase):
         self.assertIn('http://127.0.0.1:18790/',script)
         self.assertIn('<h1>Rusty Home</h1>',script)
         self.assertIn('r["release_gates_blocked"]==15',script)
-        self.assertIn('r["haos_apps_not_production_qualified"]==9',script)
+        self.assertIn('"haos_apps_total" not in r',script)
 if __name__=="__main__":
     unittest.main()

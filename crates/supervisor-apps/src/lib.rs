@@ -18,6 +18,7 @@ pub mod core_user_snapshot_lab;
 #[cfg(feature = "ingress-identity-lab")]
 pub mod ingress_identity_lab;
 
+pub mod catalog_filter;
 pub mod official_store;
 pub mod official_transport;
 use serde::de::{self, MapAccess, SeqAccess, Visitor};

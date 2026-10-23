@@ -119,3 +119,43 @@ fn refuses_invalid_framing_and_oversized_responses() {
         worker.join().unwrap();
     }
 }
+
+#[test]
+fn live_loopback_supervisor_catalog_supports_arbitrary_new_apps_and_filtering() {
+    use hars_supervisor_apps::catalog_filter::Filter;
+    let apps: Vec<_> = (0..1211)
+        .map(|i| {
+            serde_json::json!({
+                "slug":format!("unknown_app_{i:05}"),
+                "repository":format!("vendor_{}",i%17),
+                "name":format!("Unseen Future App {i}"),
+                "available":true,
+                "installed":i%2==0,
+                "update_available":i%3==0
+            })
+        })
+        .collect();
+    let repos: Vec<_> = (0..17)
+        .map(|i| serde_json::json!({"slug":format!("vendor_{i}"),"name":format!("Vendor {i}")}))
+        .collect();
+    let data = serde_json::json!({"result":"ok","data":{"apps":apps,"repositories":repos}});
+    let (addr, worker) = serve(ok(&data.to_string()));
+    let store = client(addr).fetch_store(ApiVersion::V2).unwrap();
+    assert_eq!(store.apps.len(), 1211);
+    let page = store
+        .filter_apps(Filter {
+            repository: Some("VENDOR_9"),
+            installed: Some(true),
+            updates_only: true,
+            limit: 200,
+            ..Default::default()
+        })
+        .unwrap();
+    assert!(page.total > 0);
+    assert!(
+        page.apps
+            .iter()
+            .all(|app| app.repository == "vendor_9" && app.installed && app.update_available)
+    );
+    assert!(worker.join().unwrap().starts_with("GET /v2/store HTTP/1.1"));
+}

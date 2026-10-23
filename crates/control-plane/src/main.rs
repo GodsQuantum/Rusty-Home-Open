@@ -87,36 +87,6 @@ fn field<'a>(v: &'a Value, key: &str) -> &'a str {
     v.get(key).and_then(Value::as_str).unwrap_or("")
 }
 
-fn app_kind(name: &str, image: &str) -> &'static str {
-    let hay = format!("{name} {image}")
-        .to_ascii_lowercase()
-        .replace('_', "-");
-    for (needle, kind) in [
-        ("music-assistant", "music_assistant"),
-        ("musicassistant", "music_assistant"),
-        ("esphome", "esphome"),
-        ("open-webui", "open_webui"),
-        ("paperless", "paperless"),
-        ("jellyfin", "jellyfin"),
-        ("immich", "immich"),
-        ("zwave-js", "zwave_js"),
-        ("go2rtc", "go2rtc"),
-        ("matter-server", "matter"),
-        ("mosquitto", "mqtt"),
-        ("camera365", "camera365"),
-        ("beszel", "beszel"),
-        ("node-red", "node_red"),
-        ("zigbee2mqtt", "zigbee2mqtt"),
-        ("frigate", "frigate"),
-        ("homeassistant", "home_assistant"),
-    ] {
-        if hay.contains(needle) {
-            return kind;
-        }
-    }
-    "generic"
-}
-
 fn docker_rows(body: &str, host: &str) -> Result<Vec<Value>, &'static str> {
     body.lines()
         .filter(|line| !line.trim().is_empty())
@@ -127,7 +97,6 @@ fn docker_rows(body: &str, host: &str) -> Result<Vec<Value>, &'static str> {
                 return Err("container missing name");
             }
             let image = field(&row, "Image");
-            let kind = app_kind(name, image);
             Ok(json!({
                 "id": format!("{host}:docker:{}", bounded(name)),
                 "host": host,
@@ -136,8 +105,8 @@ fn docker_rows(body: &str, host: &str) -> Result<Vec<Value>, &'static str> {
                 "state": bounded(field(&row, "State")),
                 "version": Value::Null,
                 "update_available": Value::Null,
-                "app_type": if kind == "generic" { "generic_container" } else { kind },
-                "classification": if kind == "generic" { "generic" } else { "heuristic" },
+                "app_type": "generic_container",
+                "classification": "docker",
                 "backend": "docker",
                 "managed_by_bridge": false,
                 "capabilities": ["view_status"]
@@ -165,7 +134,6 @@ fn supervisor_rows(body: &str, host: &str) -> Result<Vec<Value>, &'static str> {
             if name.is_empty() || slug.is_empty() {
                 return Err("invalid Supervisor app metadata");
             }
-            let kind = app_kind(name, slug);
             Ok(json!({
                 "id": format!("{host}:supervisor:{}", bounded(slug)),
                 "host": host,
@@ -174,7 +142,7 @@ fn supervisor_rows(body: &str, host: &str) -> Result<Vec<Value>, &'static str> {
                 "state": bounded(field(item, "state")),
                 "version": bounded(field(item, "version")),
                 "update_available": item.get("update_available").and_then(Value::as_bool),
-                "app_type": if kind == "generic" { "supervisor_app" } else { kind },
+                "app_type": "supervisor_app",
                 "classification": "supervisor",
                 "backend": "supervisor",
                 "managed_by_bridge": false,
@@ -297,13 +265,9 @@ fn report(adapters: &[Adapter], verified: Option<&attestation::Verified>) -> Val
 fn readiness_report() -> Value {
     let gates: Value = serde_json::from_str(include_str!("../../../config/release-gates.json"))
         .expect("invalid release policy shipped with app");
-    let migration: Value =
-        serde_json::from_str(include_str!("../../../config/app-migration-policy.json"))
-            .expect("invalid app policy shipped with app");
     let gates_list = gates["required_gates"]
         .as_array()
         .expect("release-gates rows");
-    let apps_list = migration["apps"].as_array().expect("apps migration rows");
     json!({
         "mode":"LAB",
         "read_only":true,
@@ -311,8 +275,6 @@ fn readiness_report() -> Value {
         "production_ready":false,
         "release_gates_total":gates_list.len(),
         "release_gates_blocked":gates_list.iter().filter(|g|g["status"]!="certified").count(),
-        "haos_apps_total":apps_list.len(),
-        "haos_apps_not_production_qualified":apps_list.iter().filter(|a|a["qualification"]!="production_qualified").count(),
         "note":"Status is a static project policy; no production configuration is read or changed"
     })
 }
@@ -829,8 +791,8 @@ mod tests {
         assert_eq!(status["production_ready"], false);
         assert_eq!(status["deployment_authorized"], false);
         assert_eq!(status["release_gates_total"], 15);
-        assert_eq!(status["haos_apps_total"], 9);
-        assert_eq!(status["haos_apps_not_production_qualified"], 9);
+        assert!(status.get("haos_apps_total").is_none());
+        assert!(status.get("haos_apps_not_production_qualified").is_none());
         assert_eq!(status["release_gates_blocked"], 15);
         let serialized = status.to_string();
         assert!(!serialized.contains("access_token"));
@@ -841,10 +803,10 @@ mod tests {
     fn docker_apps_and_unknown_containers() {
         let rows = docker_rows(include_str!("../../../fixtures/docker-ps.jsonl"), "lab").unwrap();
         assert_eq!(rows.len(), 4);
-        assert_eq!(rows[0]["app_type"], "esphome");
-        assert_eq!(rows[1]["app_type"], "music_assistant");
-        assert_eq!(rows[2]["app_type"], "matter");
-        assert_eq!(rows[3]["classification"], "generic");
+        assert_eq!(rows[0]["app_type"], "generic_container");
+        assert_eq!(rows[1]["app_type"], "generic_container");
+        assert_eq!(rows[2]["app_type"], "generic_container");
+        assert_eq!(rows[3]["classification"], "docker");
         assert_eq!(rows[0]["id"], "lab:docker:esphome-lab");
     }
 
@@ -873,7 +835,7 @@ mod tests {
         let rows = supervisor_rows(data, "haos").unwrap();
         assert_eq!(rows.len(), 1);
         assert!(!rows[0].to_string().contains("NEVER_EXPOSE"));
-        assert_eq!(rows[0]["app_type"], "matter");
+        assert_eq!(rows[0]["app_type"], "supervisor_app");
     }
 
     #[test]

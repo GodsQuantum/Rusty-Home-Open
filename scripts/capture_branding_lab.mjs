@@ -8,8 +8,7 @@ const require = createRequire(import.meta.url);
 const { chromium } = require(resolve('runtime/brandshot/node_modules/playwright'));
 const html = readFileSync('web/index.html');
 const readiness = { production_ready:false, deployment_authorized:false,
- release_gates_total:15,release_gates_blocked:15,
- haos_apps_total:9,haos_apps_not_production_qualified:9 };
+ release_gates_total:15,release_gates_blocked:15 };
 const apps = {read_only:true,degraded:false,attestation:{status:'synthetic'},
  sources:[{host:'lab-alpha',kind:'synthetic_fixture',status:'ok',live:false,count:3},
           {host:'lab-beta',kind:'synthetic_fixture',status:'ok',live:false,count:1}],
@@ -36,13 +35,13 @@ try {
   const page=await browser.newPage({viewport:{width:1365,height:860},deviceScaleFactor:1});
   await page.goto('http://127.0.0.1:'+port+'/',{waitUntil:'load'});
   await page.waitForFunction(()=>document.querySelector('#status')?.textContent==='Inventaire disponible',{timeout:10000});
-  if(!(await page.locator('#readiness').innerText()).includes('15 / 15'))throw Error('Synthetic readiness not visible');
+  if(!(await page.locator('#readiness').innerText()).includes('en développement'))throw Error('Synthetic readiness not visible');
   if((await page.locator('.card').count())!==4)throw Error('Unexpected synthetic app count');
   await page.screenshot({path:'branding/lab-dashboard.png',fullPage:true,animations:'disabled'});
   const mobile = await browser.newPage({viewport:{width:390,height:844},deviceScaleFactor:1});
   await mobile.goto('http://127.0.0.1:'+port+'/',{waitUntil:'load'});
   await mobile.waitForFunction(()=>document.querySelector('#status')?.textContent==='Inventaire disponible');
-  if(!(await mobile.locator('#readiness').innerText()).includes('15 / 15'))throw Error('Mobile release gate state not visible');
+  if(!(await mobile.locator('#readiness').innerText()).includes('en développement'))throw Error('Mobile release gate state not visible');
   if((await mobile.locator('.card').count())!==4)throw Error('Mobile synthetic app count incorrect');
   await mobile.screenshot({path:'branding/lab-dashboard-mobile.png',fullPage:true,animations:'disabled'});
   console.log('BRANDING_SCREENSHOTS_PASS: actual desktop and mobile HTML, 4 synthetic apps, zero production data');
