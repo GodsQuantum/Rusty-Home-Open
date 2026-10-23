@@ -139,6 +139,15 @@ impl<'de> Deserialize<'de> for NoDuplicates {
     }
 }
 
+/// Strict parsing of untrusted Supervisor YAML: custom tags never acquire
+/// implicit meaning, and unknown !include/host extensions fail closed.
+fn decode_yaml(bytes: &[u8]) -> Result<NoDuplicates, serde_saphyr::Error> {
+    serde_saphyr::from_slice_with_options::<NoDuplicates>(
+        bytes,
+        serde_saphyr::options! { reject_unsupported_tags: true },
+    )
+}
+
 fn safe_component(s: &str) -> bool {
     !s.is_empty()
         && s.len() <= 100
@@ -169,7 +178,7 @@ fn read_map(path: &Path) -> Result<Map<String, Value>, InspectError> {
             .map_err(|_| InspectError::InvalidManifest)?
             .0
     } else {
-        serde_yaml_ng::from_slice::<NoDuplicates>(&bytes)
+        decode_yaml(&bytes)
             .map_err(|_| InspectError::InvalidManifest)?
             .0
     };
@@ -585,6 +594,25 @@ mod tests {
     }
     const SIMPLE: &str = "name: Future timer\nversion: '1.2.0'\nslug: future_timer\ndescription: Unknown app\narch: [amd64, aarch64]\nimage: ghcr.io/future/timer\nstartup: once\nbackup: cold\n";
     const BRIDGE: &str = "name: Unknown camera bridge\nversion: '2026.10'\nslug: open_camera\ndescription: Unknown vendor\narch: [amd64]\nimage: ghcr.io/unknown/cam\ningress: true\ningress_port: 8080\nmap:\n  - type: media\n    read_only: false\nusb: true\nfull_access: true\ndocker_api: true\nhassio_api: true\nhassio_role: admin\nports:\n  9988/tcp: 9988\nsome_future_setting: true\n";
+    #[test]
+    fn maintained_yaml_parser_still_denies_nested_duplicate_keys_and_invalid_documents() {
+        let good =
+            serde_saphyr::from_str::<NoDuplicates>("outer:\n  allowed: 'value'\n  second: true\n")
+                .unwrap();
+        assert_eq!(good.0["outer"]["allowed"], "value");
+        for bad in [
+            "slug: first\nslug: second\n",
+            "outer:\n  nested: first\n  nested: second\n",
+            "name: safe\n---\nname: unsafe\n",
+            "name: safe\nother: !host/path /secret\n",
+        ] {
+            assert!(
+                decode_yaml(bad.as_bytes()).is_err(),
+                "ambiguous YAML accepted: {bad}"
+            );
+        }
+    }
+
     #[test]
     fn arbitrary_nested_json_and_yaml_with_no_slug_allowlist() {
         let d = make();

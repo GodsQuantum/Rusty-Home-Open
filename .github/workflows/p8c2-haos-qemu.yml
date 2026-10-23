@@ -46,7 +46,7 @@ jobs:
       - name: Install official HAOS QEMU upstream test dependencies
         run: |
           sudo apt-get update -qq
-          sudo apt-get install -y --no-install-recommends qemu-system-x86 ovmf xz-utils jq
+          sudo apt-get install -y --no-install-recommends qemu-system-x86 qemu-utils ovmf xz-utils jq
           python3 -m venv "$RUNNER_TEMP/haos-test-venv"
 
       - name: Build static native Rust Supervisor App client for HAOS guest
@@ -91,6 +91,14 @@ jobs:
           echo "fae6a728768cc10aff60d4820bfcd40d64cd77fab82c8bd92af13b3d9d414090  haos_ova-18.3.qcow2.xz" | sha256sum -c
           xz -T2 -dc haos_ova-18.3.qcow2.xz > haos-upstream/tests/haos.qcow2
           rm haos_ova-18.3.qcow2.xz
+          # This is an EPHEMERAL GitHub-runner VM image, never Cloud9/VM100.
+          # HAOS grows its data ext4 partition at first boot. Its stock
+          # 32GiB QEMU image can run out of space during 17 real App/backup
+          # lifecycle scenarios. Grow only virtual capacity, not physical
+          # runner allocation, and require an independently checked size.
+          qemu-img resize -f qcow2 haos-upstream/tests/haos.qcow2 64G
+          qemu-img info --output=json haos-upstream/tests/haos.qcow2 |
+            jq -e '.["virtual-size"] >= 68719476736' >/dev/null
 
       - name: Real official QEMU HAOS boot and third-party Supervisor repository
         timeout-minutes: 34

@@ -13,6 +13,13 @@ assert "group: hars-p8c2-real-haos-" + chr(36) + "{{ github.ref }}" in config, "
 assert "90fa213c3441e585d5a60387e9244d0ed38efaf8" in config
 assert "fae6a728768cc10aff60d4820bfcd40d64cd77fab82c8bd92af13b3d9d414090" in config
 assert "haos_ova-18.3.qcow2.xz" in config
+assert "qemu-img resize -f qcow2 haos-upstream/tests/haos.qcow2 64G" in config
+assert "qemu-system-x86 qemu-utils ovmf" in config
+assert '"/mnt/data/hars-supervisor-real-store.json"' in code
+assert '"-o /mnt/data/hars-supervisor-live "' in code
+assert '("tmp", 64 * 1024)' not in code
+assert 'jq -e \'.["virtual-size"] >= 68719476736\'' in config
+assert "test_hars_manager_role_app" in config
 assert "sha256sum -c" in config
 assert "qemu-system-x86" in config
 assert "-snapshot" in config

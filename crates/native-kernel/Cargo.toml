@@ -18,7 +18,7 @@ tempfile = "3"
 subtle = "2.6"
 redb = "=4.4.0"
 serde = { version = "1", features = ["derive"] }
-serde_yaml_ng = "=0.10.0"
+serde-saphyr = "=2.0.0"
 nix = { version = "0.31", features = ["user", "fs"] }
 rumqttc = { package = "rumqttc-v4-next", version = "=0.34.0", default-features = false }
 rumqttc5 = { package = "rumqttc-v5-next", version = "=0.34.0", default-features = false }
