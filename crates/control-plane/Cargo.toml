@@ -2,6 +2,8 @@
 name = "ha-rust-bridge"
 version = "0.1.0"
 edition = "2021"
+license = "MIT"
+publish = false
 description = "Read-only lab Docker Apps discovery (not a HAOS replacement)"
 
 [dependencies]

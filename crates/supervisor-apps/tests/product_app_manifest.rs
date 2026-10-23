@@ -47,6 +47,11 @@ fn runtime_image_binds_only_the_official_authenticated_supervisor_ingress() {
     let docker = fs::read_to_string(project().join("Dockerfile")).unwrap();
     assert!(docker.starts_with("# Local App container"));
     assert!(docker.contains("FROM scratch"));
+    assert!(docker.contains("COPY --chmod=0444 LICENSE /usr/share/licenses/rusty-home/LICENSE"));
+    let root_license =
+        fs::read_to_string(PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../LICENSE"))
+            .unwrap();
+    assert!(root_license.starts_with("MIT License"));
     assert!(docker.contains("USER 1000:1000"));
     assert!(docker.contains("\"--ingress\""));
     assert!(docker.contains("\"--supervisor-live\""));

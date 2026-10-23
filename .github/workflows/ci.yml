@@ -81,6 +81,8 @@ jobs:
         run: python3 scripts/test_rustsec_audit_workflow_contract.py
       - name: Check all Core laboratory OCI digests track latest pinned stable
         run: python3 scripts/test_ha_core_pins.py
+      - name: All eight first-party Rust crates explicitly declare MIT and are nonpublishable
+        run: python3 scripts/test_firstparty_license_manifests.py
       - name: Public fixtures and source privacy check
         run: python3 scripts/test_public_redaction.py
       - name: Verify public certification gate ledger
