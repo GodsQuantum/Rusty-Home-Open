@@ -94,6 +94,31 @@ function renderStore(){
    finally{detailButton.disabled=false;}
   });
   card.append(detailButton,detail);
+  const availabilityButton=node("button","Vérifier disponibilité");
+  availabilityButton.type="button";
+  const availability=node("p",undefined,"muted");availability.hidden=true;
+  availabilityButton.addEventListener("click",async()=>{
+   availability.hidden=false;availability.textContent="Vérification auprès du Supervisor…";
+   availabilityButton.disabled=true;
+   try{
+    const response=await fetch("api/store/apps/"+encodeURIComponent(app.slug)+"/availability",{cache:"no-store"});
+    if(!response.ok)throw Error("Supervisor unavailable");
+    const data=await response.json();
+    if(data.read_only!==true||!data.preflight||data.preflight.slug!==app.slug
+       ||data.preflight.read_only!==true||data.preflight.activation_authorized!==false)
+       throw Error("Untrusted availability");
+    const messages={
+     available:"Disponible selon Supervisor · installation non autorisée",
+     unavailable:"Indisponible sur ce système",
+     already_installed:"Déjà installée",
+     system_managed:"Gérée par Supervisor",
+     unknown:"Disponibilité non confirmée"
+    };
+    availability.textContent=messages[data.preflight.status]||"Disponibilité non vérifiable";
+   }catch(e){availability.textContent="Disponibilité non vérifiable ou accès Supervisor refusé.";}
+   finally{availabilityButton.disabled=false;}
+  });
+  card.append(availabilityButton,availability);
   select("#store-apps").append(card);
  }
 }
