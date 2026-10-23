@@ -116,21 +116,37 @@ pub fn reconcile(
 ) -> Observation {
     let status = match job {
         None => Outcome::NoEvidence,
-        Some(j) if j.id != w.job_id => Outcome::NoEvidence,
+        Some(j)
+            if j.id != w.job_id
+                || !j.read_only
+                || !j.progress.is_finite()
+                || !(0.0..=100.0).contains(&j.progress)
+                || (j.state == State::Succeeded && j.error_count != 0) =>
+        {
+            Outcome::NoEvidence
+        }
         Some(j) => match j.state {
             State::Queued => Outcome::Queued,
             State::Running => Outcome::Running,
             State::Failed => Outcome::Failed,
             State::Succeeded => match inventory {
                 None => Outcome::AwaitingState,
-                Some(snapshot) => {
-                    let entry = snapshot.apps.iter().find(|a| a.slug == w.slug);
-                    if matches_postcondition(w, entry) {
+                Some(snapshot) if snapshot.read_only => {
+                    // Parsed inventories reject case-insensitive duplicate slugs.
+                    // Preserve that invariant even for callers constructing a
+                    // RunningInventory directly instead of using the parser.
+                    let mut matches = snapshot
+                        .apps
+                        .iter()
+                        .filter(|a| a.slug.eq_ignore_ascii_case(&w.slug));
+                    let entry = matches.next().filter(|a| a.slug == w.slug);
+                    if matches.next().is_none() && matches_postcondition(w, entry) {
                         Outcome::Confirmed
                     } else {
                         Outcome::AwaitingState
                     }
                 }
+                Some(_) => Outcome::AwaitingState,
             },
         },
     };
