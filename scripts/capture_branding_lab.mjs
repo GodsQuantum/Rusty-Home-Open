@@ -290,8 +290,12 @@ try {
   await page.locator('#refresh').click();
   await page.waitForFunction(()=>document.querySelector('#session-status')?.textContent?.includes('droits administrateur absents'));
   if(!(await page.locator('#load-jobs').isDisabled())||
-     (await page.locator('#job-list button').count())!==0)
-   throw Error('Non-admin browser retained access to discovered jobs');
+     !(await page.locator('#job-id').isDisabled())||
+     !(await page.locator('#load-job').isDisabled())||
+     (await page.locator('#job-list button').count())!==0||
+     (await page.locator('#job-id').inputValue())!=='')
+   throw Error('Non-admin browser retained access to arbitrary job details');
+  if(jobDetailCalls!==1)throw Error('Revoked session must not poll arbitrary jobs');
   console.log('SUPERVISOR_JOBS_BROWSER_PASS: dynamic admin-only GET index, selection, redaction and revocation');
 
   console.log('SUPERVISOR_STORE_BROWSER_PASS: 125 arbitrary Apps, dynamic 17-repo filter, combined search, malformed repo denial');

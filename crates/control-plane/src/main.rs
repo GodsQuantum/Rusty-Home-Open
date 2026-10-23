@@ -327,7 +327,28 @@ fn public_job_summary(job: &hars_supervisor_apps::job_status::JobStatus) -> Opti
 
 /// Official Supervisor is the only data source; never use a local fixture,
 /// cached job, user-supplied endpoint or ambiguous V1/V2 source.
-fn live_job_response(adapters: &[Adapter], id: &str) -> (&'static str, String) {
+fn live_job_response(
+    adapters: &[Adapter],
+    id: &str,
+    mode: AccessMode,
+    has_verified_identity: bool,
+    is_admin: bool,
+) -> (&'static str, String) {
+    // A job UUID is not a bearer capability. Until durable user-bound
+    // operation receipts exist, only the current verified Supervisor
+    // administrator may inspect arbitrary jobs, including by direct URL.
+    if mode != AccessMode::SupervisorIngress {
+        return (
+            "404 Not Found",
+            json!({"read_only":true,"error":"Supervisor ingress required"}).to_string(),
+        );
+    }
+    if !has_verified_identity || !is_admin {
+        return (
+            "403 Forbidden",
+            json!({"read_only":true,"error":"Supervisor administrator required"}).to_string(),
+        );
+    }
     if hars_supervisor_apps::job_status::job_path(ApiVersion::V1, id).is_err() {
         return (
             "400 Bad Request",
@@ -1240,7 +1261,13 @@ fn handle(
         live_jobs_response(adapters, mode, session_identity_present, supervisor_admin)
     } else if let Some(id) = live_job_id(&line) {
         match id {
-            Ok(id) => live_job_response(adapters, id),
+            Ok(id) => live_job_response(
+                adapters,
+                id,
+                mode,
+                session_identity_present,
+                supervisor_admin,
+            ),
             Err(_) => (
                 "400 Bad Request",
                 json!({"error":"invalid Supervisor job id","read_only":true}).to_string(),
@@ -1545,6 +1572,23 @@ fn main() {
 #[cfg(test)]
 mod tests {
     #[test]
+    fn job_detail_requires_current_verified_supervisor_admin_before_network() {
+        let id = "0123456789abcdef0123456789abcdef";
+        let no_sources: Vec<Adapter> = vec![];
+        for (mode, identity, admin, expected) in [
+            (AccessMode::Loopback, false, false, "404 Not Found"),
+            (AccessMode::Loopback, true, true, "404 Not Found"),
+            (AccessMode::SupervisorIngress, false, true, "403 Forbidden"),
+            (AccessMode::SupervisorIngress, true, false, "403 Forbidden"),
+            (AccessMode::SupervisorIngress, true, true, "404 Not Found"),
+        ] {
+            let (status, body) = live_job_response(&no_sources, id, mode, identity, admin);
+            assert_eq!(status, expected);
+            assert!(!body.contains("token"));
+        }
+    }
+
+    #[test]
     fn job_discovery_requires_supervisor_admin_and_unique_live_source() {
         use super::*;
         let live = Adapter {
@@ -1639,7 +1683,7 @@ mod tests {
             "j.read_only!==true",
             "j.id!==id",
             "Number.isSafeInteger(j.error_count)",
-            "select(\"#load-job\").disabled=!supervisorAvailable",
+            "select(\"#load-job\").disabled=!(supervisorAvailable&&supervisorAdmin)",
         ] {
             assert!(
                 html.contains(expected),
@@ -1653,7 +1697,10 @@ mod tests {
     fn supervisor_job_progress_fails_closed_without_one_live_source() {
         let id = "0123456789abcdef0123456789abcdef";
         let empty: Vec<Adapter> = vec![];
-        assert_eq!(live_job_response(&empty, id).0, "404 Not Found");
+        assert_eq!(
+            live_job_response(&empty, id, AccessMode::SupervisorIngress, true, true).0,
+            "404 Not Found"
+        );
         let duplicated = vec![
             Adapter {
                 host: "a".into(),
@@ -1665,7 +1712,7 @@ mod tests {
             },
         ];
         assert_eq!(
-            live_job_response(&duplicated, id).0,
+            live_job_response(&duplicated, id, AccessMode::SupervisorIngress, true, true).0,
             "503 Service Unavailable"
         );
     }

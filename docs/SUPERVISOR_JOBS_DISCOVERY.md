@@ -52,3 +52,15 @@ exact App and action, user consent, official Supervisor submission response
 and job ID, with replay prevention and postcondition reconciliation. Keep
 all mutation paths disabled until end-to-end RBAC, backup and rollback are
 independently verified in disposable HAOS.
+
+
+## Follow-up: restrict individual job inspection (2026-10-23)
+
+Both the job index and direct `GET /api/jobs/{uuid}` now require the
+**current** verified Supervisor Ingress TCP peer, user identity and effective
+`system-admin` group. A UUID is not a bearer token or authorization.
+Loopback and non-admin clients cannot read arbitrary job progress; the UI
+clears the selected ID, cancels polling and disables tracking on identity
+refresh/revocation. The native backend independently rejects direct URL
+requests even if JavaScript controls are bypassed. Read-only only; Core
+revalidation, durable per-user receipts and mutations remain unavailable.
