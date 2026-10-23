@@ -46,7 +46,7 @@ jobs:
       - name: Install official HAOS QEMU upstream test dependencies
         run: |
           sudo apt-get update -qq
-          sudo apt-get install -y --no-install-recommends qemu-system-x86 ovmf xz-utils jq
+          sudo apt-get install -y --no-install-recommends qemu-system-x86 qemu-utils ovmf xz-utils jq
           python3 -m venv "$RUNNER_TEMP/haos-test-venv"
 
       - name: Build static native Rust Supervisor App client for HAOS guest

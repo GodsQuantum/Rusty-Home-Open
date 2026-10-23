@@ -169,7 +169,7 @@ def test_hars_real_supervisor_store(shell, shell_json):
     def _real_store_over_bounded_serial():
         # HAOS host contains jq but not gzip; never send >20 KiB raw JSON lines.
         # Keep full genuine Supervisor response in a disposable guest temp file.
-        path = "/tmp/hars-supervisor-real-store.json"
+        path = "/mnt/data/hars-supervisor-real-store.json"
         shell.run_check(
             "ha store info --no-progress --raw-json > " + path,
             timeout=120,
@@ -259,10 +259,11 @@ def test_hars_rust_supervisor_direct(shell):
     shell.run_check(
         "curl --fail --silent --show-error --max-time 30 "
         "http://10.0.2.2:18673/guest_supervisor_live "
-        "-o /tmp/hars-supervisor-live "
-        "&& chmod 0700 /tmp/hars-supervisor-live"
+        "-o /mnt/data/hars-supervisor-live "
+        "&& chmod 0700 /mnt/data/hars-supervisor-live"
     )
-    shell.run_check("docker cp /tmp/hars-supervisor-live hassio_cli:/tmp/hars-supervisor-live")
+    shell.run_check("docker cp /mnt/data/hars-supervisor-live hassio_cli:/tmp/hars-supervisor-live")
+    shell.run_check("rm -f /mnt/data/hars-supervisor-live", timeout=30)
     # Guard that the guest container itself has a legitimate Supervisor token,
     # without printing any secret to shell logs or CI.
     shell.run_check("docker exec hassio_cli sh -c 'test -n \"$SUPERVISOR_TOKEN\"'")
@@ -293,7 +294,7 @@ def test_hars_manager_role_app(shell, shell_json):
     # Diagnose ENOSPC before any further local App installations/backups.
     # Free space comes ONLY from this disposable HAOS QEMU guest.
     for mount, minimum_kib in (("/mnt/data", 8 * 1024 * 1024),
-                               ("/tmp", 64 * 1024)):
+                               ("/tmp", 2 * 1024)):
         rows = shell.run_check("df -Pk " + mount, timeout=30)
         fields = rows[-1].split()
         assert len(fields) >= 5 and fields[3].isdigit(), (
