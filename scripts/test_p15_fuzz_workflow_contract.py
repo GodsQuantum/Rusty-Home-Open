@@ -47,6 +47,26 @@ class FuzzIsolation(unittest.TestCase):
         gitignore=(ROOT/"fuzz/.gitignore").read_text()
         self.assertIn("/corpus/ingress_http/*",gitignore)
 
+    def test_genuine_untrusted_supervisor_store_parser_fuzzed_and_fail_closed(self):
+        cargo=tomllib.loads((ROOT/"fuzz/Cargo.toml").read_text())
+        self.assertTrue(any(x["name"]=="supervisor_store" for x in cargo["bin"]))
+        target=(ROOT/"fuzz/fuzz_targets/supervisor_store.rs").read_text()
+        self.assertIn("official_store::parse_store_response",target)
+        self.assertIn("assert!(!catalog.activation_authorized)",target)
+        self.assertNotIn("SUPERVISOR_TOKEN",target)
+        self.assertNotIn("TcpStream",target)
+        ci=(ROOT/".github/workflows/fuzz.yml").read_text()
+        self.assertIn("fuzz run supervisor_store",ci)
+        self.assertIn("crates/supervisor-apps/src/official_store.rs",ci)
+        seeds=list((ROOT/"fuzz/corpus/supervisor_store").glob("*.bin"))
+        self.assertEqual(len(seeds),6)
+        for file in seeds:
+            self.assertLess(file.stat().st_size,4096)
+            self.assertNotIn(b"SUPERVISOR_TOKEN",file.read_bytes())
+            self.assertNotIn(b"real-person",file.read_bytes())
+        self.assertIn("/corpus/supervisor_store/*",(ROOT/"fuzz/.gitignore").read_text())
+        self.assertIn("fuzz/corpus/supervisor_store/*.bin binary",(ROOT/".gitattributes").read_text())
+
     def test_release_still_blocked_and_no_real_personal_ids_in_corpus(self):
         data=json.loads((ROOT/"config/release-gates.json").read_text())
         item=next(g for g in data["required_gates"] if g["id"]=="security_stress_fuzz")
