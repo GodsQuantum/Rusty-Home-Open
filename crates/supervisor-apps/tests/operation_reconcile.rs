@@ -186,3 +186,36 @@ fn invalid_requests_never_claim_completion() {
         Err(WatchError::MissingPriorVersion)
     );
 }
+
+#[test]
+fn untrusted_job_or_inventory_never_confirms_completion() {
+    let w = Watch::new("future_vendor", JOB, Operation::Start, None).unwrap();
+    let clean = job(State::Succeeded, JOB, 100.0);
+    let ready = inventory(vec![app("future_vendor", "started", "1", false)]);
+    let mut untrusted = clean.clone();
+    untrusted.read_only = false;
+    assert_eq!(
+        reconcile(&w, Some(&untrusted), Some(&ready)).outcome,
+        Outcome::NoEvidence
+    );
+    let mut malformed = clean.clone();
+    malformed.progress = f64::NAN;
+    assert_eq!(
+        reconcile(&w, Some(&malformed), Some(&ready)).outcome,
+        Outcome::NoEvidence
+    );
+    let mut unsafe_inventory = ready.clone();
+    unsafe_inventory.read_only = false;
+    assert_eq!(
+        reconcile(&w, Some(&clean), Some(&unsafe_inventory)).outcome,
+        Outcome::AwaitingState
+    );
+    let mut ambiguous = ready.clone();
+    ambiguous
+        .apps
+        .push(app("FUTURE_VENDOR", "started", "2", false));
+    assert_eq!(
+        reconcile(&w, Some(&clean), Some(&ambiguous)).outcome,
+        Outcome::AwaitingState
+    );
+}
