@@ -25,6 +25,7 @@ pub mod app_stats;
 pub mod catalog_filter;
 pub mod official_store;
 pub mod official_transport;
+pub mod operation_preflight;
 pub mod store_availability;
 use serde::de::{self, MapAccess, SeqAccess, Visitor};
 use serde::{Deserialize, Deserializer, Serialize};
