@@ -32,6 +32,14 @@ impl Actor {
             role,
         })
     }
+    /// Read-only subject for binding a durable fixture session to Core's
+    /// independently checked account. Never a role/authority by itself.
+    pub fn subject(&self) -> &str {
+        &self.subject
+    }
+    pub fn role(&self) -> Role {
+        self.role
+    }
 }
 
 fn valid_subject(value: &str) -> bool {
