@@ -37,7 +37,7 @@ footer{border-top:1px solid #313f50;margin-top:2.5rem;padding-top:1rem;font-size
 </header>
 <section aria-labelledby="readiness-title"><div class="sectionhead"><h2 id="readiness-title">Certification et migration</h2></div><p id="readiness" aria-live="polite">Vérification des critères de production…</p><p id="core-ipc" aria-live="polite">Pont Python Home Assistant : vérification…</p></section>
 <section><div class="sectionhead"><h2>Sources</h2><span id="status" aria-live="polite">Chargement…</span></div><p id="proof">Authenticité des données : vérification en cours</p><div id="sources" aria-live="polite"></div></section>
-<section><div class="sectionhead"><h2>Applications <span id="count">—</span></h2><label for="filter">Afficher <select id="filter"><option value="recognized" selected>Apps reconnues</option><option value="all">Tous les conteneurs</option></select></label></div><div class="cards" id="apps" aria-live="polite"></div></section>
+<section><div class="sectionhead"><h2>Applications <span id="count">—</span></h2><label for="filter">Afficher <select id="filter"><option value="all" selected>Toutes les applications</option><option value="supervisor">Apps Supervisor</option><option value="docker">Conteneurs Docker</option></select></label></div><div class="cards" id="apps" aria-live="polite"></div></section>
 <footer>Prototype sans commandes de pilotage. Les Apps HAOS proviennent d'un instantané hors ligne, non d'une connexion directe au Supervisor. HACS et la migration complète ne sont pas encore disponibles.</footer>
 <script>
 const select=q=>document.querySelector(q);
@@ -70,7 +70,7 @@ async function load(){
   select("#proof").textContent=att.status==="verified"
     ?"Inventaire signé par sample lab host · valide jusqu’au "+new Date(att.expires_at*1000).toLocaleString("fr-FR")
     :"Inventaire non signé : mode laboratoire";
-  const visible=apps.filter(a=>select("#filter").value==="all"||a.backend==="supervisor"||a.app_type!=="generic_container");
+  const visible=apps.filter(a=>select("#filter").value==="all"||a.backend===select("#filter").value);
   select("#count").textContent=visible.length===apps.length?String(apps.length):visible.length+" / "+apps.length;
   select("#status").textContent=data.degraded?"Certaines sources sont indisponibles":"Inventaire disponible";
   for(const src of sources){

@@ -50,3 +50,16 @@ for invalid in [
     assert not result.stdout
 assert call("--text","FUTURE PRODUCT 1316","--limit","5").returncode==0
 print("GENERIC_SUPERVISOR_CATALOG_CLI_PASS: 1317 arbitrary Apps / 13 providers, exact paging, search and filtering")
+
+
+# Product regression: never hide unknown Apps or classify them by a personal
+# collection of known brand names.
+html=(ROOT/"web/index.html").read_text()
+server=(ROOT/"crates/control-plane/src/main.rs").read_text()
+assert '<option value="all" selected>' in html
+assert 'a.backend===select("#filter").value' in html
+assert 'Apps reconnues' not in html
+assert 'fn app_kind(' not in server
+assert '"app_type": "generic_container"' in server
+assert '"app_type": "supervisor_app"' in server
+print("UNIVERSAL_CONTROL_PLANE_UI_PASS: all unknown providers visible by default")

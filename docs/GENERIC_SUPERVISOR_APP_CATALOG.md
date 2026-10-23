@@ -52,3 +52,11 @@ not post-development certification tasks.
 
 See `crates/supervisor-apps/src/catalog_filter.rs` and
 `scripts/test_generic_supervisor_catalog_cli.py`.
+
+## Display policy
+
+The experimental web dashboard now shows **all discovered Docker and
+Supervisor entries by default**, with source filters. It no longer guesses
+App kinds from a fixed list of product/brand names, or hides unknown
+containers under a "recognized" filter. The backend reports generic
+platform-specific classifications, not per-user known-App categories.
