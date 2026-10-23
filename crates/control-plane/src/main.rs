@@ -1,6 +1,9 @@
 //! Rusty Home P3b prototype: read-only, multi-source application inventory.
 //! No Docker socket exposed, no write paths, no HAOS device control or automation.
 mod attestation;
+use hars_supervisor_apps::installed_inventory::RunningInventory;
+use hars_supervisor_apps::official_store::ApiVersion;
+use hars_supervisor_apps::official_transport::AppSupervisorClient;
 use serde_json::{json, Value};
 use std::env;
 use std::fs;
@@ -18,6 +21,7 @@ enum AdapterKind {
     DockerCli,
     DockerFixture(String),
     SupervisorSnapshot(String),
+    SupervisorLive(ApiVersion),
 }
 
 #[derive(Clone, Debug)]
@@ -41,6 +45,7 @@ impl HostAdapter for Adapter {
         match self.kind {
             AdapterKind::DockerCli | AdapterKind::DockerFixture(_) => "docker",
             AdapterKind::SupervisorSnapshot(_) => "supervisor-snapshot",
+            AdapterKind::SupervisorLive(_) => "supervisor-live",
         }
     }
 
@@ -66,6 +71,15 @@ impl HostAdapter for Adapter {
                 let body =
                     fs::read_to_string(path).map_err(|_| "Supervisor snapshot unavailable")?;
                 supervisor_rows(&body, &self.host)
+            }
+            AdapterKind::SupervisorLive(version) => {
+                // Fixed internal Supervisor service; never caller-chosen host.
+                let client = AppSupervisorClient::from_environment()
+                    .map_err(|_| "Supervisor live authentication unavailable")?;
+                let installed = client
+                    .fetch_installed(*version)
+                    .map_err(|_| "Supervisor installed-App API unavailable")?;
+                Ok(supervisor_live_rows(&installed, &self.host))
             }
         }
     }
@@ -152,6 +166,31 @@ fn supervisor_rows(body: &str, host: &str) -> Result<Vec<Value>, &'static str> {
         .collect()
 }
 
+/// Typed official Supervisor inventory -> unprivileged frontend presentation.
+/// Never expose credentials, options, network addresses or write capabilities.
+fn supervisor_live_rows(inventory: &RunningInventory, host: &str) -> Vec<Value> {
+    inventory
+        .apps
+        .iter()
+        .map(|app| {
+            json!({
+                "id": format!("{host}:supervisor:{}", app.slug),
+                "host": host,
+                "display_name": bounded(&app.name),
+                "image": Value::Null,
+                "state": app.state.as_deref().unwrap_or("unknown"),
+                "version": app.version,
+                "update_available": app.update_available,
+                "app_type": "supervisor_app",
+                "classification": "supervisor",
+                "backend": "supervisor",
+                "managed_by_bridge": false,
+                "capabilities": ["view_status"]
+            })
+        })
+        .collect()
+}
+
 fn manifest_sources(body: &str) -> Result<Vec<Adapter>, String> {
     let doc: Value = serde_json::from_str(body).map_err(|_| "invalid manifest JSON")?;
     let list = doc
@@ -198,7 +237,7 @@ fn aggregate(adapters: &[Adapter]) -> Value {
                 apps.append(&mut rows);
                 sources.push(json!({
                     "host": a.host(), "kind": a.kind(), "status": "ok", "count":count,
-                    "live":matches!(a.kind, AdapterKind::DockerCli),
+                    "live":matches!(a.kind, AdapterKind::DockerCli | AdapterKind::SupervisorLive(_)),
                 }));
             }
             Err(err) => sources.push(json!({
@@ -557,6 +596,8 @@ fn run() -> Result<(), String> {
                 None
             }
             "--docker" => Some(AdapterKind::DockerCli),
+            "--supervisor-live" => Some(AdapterKind::SupervisorLive(ApiVersion::V1)),
+            "--supervisor-live-v2" => Some(AdapterKind::SupervisorLive(ApiVersion::V2)),
             "--manifest" if manifest_file.is_none() => {
                 let path = args.next().ok_or("--manifest requires a path")?;
                 manifest_file = Some(path.clone());
@@ -609,7 +650,7 @@ fn run() -> Result<(), String> {
         }
     }
     if adapters.is_empty() {
-        return Err("select at least one of --docker, --fixture FILE, --haos-snapshot FILE".into());
+        return Err("select at least one of --docker, --fixture FILE, --haos-snapshot FILE, --supervisor-live".into());
     }
     let core = match (python_socket, python_capability) {
         (Some(socket), Some(capability)) => Some(CoreSidecar {
@@ -625,7 +666,9 @@ fn run() -> Result<(), String> {
             for a in &adapters {
                 let p = match &a.kind {
                     AdapterKind::DockerFixture(p) | AdapterKind::SupervisorSnapshot(p) => p.clone(),
-                    AdapterKind::DockerCli => return Err("signed mode needs snapshots".into()),
+                    AdapterKind::DockerCli | AdapterKind::SupervisorLive(_) => {
+                        return Err("signed mode needs snapshots".into())
+                    }
                 };
                 paths.push(p);
             }
@@ -836,6 +879,67 @@ mod tests {
         assert_eq!(rows.len(), 1);
         assert!(!rows[0].to_string().contains("NEVER_EXPOSE"));
         assert_eq!(rows[0]["app_type"], "supervisor_app");
+    }
+
+    #[test]
+    fn genuinely_typed_supervisor_runtime_adapter_has_no_app_name_allowlist_or_secrets() {
+        use hars_supervisor_apps::installed_inventory::parse_running_inventory;
+        let sample: Vec<Value> = (0..1403)
+            .rev()
+            .map(|i| {
+                json!({
+                    "slug":format!("new_vendor_app_{i:05}"),
+                    "name":format!("Unknown Future App {i}"),
+                    "repository":format!("third_party_{}",i%29),
+                    "version":"1.0","state":"started","update_available":i%3==0,
+                    "options":{"password":"HIDE_ME"},"devices":["/dev/not-disclosed"]
+                })
+            })
+            .collect();
+        let raw = json!({"result":"ok","data":{"addons":sample}}).to_string();
+        let typed = parse_running_inventory(raw.as_bytes(), ApiVersion::V1).unwrap();
+        let rows = supervisor_live_rows(&typed, "dynamic-host");
+        assert_eq!(rows.len(), 1403);
+        assert_eq!(
+            rows[0]["id"],
+            "dynamic-host:supervisor:new_vendor_app_00000"
+        );
+        assert_eq!(rows[1402]["backend"], "supervisor");
+        assert_eq!(rows[1402]["managed_by_bridge"], false);
+        assert!(rows
+            .iter()
+            .all(|row| row["capabilities"] == json!(["view_status"])));
+        let output = serde_json::to_string(&rows).unwrap();
+        for private in [
+            "HIDE_ME",
+            "/dev/not-disclosed",
+            "options",
+            "devices",
+            "password",
+        ] {
+            assert!(!output.contains(private));
+        }
+    }
+
+    #[test]
+    fn supervisor_live_never_claims_success_without_official_api_access() {
+        // No source-side permitted URL or credentials may be supplied through
+        // a snapshot manifest; only the official in-App token is ever used.
+        let adapter = Adapter {
+            host: "future-vendor".into(),
+            kind: AdapterKind::SupervisorLive(ApiVersion::V1),
+        };
+        assert_eq!(adapter.kind(), "supervisor-live");
+        assert!(matches!(adapter.kind, AdapterKind::SupervisorLive(_)));
+        let source = supervisor_live_rows(
+            &hars_supervisor_apps::installed_inventory::RunningInventory {
+                api_version: ApiVersion::V1,
+                apps: vec![],
+                read_only: true,
+            },
+            "test-host",
+        );
+        assert!(source.is_empty());
     }
 
     #[test]

@@ -10,3 +10,4 @@ hex = "0.4"
 serde_json = "1.0"
 sha2 = "0.10"
 hars-python-bridge = { path = "../python-bridge" }
+hars-supervisor-apps = { path = "../supervisor-apps" }
