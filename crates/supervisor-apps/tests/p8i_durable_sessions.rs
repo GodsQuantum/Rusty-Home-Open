@@ -242,3 +242,104 @@ fn rejects_unprotected_and_symlink_database_paths() {
     std::os::unix::fs::symlink(&file, &link).unwrap();
     assert!(DurableFixtureSessions::open(&link).is_err());
 }
+
+fn count_entries(path: &std::path::Path, name: &'static str) -> u64 {
+    use redb::{ReadableDatabase as _, ReadableTableMetadata as _};
+    let database = redb::Database::open(path).unwrap();
+    let tx = database.begin_read().unwrap();
+    let table = tx
+        .open_table(redb::TableDefinition::<&str, &str>::new(name))
+        .unwrap();
+    table.len().unwrap()
+}
+
+#[test]
+fn durable_approvals_are_bounded_pruned_and_atomically_revoked() {
+    let dir = tempfile::tempdir().unwrap();
+    fs::set_permissions(dir.path(), fs::Permissions::from_mode(0o700)).unwrap();
+    let path = dir.path().join("sessions.redb");
+    let app = AppSlug::parse("future_vendor_7241").unwrap();
+    let request = prepare(&app, Operation::Install).unwrap();
+    let mut policy = Policy::default();
+    policy.grant("session_operator", &app, &[Action::Install]);
+    let mut db = DurableFixtureSessions::open(&path).unwrap();
+    let session = db
+        .issue_fixture(
+            Actor::new("session_operator", Role::Administrator).unwrap(),
+            100,
+            600,
+            600,
+        )
+        .unwrap();
+
+    // A single valid session cannot persist more than 32 outstanding requests.
+    let mut old_approval = None;
+    for i in 0..32 {
+        let token = db
+            .issue_confirmation(&policy, session.as_str(), &request, 101)
+            .unwrap()
+            .unwrap();
+        if i == 0 {
+            old_approval = Some(token);
+        }
+    }
+    let denied = db.issue_confirmation(&policy, session.as_str(), &request, 101);
+    assert!(
+        denied.is_err(),
+        "durable per-session approval limit not enforced"
+    );
+    drop(db);
+    assert_eq!(count_entries(&path, "lab_approvals_v1"), 32);
+
+    let mut db = DurableFixtureSessions::open(&path).unwrap();
+    // At the exact 60-second boundary every old confirmation is expired.
+    let new_approval = db
+        .issue_confirmation(&policy, session.as_str(), &request, 161)
+        .unwrap()
+        .unwrap();
+    drop(db);
+    assert_eq!(count_entries(&path, "lab_approvals_v1"), 1);
+
+    let mut db = DurableFixtureSessions::open(&path).unwrap();
+    let mut journal = FileAuditJournal::open(&dir.path().join("audit.jsonl")).unwrap();
+    assert!(db.revoke(session.as_str()).unwrap());
+    drop(db);
+    assert_eq!(count_entries(&path, "lab_sessions_v1"), 0);
+    assert_eq!(count_entries(&path, "lab_approvals_v1"), 0);
+
+    let mut db = DurableFixtureSessions::open(&path).unwrap();
+    for approval in [old_approval.unwrap(), new_approval] {
+        assert!(
+            db.grant_recorded_session(
+                &policy,
+                session.as_str(),
+                &request,
+                Some(approval.as_str()),
+                &mut journal,
+                162
+            )
+            .unwrap()
+            .is_none()
+        );
+    }
+}
+
+#[test]
+fn durable_sessions_reject_capacity_then_reuse_expired_slots() {
+    let dir = tempfile::tempdir().unwrap();
+    fs::set_permissions(dir.path(), fs::Permissions::from_mode(0o700)).unwrap();
+    let path = dir.path().join("sessions.redb");
+    let user = Actor::new("fixture_limit", Role::Administrator).unwrap();
+    let mut db = DurableFixtureSessions::open(&path).unwrap();
+    for _ in 0..1024 {
+        db.issue_fixture(user.clone(), 100, 200, 200).unwrap();
+    }
+    assert!(db.issue_fixture(user.clone(), 100, 200, 200).is_err());
+    drop(db);
+    assert_eq!(count_entries(&path, "lab_sessions_v1"), 1024);
+    let mut db = DurableFixtureSessions::open(&path).unwrap();
+    // The 1024 sessions have now expired, including across restart.
+    assert!(db.issue_fixture(user, 300, 200, 200).is_ok());
+    drop(db);
+    assert_eq!(count_entries(&path, "lab_sessions_v1"), 1);
+}
