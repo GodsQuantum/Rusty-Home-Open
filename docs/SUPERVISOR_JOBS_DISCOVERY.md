@@ -1,0 +1,66 @@
+# Official Supervisor job discovery — read-only product increment
+
+This increment exposes the **official** Supervisor GET /jobs/info (and
+experimental V2 /v2/jobs/info) through a typed Rust transport and
+GET /api/jobs. The dashboard can discover recent job identifiers and
+select one for the existing GET /api/jobs/<id> progress tracker, without
+requiring a user to paste an opaque UUID.
+
+## Access and safety
+
+- Discovery requires a verified TCP connection from the official Supervisor
+  Ingress proxy **and** its effective system-admin group; local loopback,
+  non-admin and anonymous clients are denied. This is a read-only access
+  restriction, **not** production-grade RBAC or permission to submit actions.
+- Only one live Supervisor adapter is accepted. Signed snapshots, Docker
+  fixtures, ambiguous sources and arbitrary remote URLs cannot substitute
+  for the official internal Supervisor service.
+- The Supervisor App token stays server-side; the API never returns job names,
+  references, stages, error messages, child metadata, extra, conditions or
+  private configuration. Only UUID, state, progress and error count are
+  exposed. The full upstream list is validated, and the newest 24 jobs are
+  shown; more than 512 jobs or 1 MiB fails closed.
+- No job identifier proves who initiated the operation. This index is **not**
+  a durable operation receipt, authorization, completion proof or App
+  ownership proof. Mutation routes remain absent and all release gates
+  remain unchanged.
+
+## Tests
+
+- TDD: jobs_discovery.rs initially failed with E0432/E0599 for missing
+  parser/transport, then passed after implementation.
+- Real loopback TCP GET checks official route and Bearer authentication;
+  malicious and duplicate job IDs, duplicate JSON keys, unsafe stages,
+  oversized data and private metadata are rejected/redacted.
+- Control-plane unit tests deny local, anonymous, non-admin and ambiguous
+  sources before any network request.
+- Independent HAOS 18.3 KVM GitHub Actions must run the compiled Rust guest
+  client against the genuine Supervisor /jobs/info, asserting a redacted
+  response; this is not substituted with a local mock.
+- The real dashboard Playwright contract tests admin-only discovery, job selection,
+  secret-field non-rendering and loss of access after a non-admin session refresh.
+  These are browser fixtures, not real production authentication.
+- Workspace, Clippy, frontend syntax and independent PR CI must be recorded
+  with the final SHA; no CI success is implied by this document.
+
+Official reference: https://contributors.home-assistant.io/apps/supervisor-api/supervisor/#jobs
+
+## Next product milestone
+
+Introduce a durable, tamper-evident correlation of verified Core identity,
+exact App and action, user consent, official Supervisor submission response
+and job ID, with replay prevention and postcondition reconciliation. Keep
+all mutation paths disabled until end-to-end RBAC, backup and rollback are
+independently verified in disposable HAOS.
+
+
+## Follow-up: restrict individual job inspection (2026-10-23)
+
+Both the job index and direct `GET /api/jobs/{uuid}` now require the
+**current** verified Supervisor Ingress TCP peer, user identity and effective
+`system-admin` group. A UUID is not a bearer token or authorization.
+Loopback and non-admin clients cannot read arbitrary job progress; the UI
+clears the selected ID, cancels polling and disables tracking on identity
+refresh/revocation. The native backend independently rejects direct URL
+requests even if JavaScript controls are bypassed. Read-only only; Core
+revalidation, durable per-user receipts and mutations remain unavailable.

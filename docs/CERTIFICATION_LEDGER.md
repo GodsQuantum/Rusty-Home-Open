@@ -6,6 +6,17 @@
 partial laboratory evidence; none is an independently qualified production gate.
 The nine sample Apps published here are all fictional synthetic fixtures.
 
+## Product development evidence — not a production gate
+
+- Supervisor job discovery (work in progress, independent PR CI pending):
+  native Rust GET /jobs/info V1/V2, admin-only authenticated Ingress
+  GET /api/jobs, redacted 24-job UI and TCP/adversarial tests. TDD failed
+  with E0432/E0599 before implementation; 5 new Rust integration tests,
+  full Rust workspace, strict Clippy, all-features Supervisor tests and
+  frontend syntax passed locally in isolated LXC700 DEV. See
+  [scoped implementation evidence](SUPERVISOR_JOBS_DISCOVERY.md).
+  No operation execution, persistent receipt or production authorization.
+
 ## Verified, narrowly scoped laboratory results
 
 | Area | Real verified result | GitHub Actions evidence |
@@ -168,7 +179,9 @@ The only machine authority for production release gates is
 ## Product development evidence: dynamic Supervisor Store repositories (2026-10-23)
 
 - Feature commit 371c0a65d1005274b47c9704084791b0bb615c3c, PR #51.
-  Independent GitHub Actions: pending on final PR SHA, not certified.
+  Independent GitHub Actions: nine checks passed on head
+  af198eb236adf0202ada25d594913dd9a5ec6d48; PR #51 merged as
+  32804326847cd8f9cf375aa42a2bd7060aac49b2.
 - Real UI increment on a feature branch: a repository dropdown derived from
   the official Supervisor Store response, exact vendor-neutral filtering,
   combined search/paging and fail-closed invalid metadata handling.
@@ -177,6 +190,21 @@ The only machine authority for production release gates is
   fictional Apps, 23 repositories and malicious/duplicate metadata.
 - Independent Playwright browser scenario is included in
   scripts/capture_branding_lab.mjs; **not yet independently certified**
-  until the exact PR SHA CI reports success.
+  on the exact PR SHA (successful screenshot workflow).
 - No App lifecycle mutation, production identity or gate signoff. All 15
+  production gates remain blocked/lab_partial.
+
+
+## Product security increment: restrict direct Supervisor job detail (PR #56)
+
+- Direct `GET /api/jobs/{uuid}` now has the same **current** verified
+  Supervisor Ingress administrator requirement as job discovery; a known UUID
+  cannot be used from loopback or by a non-admin. Browser job selection and
+  polling are revoked on session refresh, loss or role downgrade.
+- TDD RED: Rust E0061 (new five-argument access test against old unguarded
+  handler); GREEN: dedicated adversarial test, workspace tests, strict Clippy,
+  rustfmt, read-only HTTP smoke, JS syntax and synthetic repository tests
+  passed in isolated LXC700 DEV.
+- Independent CI on the exact new PR head remains to be checked before merge.
+  This does **not** verify independent Core RBAC or enable App writes. All
   production gates remain blocked/lab_partial.

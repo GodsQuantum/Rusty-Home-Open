@@ -72,6 +72,10 @@ Next: Core-verified Ingress user RBAC, durable job-to-App/user/action receipts,
 then guarded mutations and restart-safe reconciliation. Job UUID possession
 does not authorize any lifecycle action.
 
+## Official Supervisor job discovery
+
+The product can enumerate and track recent official Supervisor jobs via a redacted admin-only Ingress route, without a fixed App inventory. [Scope and remaining limits](SUPERVISOR_JOBS_DISCOVERY.md). Job IDs do not constitute durable operation receipts or authorize lifecycle changes.
+
 ## Official App release notes (read-only)
 
 The native Rust dashboard now offers on-demand official Supervisor changelogs
@@ -80,3 +84,14 @@ inventory and bounds plain-text responses; the UI never executes Markdown or
 HTML. [Scope and limits](LIVE_SUPERVISOR_APP_CHANGELOG.md).
 Next: trusted Core-verified RBAC, durable operation receipts and guarded
 lifecycle operations. No production release gate is certified.
+
+
+## Supervisor job detail access hardening
+
+Both official job discovery and individual job status now require a verified
+Ingress administrator; job UUID possession alone is insufficient. The UI
+cancels pending job polls and clears the selected ID when identity is
+rechecked or revoked. Next implementation: independently verify current
+Home Assistant Core user status, then build durable user/App/action/job
+receipts and idempotent Supervisor write operations behind explicit consent.
+No production write permission or release gate is granted.
