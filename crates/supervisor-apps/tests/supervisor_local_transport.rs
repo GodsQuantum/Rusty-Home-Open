@@ -264,3 +264,30 @@ fn installed_apps_http_outage_is_not_an_empty_catalog() {
     ));
     worker.join().unwrap();
 }
+
+#[test]
+fn supervisor_jobs_readonly_v1_v2_authorized_http() {
+    use hars_supervisor_apps::job_status::State;
+    let id = "abcdef0123456789abcdef0123456789";
+    let reply = serde_json::json!({"result":"ok","data":{
+        "uuid":id,"progress":100.0,"done":true,"stage":null,
+        "errors":[],"child_jobs":[],"extra":{"password":"SECRET"}
+    }});
+    for (version, path) in [
+        (ApiVersion::V1, format!("/jobs/{id}")),
+        (ApiVersion::V2, format!("/v2/jobs/{id}")),
+    ] {
+        let (addr, worker) = serve(ok(&reply.to_string()));
+        let result = client(addr).fetch_job(version, id).unwrap();
+        assert_eq!(result.state, State::Succeeded);
+        assert!(!serde_json::to_string(&result).unwrap().contains("SECRET"));
+        let request = worker.join().unwrap();
+        assert!(request.starts_with(&format!("GET {path} HTTP/1.1\r\n")));
+        assert!(request.contains("Authorization: Bearer fixture_value_123"));
+    }
+    let local = client("127.0.0.1:1".parse().unwrap());
+    assert_eq!(
+        local.fetch_job(ApiVersion::V1, "../../bad"),
+        Err(TransportError::InvalidJob)
+    );
+}

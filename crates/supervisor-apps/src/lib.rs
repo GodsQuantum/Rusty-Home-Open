@@ -701,3 +701,5 @@ mod tests {
 }
 
 pub mod installed_inventory;
+
+pub mod job_status;

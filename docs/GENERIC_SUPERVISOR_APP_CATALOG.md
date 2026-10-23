@@ -114,3 +114,17 @@ without serializing options, network addresses or credentials.
 version and update-availability changes between complete snapshots.
 An offline/unresponsive Supervisor returns an **error**, never an invented
 empty inventory. Work on generic operation execution and job tracking remains.
+
+## Read-only Supervisor lifecycle job progress
+
+The generic Supervisor clients now inspect any Job UUID through the official
+GET /jobs/{uuid} and GET /v2/jobs/{uuid} endpoints. Typed progress tracking
+distinguishes queued, active, succeeded and failed operations, including
+errors from child jobs. A displayed progress of 100% alone never means success;
+Supervisor must report done=true with no recorded errors. Confidential error
+messages, host references and raw extra fields are not copied into the UI
+model. IDs are validated before any HTTP request is made.
+
+This is a functioning backend component for future install/start/stop/update
+workflows. Operator authorization, action submission, job persistence,
+reconnection and rollback remain unfinished product features.
