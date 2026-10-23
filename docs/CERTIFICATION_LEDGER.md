@@ -23,7 +23,8 @@ authorizes a hardware radio handoff or real migration.
 
 ## Product development evidence (NOT production certification)
 
-- **2026-10-23, read-only Supervisor Job progress (product PR pending):**
+- **2026-10-23, read-only Supervisor Job progress ([PR #45](https://github.com/GodsQuantum/Rusty-Home-Open/pull/45), independent CI pending):**
+  Code commit `99f524b0ffc1285d9a631f08bef5a45ad9f09cbc`.
   native Rust route and French dashboard poll official V1/V2 job endpoints
   by strictly validated UUID; output contains only state, progress, ID and
   error count, never raw stage, error messages or child jobs.

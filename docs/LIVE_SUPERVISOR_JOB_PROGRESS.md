@@ -33,5 +33,5 @@ All 15 release gates remain noncertified.
    arbitrary browser-supplied job UUID. Then add guarded lifecycle writes
    and disposable-HAOS end-to-end failure/restart tests.
 
-Evidence: see the PR's exact SHA, Rust workspace and GitHub Actions checks.
+Evidence: [PR #45](https://github.com/GodsQuantum/Rusty-Home-Open/pull/45), initial code commit `99f524b0ffc1285d9a631f08bef5a45ad9f09cbc`; independent CI on the final PR head remains mandatory.
 Never change `config/release-gates.json` based on this lab milestone.
