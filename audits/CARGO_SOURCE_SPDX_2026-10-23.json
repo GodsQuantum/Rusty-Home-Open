@@ -1424,7 +1424,7 @@
       "downloadLocation": "NOASSERTION",
       "filesAnalyzed": false,
       "licenseConcluded": "NOASSERTION",
-      "licenseDeclared": "NOASSERTION",
+      "licenseDeclared": "MIT",
       "copyrightText": "NOASSERTION",
       "supplier": "NOASSERTION",
       "sourceInfo": "Cargo.lock all-target source dependency; not proven included in a release binary",
@@ -1434,8 +1434,7 @@
           "referenceType": "purl",
           "referenceLocator": "pkg:cargo/ha-rust-bridge@0.1.0"
         }
-      ],
-      "licenseComments": "Original Cargo declaration requires review: MISSING"
+      ]
     },
     {
       "SPDXID": "SPDXRef-Package-4959e6b63018492acd316876",

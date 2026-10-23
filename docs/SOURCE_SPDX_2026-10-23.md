@@ -10,8 +10,10 @@ Artifact: [SPDX 2.3 JSON](../audits/CARGO_SOURCE_SPDX_2026-10-23.json).
 Every package has a stable SPDX identifier, purl, name, exact version,
 source archive SHA-256 when supplied in Cargo.lock, and the declared
 SPDX-compatible licensing expression if available. Invalid or legacy
-license expressions and absent workspace license declarations are represented
-as **NOASSERTION**, not silently replaced by a more permissive license.
+license expressions are represented as **NOASSERTION**, not silently
+replaced by a more permissive license. All eight first-party workspace crates
+now explicitly declare MIT, including the native ha-rust-bridge package.
+Six legacy third-party slash license declarations remain unresolved.
 
 Git checkout paths and host file system paths are absent. Download URLs are
 recorded only for registry packages. This artifact is NOT an inventory of
