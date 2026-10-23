@@ -45,6 +45,7 @@ pub enum TransportError {
     InvalidAppSlug,
     InvalidAppInfo,
     InvalidRuntimeInventory,
+    InvalidJob,
     #[cfg(feature = "managed-apps-preview")]
     ManagedPreviewDisabled,
     #[cfg(feature = "lab-app-actions")]
@@ -73,6 +74,18 @@ impl LocalSupervisorClient {
             return Err(TransportError::UnsupportedHost);
         }
         Ok(Self { target, token })
+    }
+
+    /// Read one official Supervisor job with validated ID and no mutations.
+    pub fn fetch_job(
+        &self,
+        version: ApiVersion,
+        id: &str,
+    ) -> Result<crate::job_status::JobStatus, TransportError> {
+        let path =
+            crate::job_status::job_path(version, id).map_err(|_| TransportError::InvalidJob)?;
+        let body = get_json(self.target, &self.token, &path)?;
+        crate::job_status::parse_job_response(&body, id).map_err(|_| TransportError::InvalidJob)
     }
 
     /// Authenticated, read-only details of an arbitrary installed App.
@@ -163,6 +176,24 @@ impl AppSupervisorClient {
             .ok_or(TransportError::UnsupportedHost)?;
         let body = get_json(target, &self.token, path)?;
         parse_running_inventory(&body, version).map_err(|_| TransportError::InvalidRuntimeInventory)
+    }
+
+    /// Read job progress on the authenticated internal Supervisor service.
+    pub fn fetch_job(
+        &self,
+        version: ApiVersion,
+        id: &str,
+    ) -> Result<crate::job_status::JobStatus, TransportError> {
+        use std::net::{IpAddr, ToSocketAddrs};
+        let path =
+            crate::job_status::job_path(version, id).map_err(|_| TransportError::InvalidJob)?;
+        let target = (self.service_name(), 80)
+            .to_socket_addrs()
+            .map_err(|_| TransportError::Io)?
+            .find(|addr| matches!(addr.ip(),IpAddr::V4(ip) if ip.is_private()))
+            .ok_or(TransportError::UnsupportedHost)?;
+        let body = get_json(target, &self.token, &path)?;
+        crate::job_status::parse_job_response(&body, id).map_err(|_| TransportError::InvalidJob)
     }
 
     /// GET only, against the same internal Supervisor service used for the Store.
