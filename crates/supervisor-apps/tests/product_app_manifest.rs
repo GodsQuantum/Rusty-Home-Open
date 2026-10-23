@@ -57,3 +57,20 @@ fn runtime_image_binds_only_the_official_authenticated_supervisor_ingress() {
         assert!(!docker.contains(forbidden), "{forbidden}");
     }
 }
+
+#[test]
+fn frontend_endpoints_use_ingress_relative_urls_not_home_assistant_root() {
+    let html =
+        fs::read_to_string(PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../web/index.html"))
+            .unwrap();
+    for endpoint in ["apps", "readiness", "python-core"] {
+        assert!(
+            html.contains(&format!("fetch(\"api/{endpoint}\"")),
+            "missing ingress-relative route: {endpoint}"
+        );
+        assert!(
+            !html.contains(&format!("fetch(\"/api/{endpoint}\"")),
+            "absolute API route would escape Home Assistant ingress: {endpoint}"
+        );
+    }
+}
