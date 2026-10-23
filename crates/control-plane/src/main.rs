@@ -644,6 +644,74 @@ fn supervisor_store_response(adapters: &[Adapter]) -> (&'static str, String) {
     }
 }
 
+/// Official Store DOCS.md for any recognized App, GET only, never user URLs.
+fn store_documentation_slug(line: &str) -> Option<Result<&str, &'static str>> {
+    let rest = line.strip_prefix("GET /api/store/apps/")?;
+    let slug = rest
+        .strip_suffix("/documentation HTTP/1.1")
+        .or_else(|| rest.strip_suffix("/documentation HTTP/1.0"))?;
+    Some(if valid_slug(slug) {
+        Ok(slug)
+    } else {
+        Err("invalid store app slug")
+    })
+}
+fn store_documentation_response(adapters: &[Adapter], slug: &str) -> (&'static str, String) {
+    if !valid_slug(slug) {
+        return (
+            "400 Bad Request",
+            json!({"read_only":true,"error":"invalid slug"}).to_string(),
+        );
+    }
+    let mut versions = adapters.iter().filter_map(|a| match a.kind {
+        AdapterKind::SupervisorLive(v) => Some(v),
+        _ => None,
+    });
+    let Some(version) = versions.next() else {
+        return (
+            "404 Not Found",
+            json!({"read_only":true,"error":"Supervisor Store unavailable"}).to_string(),
+        );
+    };
+    if versions.next().is_some() {
+        return (
+            "503 Service Unavailable",
+            json!({"read_only":true,"error":"ambiguous Supervisor Store"}).to_string(),
+        );
+    }
+    let result = AppSupervisorClient::from_environment().and_then(|client| {
+        let catalog = client.fetch_store(version)?;
+        if !catalog.official_supervisor_owner
+            || catalog.activation_authorized
+            || catalog.api_version != version
+        {
+            return Err(hars_supervisor_apps::official_transport::TransportError::InvalidStore);
+        }
+        let count = catalog.apps.iter().filter(|app| app.slug == slug).count();
+        if count == 0 {
+            return Ok(None);
+        }
+        if count != 1 {
+            return Err(hars_supervisor_apps::official_transport::TransportError::InvalidStore);
+        }
+        client.fetch_store_documentation(version, slug).map(Some)
+    });
+    match result {
+        Ok(Some(documentation)) => (
+            "200 OK",
+            json!({"read_only":true,"documentation":documentation}).to_string(),
+        ),
+        Ok(None) => (
+            "404 Not Found",
+            json!({"read_only":true,"error":"App not in current Store"}).to_string(),
+        ),
+        Err(_) => (
+            "503 Service Unavailable",
+            json!({"read_only":true,"error":"Store documentation unavailable"}).to_string(),
+        ),
+    }
+}
+
 /// Store details work for installed and uninstalled Apps alike.
 fn store_detail_slug(line: &str) -> Option<Result<&str, &'static str>> {
     let rest = line.strip_prefix("GET /api/store/apps/")?;
@@ -1407,6 +1475,14 @@ fn handle(
             Err(_) => (
                 "400 Bad Request",
                 json!({"error":"invalid store app slug","read_only":true}).to_string(),
+            ),
+        }
+    } else if let Some(slug) = store_documentation_slug(&line) {
+        match slug {
+            Ok(slug) => store_documentation_response(adapters, slug),
+            Err(_) => (
+                "400 Bad Request",
+                json!({"read_only":true,"error":"invalid store app slug"}).to_string(),
             ),
         }
     } else if let Some(slug) = store_detail_slug(&line) {
@@ -2258,6 +2334,46 @@ mod tests {
         let html = include_str!("../../../web/index.html");
         assert!(html.contains("Ressources en direct"));
         assert!(html.contains("/stats"));
+    }
+
+    #[test]
+    fn store_documentation_only_accepts_safe_get_and_authenticated_catalog() {
+        for http in ["HTTP/1.0", "HTTP/1.1"] {
+            let line = format!("GET /api/store/apps/future_vendor_188/documentation {http}");
+            assert_eq!(
+                store_documentation_slug(&line),
+                Some(Ok("future_vendor_188"))
+            );
+        }
+        for bad in ["../bad", "a%2fb", "x?redirect=x", "x/y"] {
+            let line = format!("GET /api/store/apps/{bad}/documentation HTTP/1.1");
+            assert!(matches!(store_documentation_slug(&line), Some(Err(_))));
+        }
+        assert_eq!(
+            store_documentation_slug("POST /api/store/apps/x/documentation HTTP/1.1"),
+            None
+        );
+        let lab = Adapter {
+            host: "lab".into(),
+            kind: AdapterKind::SupervisorSnapshot("fixture".into()),
+        };
+        assert_eq!(
+            store_documentation_response(&[lab], "unknown_vendor").0,
+            "404 Not Found"
+        );
+        let live = Adapter {
+            host: "live".into(),
+            kind: AdapterKind::SupervisorLive(ApiVersion::V1),
+        };
+        assert_eq!(
+            store_documentation_response(&[live.clone(), live], "unknown_vendor").0,
+            "503 Service Unavailable"
+        );
+        assert_eq!(
+            store_documentation_response(&[], "../bad").0,
+            "400 Bad Request"
+        );
+        assert!(include_str!("../../../web/index.html").contains("/documentation"));
     }
 
     #[test]
