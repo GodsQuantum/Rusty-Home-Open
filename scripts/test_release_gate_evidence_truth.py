@@ -16,6 +16,7 @@ class GateReality(unittest.TestCase):
         state=audit(self.manifest)
         self.assertEqual(state["total_gates"],15)
         self.assertEqual(state["blocking_gates"],15)
+        self.assertEqual(state["progress"],{"blocked":6,"lab_partial":9,"certified":0})
         self.assertFalse(state["deployment_authorized"])
         self.assertFalse(state["independent_release_signoff"])
         self.assertEqual(sum(x["status"]=="lab_partial" for x in self.rows),9)

@@ -11,6 +11,7 @@ cfg=json.loads((ROOT/"config/release-gates.json").read_text())
 baseline=audit(cfg)
 assert baseline["status"]=="NOT_PRODUCTION_READY",baseline
 assert baseline["blocking_gates"]==15,baseline
+assert baseline["progress"]=={"blocked":6,"lab_partial":9,"certified":0},baseline
 print("PASS: all 15 critical technical gates block production")
 
 a=copy.deepcopy(cfg)
