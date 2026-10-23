@@ -25,7 +25,7 @@ class FullBackupContract(unittest.TestCase):
         self.assertIn("supervisor_test/test_supervisor.py::test_hars_full_backup_archive_qemu",workflow)
         junit=(ROOT/"scripts/check_p8d_junit.py").read_text()
         self.assertIn('"test_hars_full_backup_archive_qemu"',junit)
-        self.assertIn("16/16 expected cases",junit)
+        self.assertIn("17/17 expected cases",junit)
         self.assertIn('("skipped", "failure", "error")',junit)
 if __name__=="__main__":
     unittest.main()

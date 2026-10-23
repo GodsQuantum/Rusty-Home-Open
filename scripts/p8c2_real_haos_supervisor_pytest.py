@@ -3,6 +3,94 @@
 # Upstream setup/fixtures come from official pinned HAOS integration test harness.
 # Only runs in an ephemeral hosted QEMU guest; never against sample lab host synthetic VM.
 @pytest.mark.dependency(depends=["test_start_supervisor"])
+@pytest.mark.timeout(720)
+def test_hars_real_product_app_install_boot(shell, shell_json):
+    """Actual Rusty Home product App (not a probe) in isolated official HAOS.
+
+    No real user's Supervisor, Home Assistant VM, radios, mounts or credentials.
+    Requires a static Rust control plane, protected local App with real
+    Supervisor manager token and an ingress listener.
+    This is NOT an authenticated human ingress or full product migration test.
+    """
+    from pathlib import Path as _Path
+    import os as _os
+    import sys as _sys
+    from time import sleep as _sleep
+    _sys.path.insert(0, str(_Path(_os.environ["GITHUB_WORKSPACE"]) / "scripts"))
+    from p8j_supervisor_store_recovery import ensure_supervisor_local_app_version as _ensure_store
+
+    app = "local_rusty_home"
+    directory = "/mnt/data/supervisor/apps/local/rusty_home"
+    shell.run_check("mkdir -p " + directory)
+    for asset in ("config.yaml", "Dockerfile", "rusty-home"):
+        shell.run_check(
+            "curl --fail --silent --show-error --max-time 90 "
+            "http://10.0.2.2:18673/rusty_home/" + asset
+            + " -o " + directory + "/" + asset,
+            timeout=105,
+        )
+    shell.run_check("chmod 0555 " + directory + "/rusty-home")
+    installed = False
+    try:
+        data = _ensure_store(shell_json, app, "0.1.0-alpha.1", sleeper=_sleep)
+        assert data.get("slug") == app, "Real HAOS failed to discover Rusty Home"
+        assert data.get("hassio_api") is True, "Supervisor token missing"
+        assert data.get("hassio_role") == "manager", "Wrong Supervisor role"
+        assert data.get("ingress") is True, "Official Supervisor ingress missing"
+        # Older Supervisor info serializers may omit the configured port.
+        # The live HTTP 403 probe below independently verifies port 8099.
+        if "ingress_port" in data:
+            assert data["ingress_port"] == 8099, "Wrong ingress listener port"
+        for denied in ("full_access", "docker_api", "host_network"):
+            assert data.get(denied) is not True, "Excessive App privilege: " + denied
+
+        result = shell_json(
+            "ha apps install " + app + " --no-progress --raw-json", timeout=300
+        )
+        assert result.get("result") == "ok", "Real Rusty Home App install failed"
+        installed = True
+        result = shell_json(
+            "ha apps start " + app + " --no-progress --raw-json", timeout=180
+        )
+        assert result.get("result") == "ok", "Real Rusty Home App start failed"
+        data = shell_json("ha apps info " + app + " --no-progress --raw-json", timeout=60).get("data") or {}
+        assert data.get("state") == "started", "Actual App process did not stay running"
+        assert data.get("protected") is True, "Protected mode disappeared on install"
+        assert data.get("hassio_role") == "manager", "Privilege mismatch at runtime"
+
+        # Verify the actual App runs as non-root without dumping env or tokens.
+        docker_user = shell.run_check(
+            "docker inspect -f '{{.Config.User}}' app_local_rusty_home",
+            timeout=30,
+        )
+        assert "1000:1000" in "".join(docker_user), "Actual App is not UID 1000"
+        # Direct access, even with a forged admin identity header, must fail
+        # because the source is NOT the official 172.30.32.2 ingress proxy.
+        ip = "".join(shell.run_check(
+            "docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}} {{end}}' "
+            "app_local_rusty_home",
+            timeout=30,
+        )).strip().split()
+        assert ip, "Real App lacks its isolated Docker network"
+        status = shell.run_check(
+            "curl --silent --output /dev/null --write-out '%{http_code}' "
+            "--connect-timeout 3 --max-time 8 "
+            "-H 'X-Remote-User-Id: claimed_admin' http://"
+            + ip[0] + ":8099/health",
+            timeout=20,
+        )
+        assert "".join(status).strip() == "403", "Untrusted direct ingress accepted"
+        print("REAL_RUSTY_HOME_PRODUCT_HAOS_PASS: installed, started, nonroot, manager, ingress deny")
+    finally:
+        if installed:
+            cleanup = shell_json(
+                "ha apps uninstall " + app + " --no-progress --raw-json",
+                timeout=150,
+            )
+            assert cleanup.get("result") == "ok", "Disposable product App cleanup failed"
+
+
+@pytest.mark.dependency(depends=["test_start_supervisor"])
 @pytest.mark.timeout(480)
 def test_hars_real_supervisor_store(shell, shell_json):
     """Exercise actual HAOS Supervisor store with a previously unseen public repository."""
