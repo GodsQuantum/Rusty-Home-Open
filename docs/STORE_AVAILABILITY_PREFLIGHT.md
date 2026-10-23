@@ -10,10 +10,11 @@
   through the official, authenticated Supervisor Store. No hardcoded vendor
   list, App list, home inventory or user-specific adapter.
 - `GET /api/store/apps/{slug}/availability` fetches a fresh official Store
-  catalog and Store detail through the fixed internal Supervisor service
+  catalog, installed inventory and Store detail through the fixed internal Supervisor service
   with its Supervisor-issued token (V1 or explicitly configured V2).
 - The Rust preflight reconciles exact slug and repository membership, checks
-  installed/system-managed state, and requires both Store responses to
+  installed/system-managed state against the official installed inventory,
+  and requires both Store responses to
   explicitly agree that an uninstalled App is available.
 - The response contains only a typed status (`available`, `unavailable`,
   `already_installed`, `system_managed`, `unknown`), safe identifiers,
@@ -27,7 +28,7 @@
 ## Tests and limits
 
 - TDD reproduced compiler error E0432 before implementation.
-- Five native adversarial preflight tests cover conflicting Store metadata,
+- Seven native adversarial preflight tests cover conflicting Store metadata,
   untrusted owner, missing or mismatched repository, already-installed,
   system-managed, unknown availability, and redaction.
 - Two control-plane tests cover HTTP route grammar, traversal attempts,

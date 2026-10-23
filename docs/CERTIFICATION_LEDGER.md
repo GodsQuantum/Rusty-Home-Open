@@ -45,7 +45,7 @@ authorizes a hardware radio handoff or real migration.
 - **2026-10-23, Store availability preflight:** Rust product code
   `afc1b6065771db60367d65357e7f83154f09b416` adds live V1/V2
   availability reconciliation, fail-closed typed read-only API and dashboard.
-  TDD first failed at E0432, then five adversarial native tests, two
+  TDD first failed at E0432, then seven adversarial native tests, two
   control-plane tests, full Rust workspace all-target tests, strict Clippy,
   rustfmt and dashboard JavaScript syntax passed in isolated LXC700 DEV.
   Independent CI on final PR SHA is **pending**, not certified.

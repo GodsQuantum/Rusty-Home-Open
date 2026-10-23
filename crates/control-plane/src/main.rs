@@ -406,23 +406,26 @@ fn supervisor_store_availability_response(
     // with the Supervisor-issued token; no synthetic fallback is permitted.
     let result = AppSupervisorClient::from_environment().and_then(|client| {
         let catalog = client.fetch_store(version)?;
+        let inventory = client.fetch_installed(version)?;
         checked_store_detail(&catalog, slug, || {
             client.fetch_store_app_detail(version, slug)
         })
-        .map(|detail| detail.map(|app| (catalog, app)))
+        .map(|detail| detail.map(|app| (catalog, inventory, app)))
     });
     match result {
-        Ok(Some((catalog, detail))) => match assess_store_availability(&catalog, &detail, slug) {
-            Ok(preflight) => (
-                "200 OK",
-                json!({"read_only":true,"preflight":preflight}).to_string(),
-            ),
-            Err(_) => (
-                "503 Service Unavailable",
-                json!({"read_only":true,"error":"inconsistent Supervisor Store availability"})
-                    .to_string(),
-            ),
-        },
+        Ok(Some((catalog, inventory, detail))) => {
+            match assess_store_availability(&catalog, &detail, &inventory, slug) {
+                Ok(preflight) => (
+                    "200 OK",
+                    json!({"read_only":true,"preflight":preflight}).to_string(),
+                ),
+                Err(_) => (
+                    "503 Service Unavailable",
+                    json!({"read_only":true,"error":"inconsistent Supervisor Store availability"})
+                        .to_string(),
+                ),
+            }
+        }
         Ok(None) => (
             "404 Not Found",
             json!({"read_only":true,"error":"app not in current Store"}).to_string(),

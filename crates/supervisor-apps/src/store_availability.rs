@@ -1,6 +1,7 @@
 //! Read-only, fail-closed platform availability preflight for arbitrary
 //! official Supervisor Store Apps. This is NOT install authorization.
 use crate::app_detail::{AppDetail, valid_slug};
+use crate::installed_inventory::RunningInventory;
 use crate::official_store::Catalog;
 use serde::Serialize;
 
@@ -41,12 +42,17 @@ pub enum AvailabilityError {
 pub fn assess_store_availability(
     catalog: &Catalog,
     detail: &AppDetail,
+    inventory: &RunningInventory,
     slug: &str,
 ) -> Result<StoreAvailability, AvailabilityError> {
     if !valid_slug(slug) {
         return Err(AvailabilityError::InvalidSlug);
     }
-    if !catalog.official_supervisor_owner
+    if catalog.api_version != inventory.api_version {
+        return Err(AvailabilityError::InconsistentDetail);
+    }
+    if !inventory.read_only
+        || !catalog.official_supervisor_owner
         || catalog.activation_authorized
         || !detail.official_supervisor_owner
         || detail.activation_authorized
@@ -67,7 +73,19 @@ pub fn assess_store_availability(
     {
         return Err(AvailabilityError::InconsistentDetail);
     }
-    let status = if app.installed {
+    let mut installed_matches = inventory.apps.iter().filter(|entry| entry.slug == slug);
+    let installed_entry = installed_matches.next();
+    if installed_matches.next().is_some()
+        || installed_entry
+            .and_then(|entry| entry.repository.as_deref())
+            .is_some_and(|repository| repository != app.repository)
+    {
+        return Err(AvailabilityError::InconsistentDetail);
+    }
+    // Any official source seeing an installation must prevent a false
+    // uninstalled/available report during a non-atomic Store refresh.
+    let installed = app.installed || installed_entry.is_some();
+    let status = if installed {
         AvailabilityStatus::AlreadyInstalled
     } else if detail.system_managed == Some(true) {
         AvailabilityStatus::SystemManaged
@@ -83,7 +101,7 @@ pub fn assess_store_availability(
         repository: app.repository.clone(),
         status,
         platform_available: status == AvailabilityStatus::Available,
-        installed: app.installed,
+        installed,
         read_only: true,
         activation_authorized: false,
     })
