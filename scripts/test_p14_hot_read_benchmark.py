@@ -20,7 +20,7 @@ class P14Proof(unittest.TestCase):
         workflow=(ROOT/".github/workflows/ci.yml").read_text()
         chunk=workflow[workflow.index("  p14-core-native-hot-read-microbench:"):].split("\n  rust-lab:",1)[0]
         for marker in ("runs-on: ubuntu-latest","cargo build --locked --release -p hars-native-hub --example bench_hot_state",
-                       "ghcr.io/home-assistant/home-assistant@sha256:130241f28d01fa80dfa3b44f7d89781c188d8642ecab9024f079f19f9f82baa0",
+                       "ghcr.io/home-assistant/home-assistant@sha256:33afb0659d786213264c2211f8d91c5fe87461c56eba6a3a546eb05fc71e89f4",
                        "scripts/p14_core_hot_read.py","--network none","--read-only",
                        "--cap-drop ALL","check_p14_hot_read_benchmark.py",
                        "actions/upload-artifact@v4","if: always()", "docker ps -a"):

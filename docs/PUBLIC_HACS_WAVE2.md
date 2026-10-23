@@ -1,7 +1,7 @@
 # Selected additional Home Assistant Core integration coverage
 
 The publicly shipped CI runs five additional pinned, genuine HACS
-integrations against official Core 2026.10.1 in disposable Linux Docker
+integrations against official Core 2026.10.2 in disposable Linux Docker
 laboratories:
 
 - Card Builder 2.6.0 — actual published release, frontend / config flow

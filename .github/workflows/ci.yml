@@ -52,6 +52,8 @@ jobs:
           python3 scripts/test_native_automation_yaml.py
       - name: Real generated dashboard screenshots (desktop and mobile)
         run: python3 scripts/test_branding_assets.py
+      - name: Check all Core laboratory OCI digests track latest pinned stable
+        run: python3 scripts/test_ha_core_pins.py
       - name: Public fixtures and source privacy check
         run: python3 scripts/test_public_redaction.py
       - name: Verify public certification gate ledger

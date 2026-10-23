@@ -37,13 +37,13 @@ class LifecycleChecks(unittest.TestCase):
         del x["real_core_unload_state_removed"]
         with self.assertRaises(ValueError):module.verify(x)
     def test_ci_uses_real_official_core_offline_not_direct_fixture_call(self):
-        ci=(ROOT/".github/workflows/ci.yml").read_text()
+        ci=(ROOT/".github/workflows/core-interop-public.yml").read_text()
         self.assertIn("bash scripts/run_config_entry_lifecycle_core.sh",ci)
         run=(ROOT/"scripts/run_config_entry_lifecycle_core.sh").read_text()
         for value in (
             "docker run", "--network none", "--read-only", "--cap-drop ALL",
             "--security-opt no-new-privileges", "--entrypoint python3",
-            "ghcr.io/home-assistant/home-assistant@sha256:130241f28d01fa80dfa3b44f7d89781c188d8642ecab9024f079f19f9f82baa0",
+            "ghcr.io/home-assistant/home-assistant@sha256:33afb0659d786213264c2211f8d91c5fe87461c56eba6a3a546eb05fc71e89f4",
             "check_config_entry_lifecycle_report.py",
         ):
             self.assertIn(value,run)

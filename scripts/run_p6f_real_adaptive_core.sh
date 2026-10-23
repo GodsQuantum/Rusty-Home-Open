@@ -35,7 +35,7 @@ homeassistant:
   name: Rusty Home Adaptive Lighting synthetic lab
   time_zone: Europe/Paris
 YAML
-IMAGE='ghcr.io/home-assistant/home-assistant@sha256:130241f28d01fa80dfa3b44f7d89781c188d8642ecab9024f079f19f9f82baa0'
+IMAGE='ghcr.io/home-assistant/home-assistant@sha256:33afb0659d786213264c2211f8d91c5fe87461c56eba6a3a546eb05fc71e89f4'
 if ! docker image inspect "$IMAGE" >/dev/null 2>&1; then docker pull "$IMAGE" >/dev/null; fi
 docker run --rm --network none --user "$(id -u):$(id -g)" --read-only \
   --cap-drop ALL --security-opt no-new-privileges --pids-limit 256 \
