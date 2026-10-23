@@ -1,1 +1,2 @@
 fuzz/corpus/ingress_http/*.bin binary
+fuzz/corpus/supervisor_store/*.bin binary
