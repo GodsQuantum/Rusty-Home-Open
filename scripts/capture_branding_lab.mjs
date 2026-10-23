@@ -144,6 +144,21 @@ try {
    throw Error('Wrong numeric resource display');
   if((await page.locator('article.card').innerText()).includes('MUST_NOT_LEAK'))
    throw Error('Unsafe stats field leaked into dashboard');
+  // Unknown vendor Markdown is displayed as inert text, never HTML.
+  let changelogCalls=0;
+  const untrustedNotes='<b>Release notes</b>\n## Updates';
+  await page.route('**/api/apps/'+liveSlug+'/changelog',async route=>{
+   changelogCalls++;
+   await route.fulfill({status:200,contentType:'application/json',
+    body:JSON.stringify({read_only:true,changelog:{slug:liveSlug,read_only:true,
+     text:untrustedNotes}})});
+  });
+  if(changelogCalls!==0)throw Error('Changelog must be on-demand');
+  await page.getByRole('button',{name:'Notes de version'}).click();
+  await page.waitForFunction(()=>document.querySelector('.app-changelog')?.textContent?.includes('Release notes'));
+  if(changelogCalls!==1)throw Error('Changelog must fetch once');
+  if((await page.locator('article.card .app-changelog b').count())!==0)
+   throw Error('Third-party changelog rendered HTML');
   const entries=Array.from({length:125},(_,i)=>({
    slug:'community_new_'+i,repository:'unfamiliar_'+(i%17),
    name:'Future Community App '+String(i).padStart(3,'0'),

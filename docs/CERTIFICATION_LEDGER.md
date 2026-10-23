@@ -34,6 +34,17 @@ authorizes a hardware radio handoff or real migration.
   No user RBAC, trusted operation receipt or actual App mutation is implied.
   [Scope and limits](LIVE_SUPERVISOR_JOB_PROGRESS.md).
 
+- **2026-10-23, official installed-App release notes (PR pending):**
+  real Rust V1/V2 Supervisor HTTP read of arbitrary App changelogs after
+  current installed-inventory validation, bounded text-only transport and
+  on-demand native dashboard display. Red-first TDD E0432/E0599 followed
+  by three adversarial loopback transport tests and one control-plane
+  route test passing. Full Rust workspace, strict Clippy, format and
+  read-only smoke passed in isolated DEV. Browser synthetic regression
+  added, independent CI pending. **No App writes, production user RBAC,
+  HAOS field authorization or release certification.**
+  [Scope](LIVE_SUPERVISOR_APP_CHANGELOG.md).
+
 
 - **2026-10-23, live installed-App telemetry (product feature, PR pending):**
   native Rust V1/V2 Supervisor stats client, current installed-inventory
