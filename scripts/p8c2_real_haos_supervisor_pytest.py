@@ -132,7 +132,7 @@ def test_hars_real_product_app_install_boot(shell, shell_json):
             timeout=30,
         )).strip().split()
         assert current_ips, "Product App network missing after actual restart"
-        for route in ("health", "api/apps", "api/store", "api/session", "api/readiness"):
+        for route in ("health", "api/apps", "api/store",  "api/session", "api/store/apps/core_ssh/operations", "api/readiness"):
             denial = shell.run_check(
                 "curl --silent --output /dev/null --write-out '%{http_code}' "
                 "--connect-timeout 3 --max-time 8 "

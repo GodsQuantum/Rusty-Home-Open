@@ -34,6 +34,10 @@ jobs:
           python3 scripts/test_p8i_durable_contract.py
           cargo test --locked -p hars-supervisor-apps --features persistent-session-lab --test p8i_durable_sessions
           cargo clippy --locked -p hars-supervisor-apps --all-targets --features persistent-session-lab -- -D warnings
+      - name: Generic lifecycle evidence on 1017 unknown vendors, no write permit
+        run: |
+          python3 scripts/test_lifecycle_preflight_contract.py
+          cargo test --locked -p hars-supervisor-apps --lib operation_preflight
       - name: Universal official Supervisor App catalog paging/search (1317 unknown Apps)
         run: python3 scripts/test_generic_supervisor_catalog_cli.py
       - name: Test the isolated 9-App migration policy

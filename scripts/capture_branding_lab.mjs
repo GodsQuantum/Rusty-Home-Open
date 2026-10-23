@@ -167,6 +167,31 @@ try {
   if((await page.locator('#store-apps .card').count())!==1)throw Error('Unsafe name filtered incorrectly');
   if((await page.locator('#store-apps img').count())!==0)throw Error('Store rendered untrusted HTML');
   if(storeCalls!==1)throw Error('Local Store filtering must not re-fetch catalog');
+  let operationCalls=0;
+  await page.route('**/api/store/apps/**/operations',async route=>{
+   operationCalls++;
+   if(route.request().method()!=='GET')throw Error('Operation preflight must never POST');
+   const found=route.request().url().match(/\/api\/store\/apps\/([^/]+)\/operations$/);
+   if(!found)throw Error('Unexpected operation route');
+   const slug=decodeURIComponent(found[1]);
+   const operations=['install','start','stop','restart','update','backup','restore'];
+   await route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({
+    read_only:true,activation_authorized:false,slug,
+    preflights:operations.map(action=>({
+     slug,action,read_only:true,activation_authorized:false,
+     platform_candidate:false,verified_backup_required:action==='update'||action==='restore',
+     status:action==='update'?'verified_backup_required':'unknown_state'
+    }))
+   })});
+  });
+  await page.getByRole('button',{name:'Précontrôle des opérations'}).click();
+  await page.waitForFunction(()=>document.querySelector('#store-apps .card')
+      ?.textContent?.includes('Preuve de sauvegarde indispensable'));
+  if(operationCalls!==1)throw Error('Operation evidence is not on-demand GET');
+  const text=await page.locator('#store-apps .card').innerText();
+  if(!text.includes('Aucune opération n’est autorisée')||!text.includes('Restaurer'))
+   throw Error('UI must show seven read-only operations and no write permit');
+
   console.log('SUPERVISOR_STORE_BROWSER_PASS: 125 arbitrary Apps, 24/page, search and safe rendering');
   console.log('LIVE_APP_DETAIL_BROWSER_PASS: unknown live App detail loaded on demand, no write action');
   console.log('LIVE_APP_STATS_BROWSER_PASS: on-demand read-only CPU/RAM and secret-field isolation');

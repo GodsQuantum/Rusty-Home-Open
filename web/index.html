@@ -119,6 +119,55 @@ function renderStore(){
    finally{availabilityButton.disabled=false;}
   });
   card.append(availabilityButton,availability);
+  const operationButton=node("button","Précontrôle des opérations");
+  operationButton.type="button";
+  const operationPanel=node("div",undefined,"muted");
+  operationPanel.hidden=true;
+  operationButton.addEventListener("click",async()=>{
+   if(!operationPanel.hidden){operationPanel.hidden=true;return;}
+   operationPanel.hidden=false;
+   operationPanel.textContent="Analyse des sept opérations via Supervisor…";
+   operationButton.disabled=true;
+   try{
+    const response=await fetch("api/store/apps/"+encodeURIComponent(app.slug)+"/operations",{cache:"no-store"});
+    if(!response.ok)throw Error("official evidence unavailable");
+    const data=await response.json();
+    if(data.read_only!==true||data.activation_authorized!==false
+       ||data.slug!==app.slug||!Array.isArray(data.preflights)||data.preflights.length!==7)
+       throw Error("invalid operation evidence");
+    const actions={
+     install:"Installer",start:"Démarrer",stop:"Arrêter",restart:"Redémarrer",
+     update:"Mettre à jour",backup:"Sauvegarder",restore:"Restaurer"
+    };
+    const statuses={
+     eligible_for_review:"Préconditions observées — autorisation absente",
+     already_installed:"Déjà installée",not_installed:"Non installée",
+     already_running:"Déjà démarrée",already_stopped:"Déjà arrêtée",
+     update_not_confirmed:"Mise à jour non confirmée",
+     unavailable:"Indisponible",system_managed:"Gérée par le système",
+     inconsistent:"Sources Supervisor contradictoires",unknown_state:"État non vérifiable",
+     verified_backup_required:"Preuve de sauvegarde indispensable"
+    };
+    const seen=new Set();
+    const lines=[];
+    for(const item of data.preflights){
+     if(!item||item.slug!==app.slug||item.read_only!==true||item.activation_authorized!==false
+        ||!Object.hasOwn(actions,item.action)||!Object.hasOwn(statuses,item.status)
+        ||typeof item.platform_candidate!=="boolean"
+        ||typeof item.verified_backup_required!=="boolean"
+        ||seen.has(item.action))throw Error("ambiguous operation");
+     seen.add(item.action);
+     lines.push([actions[item.action],statuses[item.status]]);
+    }
+    operationPanel.replaceChildren(node("p","Aucune opération n’est autorisée. Précontrôle informatif uniquement."));
+    for(const [action,status] of lines){
+     operationPanel.append(node("p",action+" : "+status));
+    }
+   }catch(e){
+    operationPanel.textContent="Précontrôle indisponible ou preuves Supervisor insuffisantes.";
+   }finally{operationButton.disabled=false;}
+  });
+  card.append(operationButton,operationPanel);
   select("#store-apps").append(card);
  }
 }

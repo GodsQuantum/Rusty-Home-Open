@@ -429,6 +429,106 @@ fn supervisor_store_detail_response(adapters: &[Adapter], slug: &str) -> (&'stat
     }
 }
 
+/// Read-only evidence for all seven operations on any current Store App.
+/// This route never accepts a verb other than GET and issues no Supervisor POST.
+fn store_operations_slug(line: &str) -> Option<Result<&str, &'static str>> {
+    let rest = line.strip_prefix("GET /api/store/apps/")?;
+    let slug = rest
+        .strip_suffix("/operations HTTP/1.1")
+        .or_else(|| rest.strip_suffix("/operations HTTP/1.0"))?;
+    Some(if valid_slug(slug) {
+        Ok(slug)
+    } else {
+        Err("invalid store app slug")
+    })
+}
+
+fn supervisor_store_operations_response(
+    adapters: &[Adapter],
+    slug: &str,
+) -> (&'static str, String) {
+    use hars_supervisor_apps::operation_preflight::{assess_lifecycle_evidence, LifecycleAction};
+    if !valid_slug(slug) {
+        return (
+            "400 Bad Request",
+            json!({"read_only":true,"activation_authorized":false,"error":"invalid store app slug"})
+                .to_string(),
+        );
+    }
+    let mut versions = adapters.iter().filter_map(|a| match a.kind {
+        AdapterKind::SupervisorLive(v) => Some(v),
+        _ => None,
+    });
+    let Some(version) = versions.next() else {
+        return (
+            "404 Not Found",
+            json!({"read_only":true,"activation_authorized":false,"error":"no live Supervisor source"})
+                .to_string(),
+        );
+    };
+    if versions.next().is_some() {
+        return (
+            "503 Service Unavailable",
+            json!({"read_only":true,"activation_authorized":false,"error":"ambiguous Supervisor source"})
+                .to_string(),
+        );
+    }
+    // Exactly three fresh official views, no cached snapshot or caller-supplied URL.
+    let result = AppSupervisorClient::from_environment().and_then(|client| {
+        let catalog = client.fetch_store(version)?;
+        let inventory = client.fetch_installed(version)?;
+        checked_store_detail(&catalog, slug, || {
+            client.fetch_store_app_detail(version, slug)
+        })
+        .map(|detail| detail.map(|app| (catalog, inventory, app)))
+    });
+    match result {
+        Ok(Some((catalog, inventory, detail))) => {
+            let actions = [
+                LifecycleAction::Install,
+                LifecycleAction::Start,
+                LifecycleAction::Stop,
+                LifecycleAction::Restart,
+                LifecycleAction::Update,
+                LifecycleAction::Backup,
+                LifecycleAction::Restore,
+            ];
+            let plans = actions
+                .iter()
+                .map(|action| {
+                    assess_lifecycle_evidence(&catalog, &detail, &inventory, slug, *action)
+                })
+                .collect::<Result<Vec<_>, _>>();
+            match plans {
+                Ok(preflights) => (
+                    "200 OK",
+                    json!({"read_only":true,"activation_authorized":false,
+                        "slug":slug,"preflights":preflights})
+                    .to_string(),
+                ),
+                Err(_) => (
+                    "503 Service Unavailable",
+                    json!({"read_only":true,"activation_authorized":false,
+                        "error":"inconsistent official Supervisor operation evidence"})
+                    .to_string(),
+                ),
+            }
+        }
+        Ok(None) => (
+            "404 Not Found",
+            json!({"read_only":true,"activation_authorized":false,
+                "error":"App absent from live official Store"})
+            .to_string(),
+        ),
+        Err(_) => (
+            "503 Service Unavailable",
+            json!({"read_only":true,"activation_authorized":false,
+                "error":"Supervisor operation evidence unavailable"})
+            .to_string(),
+        ),
+    }
+}
+
 /// Read-only availability route for any current Store App, not a write permit.
 fn store_availability_slug(line: &str) -> Option<Result<&str, &'static str>> {
     let rest = line.strip_prefix("GET /api/store/apps/")?;
@@ -914,6 +1014,15 @@ fn handle(
         ("200 OK", report(adapters, verified).to_string())
     } else if line == "GET /api/store HTTP/1.1" || line == "GET /api/store HTTP/1.0" {
         supervisor_store_response(adapters)
+    } else if let Some(slug) = store_operations_slug(&line) {
+        match slug {
+            Ok(slug) => supervisor_store_operations_response(adapters, slug),
+            Err(_) => (
+                "400 Bad Request",
+                json!({"error":"invalid store app slug","read_only":true,"activation_authorized":false})
+                    .to_string(),
+            ),
+        }
     } else if let Some(slug) = store_availability_slug(&line) {
         match slug {
             Ok(slug) => supervisor_store_availability_response(adapters, slug),
@@ -1486,6 +1595,49 @@ mod tests {
         let html = include_str!("../../../web/index.html");
         assert!(html.contains("Ressources en direct"));
         assert!(html.contains("/stats"));
+    }
+
+    #[test]
+    fn lifecycle_operations_route_is_get_only_generic_and_fails_closed() {
+        for version in ["HTTP/1.0", "HTTP/1.1"] {
+            let line = format!("GET /api/store/apps/some_vendor_333/operations {version}");
+            assert_eq!(store_operations_slug(&line), Some(Ok("some_vendor_333")));
+        }
+        for slug in ["", "..", "a/b", "x%2fsecret", "x?token=1"] {
+            let line = format!("GET /api/store/apps/{slug}/operations HTTP/1.1");
+            assert_eq!(
+                store_operations_slug(&line),
+                Some(Err("invalid store app slug"))
+            );
+        }
+        assert_eq!(
+            store_operations_slug("POST /api/store/apps/x/operations HTTP/1.1"),
+            None
+        );
+        let lab = Adapter {
+            host: "snapshot".into(),
+            kind: AdapterKind::SupervisorSnapshot("runtime/fixture.json".into()),
+        };
+        assert_eq!(
+            supervisor_store_operations_response(&[lab], "future_vendor_1").0,
+            "404 Not Found"
+        );
+        let official = Adapter {
+            host: "live".into(),
+            kind: AdapterKind::SupervisorLive(ApiVersion::V2),
+        };
+        assert_eq!(
+            supervisor_store_operations_response(&[official.clone(), official], "future_vendor_1")
+                .0,
+            "503 Service Unavailable"
+        );
+        assert_eq!(
+            supervisor_store_operations_response(&[], "../unsafe").0,
+            "400 Bad Request"
+        );
+        let html = include_str!("../../../web/index.html");
+        assert!(html.contains("/operations"));
+        assert!(html.contains("activation_authorized!==false"));
     }
 
     #[test]
