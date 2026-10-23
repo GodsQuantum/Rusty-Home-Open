@@ -1,5 +1,6 @@
 //! Explicit, read-only and locally scoped transport for official Supervisor.
 //! This does NOT install Apps or connect to a real HAOS Supervisor by itself.
+use crate::app_detail::{AppDetail, detail_path, parse_app_detail};
 use crate::official_store::{ApiVersion, Catalog, parse_store_response};
 use std::{
     fmt,
@@ -40,6 +41,8 @@ pub enum TransportError {
     TooLarge,
     UnexpectedApiVersion,
     InvalidStore,
+    InvalidAppSlug,
+    InvalidAppInfo,
     #[cfg(feature = "managed-apps-preview")]
     ManagedPreviewDisabled,
     #[cfg(feature = "lab-app-actions")]
@@ -58,6 +61,18 @@ impl LocalSupervisorClient {
             return Err(TransportError::UnsupportedHost);
         }
         Ok(Self { target, token })
+    }
+
+    /// Authenticated, read-only details of an arbitrary installed App.
+    /// Sensitive options and device addresses are dropped by the typed parser.
+    pub fn fetch_app_detail(
+        &self,
+        version: ApiVersion,
+        slug: &str,
+    ) -> Result<AppDetail, TransportError> {
+        let path = detail_path(version, slug).map_err(|_| TransportError::InvalidAppSlug)?;
+        let body = get_json(self.target, &self.token, &path)?;
+        parse_app_detail(&body, slug).map_err(|_| TransportError::InvalidAppInfo)
     }
 
     /// GET only; a V2 request is opt-in because official Supervisor V2 uses a
@@ -122,6 +137,23 @@ impl AppSupervisorClient {
         "supervisor"
     }
 
+    /// GET only, against the same internal Supervisor service used for the Store.
+    pub fn fetch_app_detail(
+        &self,
+        version: ApiVersion,
+        slug: &str,
+    ) -> Result<AppDetail, TransportError> {
+        use std::net::{IpAddr, ToSocketAddrs};
+        let path = detail_path(version, slug).map_err(|_| TransportError::InvalidAppSlug)?;
+        let target = (self.service_name(), 80)
+            .to_socket_addrs()
+            .map_err(|_| TransportError::Io)?
+            .find(|addr| matches!(addr.ip(),IpAddr::V4(ip) if ip.is_private()))
+            .ok_or(TransportError::UnsupportedHost)?;
+        let body = get_json(target, &self.token, &path)?;
+        parse_app_detail(&body, slug).map_err(|_| TransportError::InvalidAppInfo)
+    }
+
     /// Only Docker-internal Supervisor DNS; no arbitrary URI/address accepted.
     pub fn fetch_store(&self, version: ApiVersion) -> Result<Catalog, TransportError> {
         use std::net::{IpAddr, ToSocketAddrs};
@@ -161,6 +193,29 @@ impl AppSupervisorClient {
         }
         Ok(catalog)
     }
+}
+
+fn get_json(
+    target: SocketAddr,
+    token: &SupervisorToken,
+    path: &str,
+) -> Result<Vec<u8>, TransportError> {
+    let mut stream =
+        TcpStream::connect_timeout(&target, IO_TIMEOUT).map_err(|_| TransportError::Io)?;
+    stream
+        .set_read_timeout(Some(IO_TIMEOUT))
+        .map_err(|_| TransportError::Io)?;
+    stream
+        .set_write_timeout(Some(IO_TIMEOUT))
+        .map_err(|_| TransportError::Io)?;
+    let request = format!(
+        "GET {path} HTTP/1.1\r\nHost: supervisor\r\nAuthorization: Bearer {}\r\nAccept: application/json\r\nConnection: close\r\n\r\n",
+        token.0
+    );
+    stream
+        .write_all(request.as_bytes())
+        .map_err(|_| TransportError::Io)?;
+    read_http_json(&mut stream)
 }
 
 fn read_http_json(stream: &mut TcpStream) -> Result<Vec<u8>, TransportError> {

@@ -159,3 +159,66 @@ fn live_loopback_supervisor_catalog_supports_arbitrary_new_apps_and_filtering() 
     );
     assert!(worker.join().unwrap().starts_with("GET /v2/store HTTP/1.1"));
 }
+
+#[test]
+fn any_supervisor_app_detail_is_fetched_over_authenticated_loopback_without_secrets() {
+    let response = serde_json::json!({"result":"ok","data":{
+        "slug":"thirdparty_future123","name":"Future Device",
+        "repository":"unlisted_repo","state":"started",
+        "available":true,"installed":true,"update_available":false,
+        "options":{"password":"NEVER_OUTPUT"},"schema":{"token":"SUPERSECRET"},
+        "ip_address":"192.0.2.99","devices":["/dev/private"]
+    }});
+    for (version, path) in [
+        (ApiVersion::V1, "/addons/thirdparty_future123/info"),
+        (ApiVersion::V2, "/v2/apps/thirdparty_future123/info"),
+    ] {
+        let (addr, worker) = serve(ok(&response.to_string()));
+        let info = client(addr)
+            .fetch_app_detail(version, "thirdparty_future123")
+            .unwrap();
+        assert_eq!(info.slug, "thirdparty_future123");
+        assert_eq!(info.repository.as_deref(), Some("unlisted_repo"));
+        let output = serde_json::to_string(&info).unwrap();
+        for secret in [
+            "NEVER_OUTPUT",
+            "SUPERSECRET",
+            "ip_address",
+            "devices",
+            "options",
+        ] {
+            assert!(!output.contains(secret));
+        }
+        let request = worker.join().unwrap();
+        assert!(request.starts_with(&format!("GET {path} HTTP/1.1\r\n")));
+        assert!(request.contains("Authorization: Bearer fixture_value_123\r\n"));
+    }
+}
+#[test]
+fn rejects_bad_slugs_without_network_access_and_unauthorized_info() {
+    let api = client("127.0.0.1:1".parse().unwrap());
+    for slug in [
+        "",
+        "../secret",
+        "bad\nInjected: x",
+        "https://example.invalid",
+    ] {
+        assert_eq!(
+            api.fetch_app_detail(ApiVersion::V1, slug),
+            Err(TransportError::InvalidAppSlug)
+        );
+    }
+    let body = r#"{"result":"ok","data":{"slug":"not_the_requested","name":"Wrong App"}}"#;
+    let (addr, worker) = serve(ok(body));
+    assert_eq!(
+        client(addr).fetch_app_detail(ApiVersion::V2, "correct_app"),
+        Err(TransportError::InvalidAppInfo)
+    );
+    worker.join().unwrap();
+    let (addr, worker) = serve("HTTP/1.1 403 Forbidden\r\nContent-Length: 2\r\n\r\n{}".into());
+    assert_eq!(
+        client(addr).fetch_app_detail(ApiVersion::V1, "good_app"),
+        Err(TransportError::Unauthorized)
+    );
+    worker.join().unwrap();
+}
