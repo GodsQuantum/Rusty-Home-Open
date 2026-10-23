@@ -1,0 +1,38 @@
+name: Deterministic SPDX 2.3 Cargo source dependency SBOM
+on:
+  pull_request:
+    paths:
+      - "Cargo.lock"
+      - "audits/CARGO_SOURCE_SPDX_2026-10-23.json"
+      - "scripts/generate_source_spdx.py"
+      - "scripts/test_source_spdx_contract.py"
+      - ".github/workflows/spdx-source-bom.yml"
+      - "docs/SOURCE_SPDX_2026-10-23.md"
+  push:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  source-spdx:
+    name: Reproducible SPDX 2.3 source graph, external parser validation
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Verify checked-in lock-derived SPDX against sources
+        run: |
+          python3 scripts/test_source_spdx_contract.py
+          python3 scripts/test_public_redaction.py
+          python3 scripts/generate_source_spdx.py --generate
+          git diff --exit-code -- audits/CARGO_SOURCE_SPDX_2026-10-23.json
+      - name: Independent SPDX 2.3 parser and validator
+        run: |
+          python3 -m venv "$RUNNER_TEMP/spdx-validator"
+          "$RUNNER_TEMP/spdx-validator/bin/pip" install --disable-pip-version-check spdx-tools==0.8.3
+          "$RUNNER_TEMP/spdx-validator/bin/pyspdxtools" -i audits/CARGO_SOURCE_SPDX_2026-10-23.json
+      - name: Refuse production certification based on source SBOM
+        run: python3 scripts/check_release_gate.py --expect-blocked
