@@ -34,16 +34,29 @@ authorizes a hardware radio handoff or real migration.
 
 ## Product development evidence (NOT production certification)
 
-- **2026-10-23, read-only Supervisor Job progress ([PR #45](https://github.com/GodsQuantum/Rusty-Home-Open/pull/45), independent CI pending):**
-  Code commit `99f524b0ffc1285d9a631f08bef5a45ad9f09cbc`.
+- **2026-10-23, read-only Supervisor Job progress ([PR #45](https://github.com/GodsQuantum/Rusty-Home-Open/pull/45), MERGED):**
+  Exact independently validated head `d781cec80f234334903cf5739b0e93f2fd97bcd5`,
+  squash merge `126fc9c2d26c24160b6be06b1a5be0d66848c748`.
+  Eleven independent checks passed, including genuine disposable HAOS 18.3 KVM.
   native Rust route and French dashboard poll official V1/V2 job endpoints
   by strictly validated UUID; output contains only state, progress, ID and
   error count, never raw stage, error messages or child jobs.
   Four control-plane adversarial tests and one authenticated TCP loopback
   integration test pass locally; full workspace/Clippy and independent CI
-  must be recorded against the final PR SHA before merge.
+  passed on the exact merged PR head.
   No user RBAC, trusted operation receipt or actual App mutation is implied.
   [Scope and limits](LIVE_SUPERVISOR_JOB_PROGRESS.md).
+
+- **2026-10-23, official installed-App release notes ([PR #48](https://github.com/GodsQuantum/Rusty-Home-Open/pull/48), independent CI pending):**
+  real Rust V1/V2 Supervisor HTTP read of arbitrary App changelogs after
+  current installed-inventory validation, bounded text-only transport and
+  on-demand native dashboard display. Red-first TDD E0432/E0599 followed
+  by three adversarial loopback transport tests and one control-plane
+  route test passing. Full Rust workspace, strict Clippy, format and
+  read-only smoke passed in isolated DEV. Browser synthetic regression
+  added, independent CI pending. **No App writes, production user RBAC,
+  HAOS field authorization or release certification.**
+  [Scope](LIVE_SUPERVISOR_APP_CHANGELOG.md).
 
 
 - **2026-10-23, live installed-App telemetry (product feature, PR pending):**
@@ -161,3 +174,20 @@ No date of production completion can be established from isolated labs.
 
 The only machine authority for production release gates is
 [config/release-gates.json](../config/release-gates.json).
+
+
+## Product development evidence: dynamic Supervisor Store repositories (2026-10-23)
+
+- Feature commit 371c0a65d1005274b47c9704084791b0bb615c3c, PR #51.
+  Independent GitHub Actions: pending on final PR SHA, not certified.
+- Real UI increment on a feature branch: a repository dropdown derived from
+  the official Supervisor Store response, exact vendor-neutral filtering,
+  combined search/paging and fail-closed invalid metadata handling.
+- TDD: Python UI contract initially failed on the missing selector, then
+  passed. Node executes the actual browser filter/validator against 1317
+  fictional Apps, 23 repositories and malicious/duplicate metadata.
+- Independent Playwright browser scenario is included in
+  scripts/capture_branding_lab.mjs; **not yet independently certified**
+  until the exact PR SHA CI reports success.
+- No App lifecycle mutation, production identity or gate signoff. All 15
+  production gates remain blocked/lab_partial.

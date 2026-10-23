@@ -40,6 +40,10 @@ jobs:
           cargo test --locked -p hars-supervisor-apps --lib operation_preflight
       - name: Universal official Supervisor App catalog paging/search (1317 unknown Apps)
         run: python3 scripts/test_generic_supervisor_catalog_cli.py
+      - name: Live Store repository selector contract and adversarial 1317-App filtering
+        run: |
+          python3 scripts/test_store_repository_filter_contract.py
+          node scripts/test_dynamic_store_repository_filter.mjs
       - name: Test the isolated 9-App migration policy
         run: python3 scripts/test_app_migration_policy.py
       - name: Synthetic inventory and loopback HTTP integration

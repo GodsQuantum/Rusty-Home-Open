@@ -144,18 +144,37 @@ try {
    throw Error('Wrong numeric resource display');
   if((await page.locator('article.card').innerText()).includes('MUST_NOT_LEAK'))
    throw Error('Unsafe stats field leaked into dashboard');
+  // Unknown vendor Markdown is displayed as inert text, never HTML.
+  let changelogCalls=0;
+  const untrustedNotes='<b>Release notes</b>\n## Updates';
+  await page.route('**/api/apps/'+liveSlug+'/changelog',async route=>{
+   changelogCalls++;
+   await route.fulfill({status:200,contentType:'application/json',
+    body:JSON.stringify({read_only:true,changelog:{slug:liveSlug,read_only:true,
+     text:untrustedNotes}})});
+  });
+  if(changelogCalls!==0)throw Error('Changelog must be on-demand');
+  await page.getByRole('button',{name:'Notes de version'}).click();
+  await page.waitForFunction(()=>document.querySelector('.app-changelog')?.textContent?.includes('Release notes'));
+  if(changelogCalls!==1)throw Error('Changelog must fetch once');
+  if((await page.locator('article.card .app-changelog b').count())!==0)
+   throw Error('Third-party changelog rendered HTML');
   const entries=Array.from({length:125},(_,i)=>({
    slug:'community_new_'+i,repository:'unfamiliar_'+(i%17),
    name:'Future Community App '+String(i).padStart(3,'0'),
    available:true,installed:i%3===0,update_available:false
   }));
   entries[124].name='<img src=x onerror=alert(1)> New Third Party';
+  const repositories=Array.from({length:17},(_,i)=>({
+   slug:'unfamiliar_'+i,
+   name:i===3?'<img src=x onerror=alert(1)> Suspicious Repo':'Unknown vendor '+i
+  }));
   let storeCalls=0;
   await page.route('**/api/store', async route=>{
    storeCalls++;
    await route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({
     read_only:true,catalog:{official_supervisor_owner:true,
-      activation_authorized:false,api_version:'V1',apps:entries,repositories:[]}
+      activation_authorized:false,api_version:'V1',apps:entries,repositories}
    })});
   });
   await page.locator('#load-store').click();
@@ -167,6 +186,22 @@ try {
   if((await page.locator('#store-apps .card').count())!==1)throw Error('Unsafe name filtered incorrectly');
   if((await page.locator('#store-apps img').count())!==0)throw Error('Store rendered untrusted HTML');
   if(storeCalls!==1)throw Error('Local Store filtering must not re-fetch catalog');
+  if((await page.locator('#store-repository option').count())!==18)
+   throw Error('All official repositories must populate the selector dynamically');
+  await page.locator('#store-repository').selectOption('unfamiliar_3');
+  await page.locator('#store-search').fill('');
+  if((await page.locator('#store-apps .card').count())!==8)
+   throw Error('Unknown vendor repository selection must filter by exact ownership');
+  await page.locator('#store-search').fill('Future Community App 071');
+  if((await page.locator('#store-apps .card').count())!==1)
+   throw Error('Search and repository filter must compose');
+  await page.locator('#store-repository').selectOption('unfamiliar_5');
+  await page.locator('#store-search').fill('<img');
+  if((await page.locator('#store-apps .card').count())!==1)
+   throw Error('Repository filter must not hide arbitrary future vendor App');
+  if((await page.locator('#store-catalog img').count())!==0)
+   throw Error('Untrusted repository metadata was rendered as HTML');
+  if(storeCalls!==1)throw Error('Changing repository must never issue another HTTP request');
   let operationCalls=0;
   await page.route('**/api/store/apps/**/operations',async route=>{
    operationCalls++;
@@ -191,6 +226,20 @@ try {
   const text=await page.locator('#store-apps .card').innerText();
   if(!text.includes('Aucune opération n’est autorisée')||!text.includes('Restaurer'))
    throw Error('UI must show seven read-only operations and no write permit');
+  await page.unroute('**/api/store');
+  await page.route('**/api/store',route=>route.fulfill({
+   status:200,contentType:'application/json',
+   body:JSON.stringify({read_only:true,catalog:{
+    official_supervisor_owner:true,activation_authorized:false,apps:entries,
+    repositories:[repositories[0],repositories[0]]
+   }})
+  }));
+  await page.locator('#load-store').click();
+  await page.waitForFunction(()=>document.querySelector('#store-status')?.textContent?.includes('indisponible'));
+  if(!(await page.locator('#store-repository').isDisabled())
+      ||(await page.locator('#store-repository option').count())!==1
+      ||(await page.locator('#store-apps .card').count())!==0)
+   throw Error('Duplicate official repositories must fail closed and erase stale selections');
 
   // Browser contract: official job discovery is admin-only, read-only,
   // dynamic and never renders private Supervisor job metadata.
@@ -245,7 +294,7 @@ try {
    throw Error('Non-admin browser retained access to discovered jobs');
   console.log('SUPERVISOR_JOBS_BROWSER_PASS: dynamic admin-only GET index, selection, redaction and revocation');
 
-  console.log('SUPERVISOR_STORE_BROWSER_PASS: 125 arbitrary Apps, 24/page, search and safe rendering');
+  console.log('SUPERVISOR_STORE_BROWSER_PASS: 125 arbitrary Apps, dynamic 17-repo filter, combined search, malformed repo denial');
   console.log('LIVE_APP_DETAIL_BROWSER_PASS: unknown live App detail loaded on demand, no write action');
   console.log('LIVE_APP_STATS_BROWSER_PASS: on-demand read-only CPU/RAM and secret-field isolation');
   console.log('UNIVERSAL_DASHBOARD_E2E_PASS: 83 unknown Apps, 24/page, source/search, no unsafe HTML or unnecessary fetch');

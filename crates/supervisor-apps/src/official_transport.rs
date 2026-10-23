@@ -46,6 +46,7 @@ pub enum TransportError {
     InvalidAppInfo,
     InvalidRuntimeInventory,
     InvalidJob,
+    InvalidChangelog,
     #[cfg(feature = "managed-apps-preview")]
     ManagedPreviewDisabled,
     #[cfg(feature = "lab-app-actions")]
@@ -150,6 +151,18 @@ impl LocalSupervisorClient {
             .map_err(|_| TransportError::InvalidAppSlug)?;
         let body = get_json(self.target, &self.token, &path)?;
         crate::app_stats::parse_app_stats(&body, slug).map_err(|_| TransportError::BadResponse)
+    }
+
+    /// Read-only official release notes; never interpreted as HTML.
+    pub fn fetch_app_changelog(
+        &self,
+        version: ApiVersion,
+        slug: &str,
+    ) -> Result<crate::changelog::AppChangelog, TransportError> {
+        let path = crate::changelog::changelog_path(version, slug)
+            .map_err(|_| TransportError::InvalidAppSlug)?;
+        let body = get_text(self.target, &self.token, &path)?;
+        crate::changelog::parse_changelog(&body, slug).map_err(|_| TransportError::InvalidChangelog)
     }
 
     /// Authenticated, read-only details of an arbitrary installed App.
@@ -325,6 +338,24 @@ impl AppSupervisorClient {
         crate::app_stats::parse_app_stats(&body, slug).map_err(|_| TransportError::BadResponse)
     }
 
+    /// Official Supervisor App release notes from the fixed internal service.
+    pub fn fetch_app_changelog(
+        &self,
+        version: ApiVersion,
+        slug: &str,
+    ) -> Result<crate::changelog::AppChangelog, TransportError> {
+        use std::net::{IpAddr, ToSocketAddrs};
+        let path = crate::changelog::changelog_path(version, slug)
+            .map_err(|_| TransportError::InvalidAppSlug)?;
+        let target = (self.service_name(), 80)
+            .to_socket_addrs()
+            .map_err(|_| TransportError::Io)?
+            .find(|addr| matches!(addr.ip(), IpAddr::V4(ip) if ip.is_private()))
+            .ok_or(TransportError::UnsupportedHost)?;
+        let body = get_text(target, &self.token, &path)?;
+        crate::changelog::parse_changelog(&body, slug).map_err(|_| TransportError::InvalidChangelog)
+    }
+
     /// GET only, against the same internal Supervisor service used for the Store.
     pub fn fetch_app_detail(
         &self,
@@ -423,7 +454,40 @@ fn get_json(
     read_http_json(&mut stream)
 }
 
+fn get_text(
+    target: SocketAddr,
+    token: &SupervisorToken,
+    path: &str,
+) -> Result<Vec<u8>, TransportError> {
+    let mut stream =
+        TcpStream::connect_timeout(&target, IO_TIMEOUT).map_err(|_| TransportError::Io)?;
+    stream
+        .set_read_timeout(Some(IO_TIMEOUT))
+        .map_err(|_| TransportError::Io)?;
+    stream
+        .set_write_timeout(Some(IO_TIMEOUT))
+        .map_err(|_| TransportError::Io)?;
+    let request = format!(
+        "GET {path} HTTP/1.1\r\nHost: supervisor\r\nAuthorization: Bearer {}\r\nAccept: text/plain\r\nConnection: close\r\n\r\n",
+        token.0
+    );
+    stream
+        .write_all(request.as_bytes())
+        .map_err(|_| TransportError::Io)?;
+    read_http_text(&mut stream)
+}
+
 fn read_http_json(stream: &mut TcpStream) -> Result<Vec<u8>, TransportError> {
+    read_http_body(stream, "application/json", MAX_BODY)
+}
+fn read_http_text(stream: &mut TcpStream) -> Result<Vec<u8>, TransportError> {
+    read_http_body(stream, "text/plain", crate::changelog::MAX_CHANGELOG_BYTES)
+}
+fn read_http_body(
+    stream: &mut TcpStream,
+    expected_type: &str,
+    max_body: usize,
+) -> Result<Vec<u8>, TransportError> {
     let mut data = Vec::new();
     let mut chunk = [0_u8; 8192];
     let header_end;
@@ -460,6 +524,7 @@ fn read_http_json(stream: &mut TcpStream) -> Result<Vec<u8>, TransportError> {
     }
     let mut content_length = None;
     let mut has_transfer_encoding = false;
+    let mut has_content_type = false;
     for line in lines {
         if line.is_empty() {
             continue;
@@ -474,17 +539,29 @@ fn read_http_json(stream: &mut TcpStream) -> Result<Vec<u8>, TransportError> {
             let parsed = value
                 .parse::<usize>()
                 .map_err(|_| TransportError::BadResponse)?;
-            if parsed > MAX_BODY {
+            if parsed > max_body {
                 return Err(TransportError::TooLarge);
             }
             content_length = Some(parsed);
         } else if name.eq_ignore_ascii_case("transfer-encoding") {
             has_transfer_encoding = true;
-        } else if name.eq_ignore_ascii_case("content-type")
-            && !value.to_ascii_lowercase().starts_with("application/json")
-        {
-            return Err(TransportError::BadResponse);
+        } else if name.eq_ignore_ascii_case("content-type") {
+            if has_content_type
+                || value
+                    .split(';')
+                    .next()
+                    .unwrap_or("")
+                    .trim()
+                    .to_ascii_lowercase()
+                    != expected_type
+            {
+                return Err(TransportError::BadResponse);
+            }
+            has_content_type = true;
         }
+    }
+    if expected_type == "text/plain" && !has_content_type {
+        return Err(TransportError::BadResponse);
     }
     if has_transfer_encoding {
         // Deliberately refuse HTTP chunked until a fully tested parser exists.

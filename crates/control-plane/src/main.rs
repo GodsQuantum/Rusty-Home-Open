@@ -209,6 +209,73 @@ fn live_detail_slug(line: &str) -> Option<Result<&str, &'static str>> {
     })
 }
 
+/// App release notes are never taken from a snapshot or a user-selected URL.
+fn live_changelog_slug(line: &str) -> Option<Result<&str, &'static str>> {
+    let rest = line.strip_prefix("GET /api/apps/")?;
+    let slug = rest
+        .strip_suffix("/changelog HTTP/1.1")
+        .or_else(|| rest.strip_suffix("/changelog HTTP/1.0"))?;
+    Some(if valid_slug(slug) {
+        Ok(slug)
+    } else {
+        Err("invalid app slug")
+    })
+}
+
+/// Release notes are informational. Confirm the installed App from the
+/// current authenticated Supervisor inventory before requesting them.
+fn live_changelog_response(adapters: &[Adapter], slug: &str) -> (&'static str, String) {
+    if !valid_slug(slug) {
+        return (
+            "400 Bad Request",
+            json!({"error":"invalid app slug","read_only":true}).to_string(),
+        );
+    }
+    let mut versions = adapters.iter().filter_map(|a| match a.kind {
+        AdapterKind::SupervisorLive(v) => Some(v),
+        _ => None,
+    });
+    let Some(version) = versions.next() else {
+        return (
+            "404 Not Found",
+            json!({"error":"live Supervisor source not configured","read_only":true}).to_string(),
+        );
+    };
+    if versions.next().is_some() {
+        return (
+            "503 Service Unavailable",
+            json!({"error":"ambiguous live Supervisor source","read_only":true}).to_string(),
+        );
+    }
+    let result = AppSupervisorClient::from_environment().and_then(|client| {
+        let inventory = client.fetch_installed(version)?;
+        let matches = inventory.apps.iter().filter(|app| app.slug == slug).count();
+        if matches == 0 {
+            return Ok(None);
+        }
+        if matches != 1 {
+            return Err(
+                hars_supervisor_apps::official_transport::TransportError::InvalidRuntimeInventory,
+            );
+        }
+        client.fetch_app_changelog(version, slug).map(Some)
+    });
+    match result {
+        Ok(Some(notes)) => (
+            "200 OK",
+            json!({"read_only":true,"changelog":notes}).to_string(),
+        ),
+        Ok(None) => (
+            "404 Not Found",
+            json!({"error":"app not installed","read_only":true}).to_string(),
+        ),
+        Err(_) => (
+            "503 Service Unavailable",
+            json!({"error":"Supervisor App changelog unavailable","read_only":true}).to_string(),
+        ),
+    }
+}
+
 /// Read-only numeric telemetry for installed Apps from official Supervisor.
 fn live_stats_slug(line: &str) -> Option<Result<&str, &'static str>> {
     let rest = line.strip_prefix("GET /api/apps/")?;
@@ -1179,6 +1246,14 @@ fn handle(
                 json!({"error":"invalid Supervisor job id","read_only":true}).to_string(),
             ),
         }
+    } else if let Some(slug) = live_changelog_slug(&line) {
+        match slug {
+            Ok(slug) => live_changelog_response(adapters, slug),
+            Err(_) => (
+                "400 Bad Request",
+                json!({"error":"invalid app slug","read_only":true}).to_string(),
+            ),
+        }
     } else if let Some(slug) = live_stats_slug(&line) {
         match slug {
             Ok(slug) => live_stats_response(adapters, slug),
@@ -1788,6 +1863,40 @@ mod tests {
             "test-host",
         );
         assert!(source.is_empty());
+    }
+
+    #[test]
+    fn official_changelog_route_rejects_unsafe_slugs_and_nonlive_sources() {
+        for version in ["HTTP/1.0", "HTTP/1.1"] {
+            let route = format!("GET /api/apps/future_vendor_999/changelog {version}");
+            assert_eq!(live_changelog_slug(&route), Some(Ok("future_vendor_999")));
+        }
+        for slug in ["%2e%2e", "..", "a/b", "a?token=x", "a#b"] {
+            let route = format!("GET /api/apps/{slug}/changelog HTTP/1.1");
+            assert!(matches!(live_changelog_slug(&route), Some(Err(_))));
+        }
+        assert!(live_changelog_slug("POST /api/apps/a/changelog HTTP/1.1").is_none());
+        let (status, response) = live_changelog_response(&[], "unknown_vendor_app");
+        assert_eq!(status, "404 Not Found");
+        assert!(response.contains("read_only"));
+        let ambiguous = vec![
+            Adapter {
+                host: "one".into(),
+                kind: AdapterKind::SupervisorLive(ApiVersion::V1),
+            },
+            Adapter {
+                host: "two".into(),
+                kind: AdapterKind::SupervisorLive(ApiVersion::V2),
+            },
+        ];
+        assert_eq!(
+            live_changelog_response(&ambiguous, "unknown_vendor_app").0,
+            "503 Service Unavailable"
+        );
+        assert_eq!(
+            live_changelog_response(&ambiguous, "../bad").0,
+            "400 Bad Request"
+        );
     }
 
     #[test]
