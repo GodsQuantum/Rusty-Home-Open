@@ -13,5 +13,6 @@ tick=chr(96)
 for gate in gates:
     marker="| "+tick+gate["id"]+tick+" | "+tick+gate["status"]+tick+" |"
     assert report.count(marker)==1,(gate["id"],report.count(marker))
-assert sum(line.startswith("| "+tick) for line in report.splitlines())==15
+gate_section=report.split("## Release gate matrix — every gate remains noncertified",1)[1].split("## Effort estimates",1)[0]
+assert sum(line.startswith("| "+tick) for line in gate_section.splitlines())==15
 print("PASS: exact 15 gates in ledger, 0 certified; limited lab evidence only")

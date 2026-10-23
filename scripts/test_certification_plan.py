@@ -13,7 +13,7 @@ class CertificationCoverage(unittest.TestCase):
         expected={x["id"] for x in rows}
         self.assertEqual(len(rows),15)
         self.assertEqual(len(expected),15)
-        plan=(ROOT/"docs/PLAN_CERTIFICATION_TECHNOLOGIES_2026-10-21.md").read_text()
+        plan=(ROOT/"docs/PLAN_CERTIFICATION_TECHNOLOGIES_2026-10-23.md").read_text()
         found=re.findall(r"(?m)^\| ([a-z][a-z0-9_]+) \| (?:P0|P1|P2) \|",plan)
         self.assertEqual(len(found),len(set(found)),"duplicate gate rows")
         self.assertEqual(set(found),expected,"roadmap missing or inventing release gates")
