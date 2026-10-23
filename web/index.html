@@ -170,7 +170,7 @@ function renderApps(){
   if(app.backend==="supervisor"&&app.live===true&&typeof app.slug==="string"){
    const button=node("button","Détails de l’App");
    button.type="button";
-   const detail=node("div",undefined,"muted");detail.hidden=true;
+   const detail=node("div",undefined,"muted app-detail");detail.hidden=true;
    button.addEventListener("click",async()=>{
     if(!detail.hidden){detail.hidden=true;return;}
     detail.hidden=false;detail.textContent="Chargement des détails…";button.disabled=true;
@@ -191,7 +191,7 @@ function renderApps(){
    card.append(button,detail);
    const statsButton=node("button","Ressources en direct");
    statsButton.type="button";
-   const stats=node("p",undefined,"muted");stats.hidden=true;
+   const stats=node("p",undefined,"muted app-stats");stats.hidden=true;
    statsButton.addEventListener("click",async()=>{
     if(!stats.hidden){stats.hidden=true;return;}
     stats.hidden=false;stats.textContent="Lecture des ressources Supervisor…";statsButton.disabled=true;
