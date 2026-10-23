@@ -223,7 +223,7 @@ try {
    })});
   });
   await page.locator('#load-jobs').click();
-  await page.waitForFunction(()=>document.querySelector('#job-list')?.textContent?.includes(discoveredId));
+  await page.waitForFunction(id=>document.querySelector('#job-list')?.textContent?.includes(id),discoveredId);
   if(discoveryCalls!==1)throw Error('Official job index should fetch once on demand');
   if((await page.locator('body').innerText()).includes('NEVER_RENDER_PRIVATE_JOB_EXTRA'))
    throw Error('Private job field leaked');
