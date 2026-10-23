@@ -315,3 +315,41 @@ fn official_store_detail_fetches_uninstalled_unknown_app_and_redacts_secrets() {
     assert!(request.starts_with("GET /store/addons/unknown_new_2060 HTTP/1.1"));
     assert!(request.contains("Authorization: Bearer fixture_value_123"));
 }
+
+#[test]
+fn official_job_progress_over_authenticated_http_is_vendor_neutral_and_redacted() {
+    use hars_supervisor_apps::job_status::State;
+    const ID: &str = "0123456789abcdef0123456789abcdef";
+    let body = serde_json::json!({"result":"ok","data":{
+        "uuid":ID,"progress":87.5,"done":false,"stage":"PRIVATE_JOB_STAGE",
+        "errors":[{"message":"SECRET_ERROR"}],"child_jobs":[],
+        "extra":{"token":"SECRET_EXTRA"}
+    }})
+    .to_string();
+    for (version, path) in [
+        (ApiVersion::V1, format!("/jobs/{ID}")),
+        (ApiVersion::V2, format!("/v2/jobs/{ID}")),
+    ] {
+        let (addr, worker) = serve(ok(&body));
+        let status = client(addr).fetch_job(version, ID).unwrap();
+        assert_eq!(status.state, State::Running);
+        assert_eq!(status.progress, 87.5);
+        assert_eq!(status.error_count, 1);
+        assert!(status.read_only);
+        let output = serde_json::to_string(&status).unwrap();
+        assert!(!output.contains("SECRET_ERROR"));
+        assert!(!output.contains("SECRET_EXTRA"));
+        let request = worker.join().unwrap();
+        assert!(request.starts_with(&format!("GET {path} HTTP/1.1\r\n")));
+        assert!(request.contains("Authorization: Bearer fixture_value_123\r\n"));
+    }
+    let disconnected = client("127.0.0.1:1".parse().unwrap());
+    assert_eq!(
+        disconnected.fetch_job(ApiVersion::V1, "../private"),
+        Err(TransportError::InvalidJob)
+    );
+    assert_eq!(
+        disconnected.fetch_job(ApiVersion::V1, "ABCDEF0123456789ABCDEF0123456789"),
+        Err(TransportError::InvalidJob)
+    );
+}

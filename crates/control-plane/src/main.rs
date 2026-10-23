@@ -222,6 +222,87 @@ fn live_stats_slug(line: &str) -> Option<Result<&str, &'static str>> {
     })
 }
 
+/// Read-only official Supervisor Job lookup. A job UUID is NOT an App
+/// authorization receipt and must never authorize lifecycle mutations.
+fn live_job_id(line: &str) -> Option<Result<&str, &'static str>> {
+    let rest = line.strip_prefix("GET /api/jobs/")?;
+    let id = rest
+        .strip_suffix(" HTTP/1.1")
+        .or_else(|| rest.strip_suffix(" HTTP/1.0"))?;
+    Some(
+        if hars_supervisor_apps::job_status::job_path(ApiVersion::V1, id).is_ok() {
+            Ok(id)
+        } else {
+            Err("invalid Supervisor job id")
+        },
+    )
+}
+
+/// Never expose raw Supervisor job stages, errors, extra metadata or children:
+/// they may contain credentials, paths, and details from other operations.
+fn public_job_summary(job: &hars_supervisor_apps::job_status::JobStatus) -> Option<Value> {
+    if !job.read_only
+        || hars_supervisor_apps::job_status::job_path(ApiVersion::V1, &job.id).is_err()
+        || !job.progress.is_finite()
+        || !(0.0..=100.0).contains(&job.progress)
+        || job.error_count > 4096
+    {
+        return None;
+    }
+    Some(json!({
+        "id":job.id,
+        "state":job.state,
+        "progress":job.progress,
+        "error_count":job.error_count,
+        "read_only":true
+    }))
+}
+
+/// Official Supervisor is the only data source; never use a local fixture,
+/// cached job, user-supplied endpoint or ambiguous V1/V2 source.
+fn live_job_response(adapters: &[Adapter], id: &str) -> (&'static str, String) {
+    if hars_supervisor_apps::job_status::job_path(ApiVersion::V1, id).is_err() {
+        return (
+            "400 Bad Request",
+            json!({"read_only":true,"error":"invalid job id"}).to_string(),
+        );
+    }
+    let mut versions = adapters.iter().filter_map(|a| match a.kind {
+        AdapterKind::SupervisorLive(v) => Some(v),
+        _ => None,
+    });
+    let Some(version) = versions.next() else {
+        return (
+            "404 Not Found",
+            json!({"read_only":true,"error":"live Supervisor source not configured"}).to_string(),
+        );
+    };
+    if versions.next().is_some() {
+        return (
+            "503 Service Unavailable",
+            json!({"read_only":true,"error":"ambiguous live Supervisor source"}).to_string(),
+        );
+    }
+    let result =
+        AppSupervisorClient::from_environment().and_then(|client| client.fetch_job(version, id));
+    match result {
+        Ok(job) => match public_job_summary(&job) {
+            Some(summary) => (
+                "200 OK",
+                json!({"read_only":true,"job":summary}).to_string(),
+            ),
+            None => (
+                "503 Service Unavailable",
+                json!({"read_only":true,"error":"invalid Supervisor job"}).to_string(),
+            ),
+        },
+        Err(_) => (
+            "503 Service Unavailable",
+            json!({"read_only":true,"error":"Supervisor job unavailable"}).to_string(),
+        ),
+    }
+}
+
 /// A live inventory must confirm installation before any privileged stats GET.
 /// Snapshot sources never trigger network reads and cannot impersonate live.
 fn live_stats_response(adapters: &[Adapter], slug: &str) -> (&'static str, String) {
@@ -1039,6 +1120,14 @@ fn handle(
                 json!({"error":"invalid store app slug","read_only":true}).to_string(),
             ),
         }
+    } else if let Some(id) = live_job_id(&line) {
+        match id {
+            Ok(id) => live_job_response(adapters, id),
+            Err(_) => (
+                "400 Bad Request",
+                json!({"error":"invalid Supervisor job id","read_only":true}).to_string(),
+            ),
+        }
     } else if let Some(slug) = live_stats_slug(&line) {
         match slug {
             Ok(slug) => live_stats_response(adapters, slug),
@@ -1335,6 +1424,98 @@ mod tests {
     fn bounded_lab_http_resource_policy() {
         assert_eq!(LAB_HTTP_WORKERS, 8);
         assert_eq!(LAB_HTTP_QUEUE, 32);
+    }
+
+    #[test]
+    fn supervisor_job_progress_route_is_canonical_and_read_only() {
+        let id = "0123456789abcdef0123456789abcdef";
+        for version in ["HTTP/1.1", "HTTP/1.0"] {
+            let line = format!("GET /api/jobs/{id} {version}");
+            assert_eq!(live_job_id(&line), Some(Ok(id)));
+        }
+        for bad in [
+            "",
+            "deadbeef",
+            "ABCDEF0123456789ABCDEF0123456789",
+            "../jobs",
+            "a%2fb",
+            "a?x=1",
+            "a#fragment",
+        ] {
+            let line = format!("GET /api/jobs/{bad} HTTP/1.1");
+            assert!(matches!(live_job_id(&line), Some(Err(_))), "accepted {bad}");
+        }
+        assert_eq!(live_job_id(&format!("POST /api/jobs/{id} HTTP/1.1")), None);
+    }
+
+    #[test]
+    fn supervisor_job_progress_response_redacts_stages_and_rejects_forgery() {
+        use hars_supervisor_apps::job_status::{JobStatus, State};
+        let job = JobStatus {
+            id: "0123456789abcdef0123456789abcdef".into(),
+            state: State::Running,
+            progress: 42.0,
+            error_count: 1,
+            stage: Some("SECRET PRIVATE STAGE".into()),
+            read_only: true,
+        };
+        let view = public_job_summary(&job).expect("valid read-only job");
+        assert_eq!(view["state"], "running");
+        assert_eq!(view["progress"], 42.0);
+        assert_eq!(view["error_count"], 1);
+        assert_eq!(view["read_only"], true);
+        assert!(!view.to_string().contains("SECRET PRIVATE STAGE"));
+        assert!(view.get("stage").is_none());
+        let mut forged = job.clone();
+        forged.read_only = false;
+        assert!(public_job_summary(&forged).is_none());
+        forged.read_only = true;
+        forged.progress = f64::NAN;
+        assert!(public_job_summary(&forged).is_none());
+    }
+
+    #[test]
+    fn supervisor_job_progress_dashboard_is_read_only_and_validates_official_id() {
+        let html = include_str!("../../../web/index.html");
+        for expected in [
+            "id=\"supervisor-job-tracker\"",
+            "id=\"job-id\"",
+            "id=\"load-job\"",
+            "api/jobs/",
+            "refreshSupervisorJob",
+            "data.read_only!==true",
+            "j.read_only!==true",
+            "j.id!==id",
+            "Number.isSafeInteger(j.error_count)",
+            "select(\"#load-job\").disabled=!supervisorAvailable",
+        ] {
+            assert!(
+                html.contains(expected),
+                "missing UI safety contract: {expected}"
+            );
+        }
+        assert!(!html.contains("POST /api/jobs/"));
+    }
+
+    #[test]
+    fn supervisor_job_progress_fails_closed_without_one_live_source() {
+        let id = "0123456789abcdef0123456789abcdef";
+        let empty: Vec<Adapter> = vec![];
+        assert_eq!(live_job_response(&empty, id).0, "404 Not Found");
+        let duplicated = vec![
+            Adapter {
+                host: "a".into(),
+                kind: AdapterKind::SupervisorLive(ApiVersion::V1),
+            },
+            Adapter {
+                host: "b".into(),
+                kind: AdapterKind::SupervisorLive(ApiVersion::V2),
+            },
+        ];
+        assert_eq!(
+            live_job_response(&duplicated, id).0,
+            "503 Service Unavailable"
+        );
     }
 
     #[test]
