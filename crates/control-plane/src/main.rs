@@ -1,6 +1,7 @@
 //! Rusty Home P3b prototype: read-only, multi-source application inventory.
 //! No Docker socket exposed, no write paths, no HAOS device control or automation.
 mod attestation;
+mod ingress;
 use hars_supervisor_apps::installed_inventory::RunningInventory;
 use hars_supervisor_apps::official_store::ApiVersion;
 use hars_supervisor_apps::official_transport::AppSupervisorClient;
@@ -413,6 +414,12 @@ fn parse_local_http_request(raw: &[u8], local: SocketAddr) -> Result<&str, &'sta
     Ok(request)
 }
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum AccessMode {
+    Loopback,
+    SupervisorIngress,
+}
+
 // Bounded, independent request handling: 8 workers, at most 32 pending.
 // No unbounded thread-per-connection allocation or blocking send in accept().
 const LAB_HTTP_WORKERS: usize = 8;
@@ -423,6 +430,7 @@ fn handle(
     adapters: &[Adapter],
     signed: Option<&SignedContext>,
     core: Option<&CoreSidecar>,
+    mode: AccessMode,
 ) {
     let _ = conn.set_write_timeout(Some(Duration::from_secs(2)));
     // Deadline covers the ENTIRE header, not each read separately. A client
@@ -486,18 +494,41 @@ fn handle(
         Ok(addr) => addr,
         Err(_) => return,
     };
-    let line = match parse_local_http_request(&buffer[..size], local) {
-        Ok(line) => line,
-        Err(_) => {
-            let _ = reply(
-                &mut conn,
-                "400 Bad Request",
-                r#"{"error":"invalid local HTTP request"}"#,
-                "application/json; charset=utf-8",
-            );
-            return;
+    let (line, claimed_user) = match mode {
+        AccessMode::Loopback => match parse_local_http_request(&buffer[..size], local) {
+            Ok(line) => (line.to_owned(), None),
+            Err(_) => {
+                let _ = reply(
+                    &mut conn,
+                    "400 Bad Request",
+                    r#"{"error":"invalid local HTTP request"}"#,
+                    "application/json; charset=utf-8",
+                );
+                return;
+            }
+        },
+        AccessMode::SupervisorIngress => {
+            let peer = match conn.peer_addr() {
+                Ok(a) => a,
+                Err(_) => return,
+            };
+            match ingress::verified_route(&buffer[..size], peer) {
+                Ok(identity) => (identity.route, Some(identity.user_id)),
+                Err(_) => {
+                    let _ = reply(
+                        &mut conn,
+                        "403 Forbidden",
+                        r#"{"error":"official Supervisor ingress identity required"}"#,
+                        "application/json; charset=utf-8",
+                    );
+                    return;
+                }
+            }
         }
     };
+    // The identity permits read-only access, never App mutation or admin
+    // status. Reserved for a separate, trusted Core permission lookup.
+    drop(claimed_user);
     if line == "GET / HTTP/1.1" || line == "GET / HTTP/1.0" {
         let _ = reply(
             &mut conn,
@@ -577,6 +608,7 @@ fn run() -> Result<(), String> {
     let mut public_key_file: Option<String> = None;
     let mut python_socket: Option<String> = None;
     let mut python_capability: Option<String> = None;
+    let mut ingress_mode = false;
     while let Some(arg) = args.next() {
         let kind = match arg.as_str() {
             "--attestation" if attestation_file.is_none() => {
@@ -596,6 +628,10 @@ fn run() -> Result<(), String> {
                 None
             }
             "--docker" => Some(AdapterKind::DockerCli),
+            "--ingress" if !ingress_mode => {
+                ingress_mode = true;
+                None
+            }
             "--supervisor-live" => Some(AdapterKind::SupervisorLive(ApiVersion::V1)),
             "--supervisor-live-v2" => Some(AdapterKind::SupervisorLive(ApiVersion::V2)),
             "--manifest" if manifest_file.is_none() => {
@@ -686,13 +722,42 @@ fn run() -> Result<(), String> {
         Some(s) => Some(s.verify()?),
         None => None,
     };
+    if ingress_mode {
+        if bind.is_none() {
+            return Err("Supervisor ingress requires --serve".into());
+        }
+        if signed.is_some()
+            || core.is_some()
+            || adapters
+                .iter()
+                .any(|a| !matches!(a.kind, AdapterKind::SupervisorLive(_)))
+        {
+            return Err("Supervisor ingress requires only official live App adapters".into());
+        }
+        // Require official in-App auth; any caller can set an env variable,
+        // but no HTTP peer other than the Supervisor IP is accepted.
+        AppSupervisorClient::from_environment()
+            .map_err(|_| "official Supervisor App token unavailable")?;
+    }
     if let Some(addr) = bind {
         let addr: SocketAddr = addr.parse().map_err(|_| "invalid bind address")?;
-        if !matches!(addr.ip(), IpAddr::V4(v) if v.is_loopback())
+        if ingress_mode {
+            if !matches!(addr.ip(), IpAddr::V4(v) if v.is_unspecified()) || addr.port() < 1024 {
+                return Err(
+                    "Supervisor ingress requires a container interface and unprivileged port"
+                        .into(),
+                );
+            }
+        } else if !matches!(addr.ip(), IpAddr::V4(v) if v.is_loopback())
             && !matches!(addr.ip(), IpAddr::V6(v) if v.is_loopback())
         {
             return Err("the lab API must be bound to a loopback address only".into());
         }
+        let mode = if ingress_mode {
+            AccessMode::SupervisorIngress
+        } else {
+            AccessMode::Loopback
+        };
         let listener = TcpListener::bind(addr).map_err(|e| format!("bind failed: {e}"))?;
         eprintln!("Rusty Home lab (read only): {addr}");
         let adapters = Arc::new(adapters);
@@ -719,6 +784,7 @@ fn run() -> Result<(), String> {
                     &adapters,
                     signed.as_ref().as_ref(),
                     core.as_ref().as_ref(),
+                    mode,
                 );
             });
         }
