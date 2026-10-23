@@ -112,6 +112,8 @@ The only machine authority for production release gates is
 
 ## Product development evidence: dynamic Supervisor Store repositories (2026-10-23)
 
+- Feature commit 371c0a65d1005274b47c9704084791b0bb615c3c, PR #51.
+  Independent GitHub Actions: pending on final PR SHA, not certified.
 - Real UI increment on a feature branch: a repository dropdown derived from
   the official Supervisor Store response, exact vendor-neutral filtering,
   combined search/paging and fail-closed invalid metadata handling.

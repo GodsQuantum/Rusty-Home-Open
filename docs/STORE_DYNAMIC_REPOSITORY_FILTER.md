@@ -28,3 +28,5 @@ support Ubuntu 26.04 in DEV. Browser-level execution is therefore delegated
 to the independent Ubuntu 24.04 GitHub Actions runner. The Node algorithm
 tests and source-contract checks passed locally; this limitation is not a
 browser PASS.
+
+Feature implementation commit: 371c0a65d1005274b47c9704084791b0bb615c3c; PR #51.
