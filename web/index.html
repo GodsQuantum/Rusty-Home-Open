@@ -41,7 +41,7 @@ footer{border-top:1px solid #313f50;margin-top:2.5rem;padding-top:1rem;font-size
 <section id="store-catalog"><div class="sectionhead"><h2>Store Supervisor · Apps communautaires</h2><button id="load-store" type="button" disabled>Consulter le Store</button></div>
 <p class="muted">Catalogue officiel des Apps Home Assistant OS, distinct du Marketplace des intégrations Home Assistant Core. Consultation uniquement ; aucune installation ou mise à jour n’est autorisée.</p>
 <p id="store-status" aria-live="polite">Disponible uniquement via une connexion Supervisor authentifiée.</p>
-<div class="catalog-controls"><label for="store-search">Rechercher une App <input id="store-search" type="search" maxlength="120" placeholder="Nom, dépôt, identifiant" disabled></label></div>
+<div class="catalog-controls"><label for="store-search">Rechercher une App <input id="store-search" type="search" maxlength="120" placeholder="Nom, dépôt, identifiant" disabled></label><label for="store-repository">Dépôt <select id="store-repository" disabled><option value="">Tous les dépôts</option></select></label></div>
 <div class="cards" id="store-apps" aria-live="polite"></div>
 <nav class="pager" aria-label="Pages du Store Supervisor"><button id="store-prev" type="button" disabled>Précédente</button><span id="store-page" aria-live="polite">Page 1 / 1</span><button id="store-next" type="button" disabled>Suivante</button></nav>
 </section>
@@ -53,9 +53,25 @@ const PAGE_SIZE=24;
 let allApps=[];
 let pageIndex=0;
 let storeApps=[],storePageIndex=0;
+function filterStoreEntries(apps,query,repository){
+ const q=query.trim().toLocaleLowerCase();
+ return apps.filter(a=>(!repository||a.repository===repository)
+   &&(!q||[a.name,a.slug,a.repository].some(x=>String(x||"").toLocaleLowerCase().includes(q))));
+}
+function validatedStoreRepositories(repos){
+ if(!Array.isArray(repos)||repos.length>2048)throw Error("Untrusted repositories");
+ const seen=new Set();
+ for(const repo of repos){
+  if(!repo||typeof repo.slug!=="string"||repo.slug.length<1||repo.slug.length>120
+     ||!/^[a-zA-Z0-9_-]+$/.test(repo.slug)||typeof repo.name!=="string"
+     ||repo.name.length<1||repo.name.length>256||/[\x00-\x1f\x7f]/.test(repo.name)
+     ||seen.has(repo.slug.toLowerCase()))throw Error("Untrusted repository");
+  seen.add(repo.slug.toLowerCase());
+ }
+ return [...repos].sort((a,b)=>a.name.localeCompare(b.name));
+}
 function renderStore(){
- const q=select("#store-search").value.trim().toLocaleLowerCase();
- const matching=storeApps.filter(a=>!q||[a.name,a.slug,a.repository].some(x=>String(x||"").toLocaleLowerCase().includes(q)));
+ const matching=filterStoreEntries(storeApps,select("#store-search").value,select("#store-repository").value);
  const pages=Math.max(1,Math.ceil(matching.length/PAGE_SIZE));
  storePageIndex=Math.min(storePageIndex,pages-1);
  select("#store-page").textContent="Page "+(storePageIndex+1)+" / "+pages+" · "+matching.length+" App(s)";
@@ -179,12 +195,28 @@ async function loadStore(){
   if(!response.ok)throw Error("Store unavailable");
   const data=await response.json();
   if(data.read_only!==true||!data.catalog||data.catalog.official_supervisor_owner!==true
-      ||data.catalog.activation_authorized!==false||!Array.isArray(data.catalog.apps))throw Error("Untrusted catalog");
+      ||data.catalog.activation_authorized!==false||!Array.isArray(data.catalog.apps)
+      ||data.catalog.apps.length>50000||!Array.isArray(data.catalog.repositories)
+      ||data.catalog.repositories.length>2048)throw Error("Untrusted catalog");
+  const repos=validatedStoreRepositories(data.catalog.repositories);
+  const dropdown=select("#store-repository");
+  dropdown.replaceChildren(node("option","Tous les dépôts"));
+  dropdown.firstChild.value="";
+  for(const repo of repos){
+   const option=node("option",repo.name+" ("+repo.slug+")");
+   option.value=repo.slug;
+   dropdown.append(option);
+  }
   storeApps=data.catalog.apps;
-  storePageIndex=0;select("#store-search").disabled=false;renderStore();
+  storePageIndex=0;select("#store-search").disabled=false;
+  dropdown.disabled=false;renderStore();
   select("#store-status").textContent=storeApps.length+" Apps de tous les dépôts accessibles, en lecture seule.";
  }catch(e){
-  storeApps=[];storePageIndex=0;renderStore();
+  storeApps=[];storePageIndex=0;
+  const dropdown=select("#store-repository");
+  dropdown.replaceChildren(node("option","Tous les dépôts"));
+  dropdown.firstChild.value="";dropdown.disabled=true;
+  select("#store-search").disabled=true;renderStore();
   select("#store-status").textContent="Catalogue indisponible ou accès Supervisor refusé.";
  }finally{select("#load-store").disabled=false;}
 }
@@ -326,6 +358,7 @@ async function load(){
 }
 select("#load-store").addEventListener("click",loadStore);
 select("#store-search").addEventListener("input",()=>{storePageIndex=0;renderStore()});
+select("#store-repository").addEventListener("change",()=>{storePageIndex=0;renderStore()});
 select("#store-prev").addEventListener("click",()=>{if(storePageIndex>0){storePageIndex--;renderStore()}});
 select("#store-next").addEventListener("click",()=>{storePageIndex++;renderStore()});
 select("#refresh").addEventListener("click",load);

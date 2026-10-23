@@ -108,3 +108,18 @@ No date of production completion can be established from isolated labs.
 
 The only machine authority for production release gates is
 [config/release-gates.json](../config/release-gates.json).
+
+
+## Product development evidence: dynamic Supervisor Store repositories (2026-10-23)
+
+- Real UI increment on a feature branch: a repository dropdown derived from
+  the official Supervisor Store response, exact vendor-neutral filtering,
+  combined search/paging and fail-closed invalid metadata handling.
+- TDD: Python UI contract initially failed on the missing selector, then
+  passed. Node executes the actual browser filter/validator against 1317
+  fictional Apps, 23 repositories and malicious/duplicate metadata.
+- Independent Playwright browser scenario is included in
+  scripts/capture_branding_lab.mjs; **not yet independently certified**
+  until the exact PR SHA CI reports success.
+- No App lifecycle mutation, production identity or gate signoff. All 15
+  production gates remain blocked/lab_partial.
