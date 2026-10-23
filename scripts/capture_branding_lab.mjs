@@ -254,6 +254,33 @@ try {
   if((await page.locator('#store-catalog img').count())!==0)
    throw Error('Untrusted repository metadata was rendered as HTML');
   if(storeCalls!==1)throw Error('Changing repository must never issue another HTTP request');
+  // Unknown vendors have a live security review, never an install capability.
+  let privilegeCalls=0;
+  await page.route('**/api/store/apps/**/privileges',async route=>{
+   privilegeCalls++;
+   if(route.request().method()!=='GET')throw Error('Privileges review must use GET only');
+   const found=route.request().url().match(/\/api\/store\/apps\/([^/]+)\/privileges$/);
+   if(!found)throw Error('Unexpected privileges endpoint');
+   const slug=decodeURIComponent(found[1]);
+   await route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({
+     read_only:true,privileges:{slug,read_only:true,activation_authorized:false,
+       security_rating:2,granted:['docker_api','full_access'],unknown:['auth_api'],
+       role:'manager',apparmor:'disable',review:'elevated',
+       private_token:'DO_NOT_EXPOSE_PRIVATE_TOKEN'
+     }})});
+  });
+  if(privilegeCalls!==0)throw Error('Privileges must not load automatically');
+  await page.getByRole('button',{name:'Sécurité et privilèges'}).click();
+  await page.waitForFunction(()=>document.querySelector('#store-apps .store-privileges')
+    ?.textContent?.includes('Privilèges élevés'));
+  if(privilegeCalls!==1)throw Error('Privileges must load once on demand');
+  const preflight=await page.locator('#store-apps .store-privileges').innerText();
+  if(!preflight.includes('docker_api')||!preflight.includes('champs')&&!preflight.includes('Champs')
+     ||!preflight.includes('aucune installation'))
+     throw Error('Incomplete security review output');
+  if(preflight.includes('DO_NOT_EXPOSE_PRIVATE_TOKEN'))
+     throw Error('Private vendor metadata exposed in UI');
+  console.log('LIVE_VENDOR_SECURITY_PRIVILEGES_UI_PASS: generic, read-only, no secret leaks');
   // Third-party Store DOCS.md is fetched on demand and never interpreted as HTML.
   let documentationCalls=0;
   const untrustedDocs='# Unknown vendor\n<img src=x onerror=alert(1)> Markdown only';

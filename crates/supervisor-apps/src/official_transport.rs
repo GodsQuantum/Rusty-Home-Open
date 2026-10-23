@@ -192,6 +192,20 @@ impl LocalSupervisorClient {
             .map_err(|_| TransportError::InvalidAppInfo)
     }
 
+    /// Authenticate and inspect fixed official Store metadata only.
+    /// Never send third-party secrets, raw options or executable directives.
+    pub fn fetch_store_privileges(
+        &self,
+        version: ApiVersion,
+        slug: &str,
+    ) -> Result<crate::store_privileges::AppPrivileges, TransportError> {
+        let path = crate::store_privileges::privilege_path(version, slug)
+            .map_err(|_| TransportError::InvalidAppSlug)?;
+        let body = get_json(self.target, &self.token, &path)?;
+        crate::store_privileges::parse_store_privileges(&body, slug)
+            .map_err(|_| TransportError::InvalidAppInfo)
+    }
+
     /// Authenticated, read-only details of an arbitrary installed App.
     /// Sensitive options and device addresses are dropped by the typed parser.
     pub fn fetch_app_detail(
@@ -419,6 +433,25 @@ impl AppSupervisorClient {
             .ok_or(TransportError::UnsupportedHost)?;
         let body = get_json(target, &self.token, &path)?;
         crate::app_config_schema::parse_config_schema(&body, slug)
+            .map_err(|_| TransportError::InvalidAppInfo)
+    }
+
+    /// Fixed Supervisor Store permissions review. No App writes are supported.
+    pub fn fetch_store_privileges(
+        &self,
+        version: ApiVersion,
+        slug: &str,
+    ) -> Result<crate::store_privileges::AppPrivileges, TransportError> {
+        use std::net::{IpAddr, ToSocketAddrs};
+        let path = crate::store_privileges::privilege_path(version, slug)
+            .map_err(|_| TransportError::InvalidAppSlug)?;
+        let target = (self.service_name(), 80)
+            .to_socket_addrs()
+            .map_err(|_| TransportError::Io)?
+            .find(|addr| matches!(addr.ip(),IpAddr::V4(ip) if ip.is_private()))
+            .ok_or(TransportError::UnsupportedHost)?;
+        let body = get_json(target, &self.token, &path)?;
+        crate::store_privileges::parse_store_privileges(&body, slug)
             .map_err(|_| TransportError::InvalidAppInfo)
     }
 
