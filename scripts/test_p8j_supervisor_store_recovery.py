@@ -44,6 +44,40 @@ class TestStoreReadiness(unittest.TestCase):
         got=mod.ensure_supervisor_local_app_version(fake,SLUG,"1.0.1",sleeper=lambda n:None)
         self.assertEqual(got["version_latest"],"1.0.1")
         self.assertEqual(sum("reload" in c for c in calls),1)
+    def test_one_reload_eventually_propagates_within_bounded_observation_window(self):
+        calls=[]
+        reads=0
+        sleeps=[]
+        def fake(cmd,timeout):
+            nonlocal reads
+            calls.append(cmd)
+            if "store reload" in cmd:
+                return {"result":"ok"}
+            reads+=1
+            # The genuine Supervisor may take several seconds to publish its
+            # new catalogue, even after the reload POST returned success.
+            return reply() if reads>=11 else reply("0.0.1")
+        result=mod.ensure_supervisor_local_app_version(
+            fake,SLUG,"0.1.0",max_reloads=1,sleeper=sleeps.append)
+        self.assertEqual(result["version_latest"],"0.1.0")
+        self.assertEqual(sum("store reload" in x for x in calls),1)
+        self.assertEqual(reads,11)
+        self.assertEqual(len(sleeps),9)
+        self.assertTrue(all(x==mod.POLL_SECONDS for x in sleeps))
+
+    def test_wrong_version_after_long_convergence_still_fails_closed(self):
+        calls=[]
+        sleeps=[]
+        def fake(cmd,timeout):
+            calls.append(cmd)
+            return {"result":"ok"} if "store reload" in cmd else reply("9.9.9")
+        with self.assertRaisesRegex(RuntimeError,"failed expected version"):
+            mod.ensure_supervisor_local_app_version(fake,SLUG,"0.1.0",
+                max_reloads=1,sleeper=sleeps.append)
+        self.assertEqual(sum("store reload" in x for x in calls),1)
+        self.assertEqual(len(calls),2+mod.POST_RELOAD_POLLS)
+        self.assertEqual(len(sleeps),mod.POST_RELOAD_POLLS-1)
+
     def test_unreachable_supervisor_fails_closed_with_bounded_calls(self):
         calls=[]
         def fake(cmd,timeout):
@@ -52,7 +86,7 @@ class TestStoreReadiness(unittest.TestCase):
         with self.assertRaisesRegex(RuntimeError,"failed expected version"):
             mod.ensure_supervisor_local_app_version(fake,SLUG,"0.1.0",sleeper=lambda n:None)
         self.assertEqual(sum("store reload" in c for c in calls),2)
-        self.assertLessEqual(len(calls),10)
+        self.assertLessEqual(len(calls),2*(mod.POST_RELOAD_POLLS+2))
     def test_wrong_slug_version_and_error_reply_not_accepted(self):
         def fake(cmd,timeout):
             if "reload" in cmd:return {"result":"error","message":"unauthorized"}
