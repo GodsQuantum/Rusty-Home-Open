@@ -43,6 +43,19 @@ Rusty Home — laboratoire
 
 Pour les détails : [architecture](docs/ARCHITECTURE.md), [composants étudiés](docs/UPSTREAMS.md), [sécurité](docs/SECURITY.md) et [critères de production](docs/PRODUCTION_READINESS_2026-10-18.md).
 
+### Compatibilité avec le Marketplace Home Assistant
+
+Home Assistant **2026.11 (à paraître)** intégrera HACS à Core sous le nom
+**Paramètres > Marketplace**. Rusty Home dispose désormais d'un adaptateur
+Rust **en lecture seule** vers les commandes WebSocket officielles de Core.
+Les installations, mises à jour, connexions GitHub OAuth et migrations HACS
+demeurent gérées par **Home Assistant Core**, sans magasin parallèle.
+La version **2026.10 utilise encore HACS** ; les Apps HAOS restent gérées
+séparément par Supervisor. Il s'agit d'un contrat expérimental testé,
+**pas** d'une compatibilité de production certifiée.
+
+Voir [l'architecture et ses tests](docs/MARKETPLACE_CORE_2026_11_ARCHITECTURE.md).
+
 ## Premiers tests — uniquement en environnement isolé
 
 Nécessite Rust, Python 3 et Linux ; certains tests avancés demandent Docker ou QEMU.

@@ -7,3 +7,7 @@
 5. Validate full-stack performance, fuzz, packaging and upstream licenses.
 
 All 15 production gates remain blocked.
+
+## P27: Transition HACS -> Core Marketplace (2026.11 planned)
+
+Use the official Marketplace as the single authoritative community package store rather than cloning HACS. [Architecture and source-backed ABI plan](MARKETPLACE_CORE_2026_11_ARCHITECTURE.md). Existing 29-integration runtime gate and OAuth gate remain lab_partial until actual full-life-cycle evidence.
