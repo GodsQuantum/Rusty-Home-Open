@@ -98,3 +98,19 @@ page with previous/next navigation and deterministic name ordering.
 Failed refreshes invalidate the previous in-memory catalog. An isolated
 Chromium regression test injects 83 unknown Apps and validates safe DOM
 text rendering, pagination and filtering.
+
+## Actual installed App runtime inventory
+
+In addition to browsing the Store, Rusty Home reads the **installed Apps**
+from the official Supervisor endpoints `GET /addons` (V1) and
+`GET /v2/apps` (V2), retaining all third-party providers and Apps even
+when their Store repository is no longer listed. The native Rust inventory
+normalizes name, slug, repository, state, version and update availability,
+without serializing options, network addresses or credentials.
+
+`LocalSupervisorClient::fetch_installed` and
+`AppSupervisorClient::fetch_installed` return a typed, read-only
+`RunningInventory`. `diff_running` reports install, removal, state,
+version and update-availability changes between complete snapshots.
+An offline/unresponsive Supervisor returns an **error**, never an invented
+empty inventory. Work on generic operation execution and job tracking remains.

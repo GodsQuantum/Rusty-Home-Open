@@ -222,3 +222,45 @@ fn rejects_bad_slugs_without_network_access_and_unauthorized_info() {
     );
     worker.join().unwrap();
 }
+
+#[test]
+fn installed_apps_v1_v2_use_authenticated_supervisor_routes() {
+    for (version, path, key) in [
+        (ApiVersion::V1, "/addons", "addons"),
+        (ApiVersion::V2, "/v2/apps", "apps"),
+    ] {
+        let mut data = serde_json::Map::new();
+        data.insert(
+            key.to_owned(),
+            serde_json::json!([{
+                "slug":"future_unlisted","name":"Future Provider",
+                "repository":"new_vendor","state":"started","version":"3.1",
+                "update_available":true,"options":{"password":"PRIVATE"}
+            }]),
+        );
+        let body = serde_json::json!({"result":"ok","data":data}).to_string();
+        let (addr, worker) = serve(ok(&body));
+        let result = client(addr).fetch_installed(version).unwrap();
+        assert_eq!(result.apps.len(), 1);
+        assert_eq!(result.apps[0].slug, "future_unlisted");
+        assert!(!serde_json::to_string(&result).unwrap().contains("PRIVATE"));
+        let request = worker.join().unwrap();
+        assert!(request.starts_with(&format!("GET {path} HTTP/1.1\r\n")));
+        assert!(request.contains("Authorization: Bearer fixture_value_123"));
+    }
+}
+#[test]
+fn installed_apps_http_outage_is_not_an_empty_catalog() {
+    let (addr, worker) = serve("HTTP/1.1 403 Forbidden\r\nContent-Length: 2\r\n\r\n{}".to_owned());
+    assert!(matches!(
+        client(addr).fetch_installed(ApiVersion::V2),
+        Err(TransportError::Unauthorized)
+    ));
+    worker.join().unwrap();
+    let (addr, worker) = serve(ok(r#"{"result":"ok","data":{"addons":[]}}"#));
+    assert!(matches!(
+        client(addr).fetch_installed(ApiVersion::V2),
+        Err(TransportError::InvalidRuntimeInventory)
+    ));
+    worker.join().unwrap();
+}

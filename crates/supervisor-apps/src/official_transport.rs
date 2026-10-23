@@ -1,6 +1,7 @@
 //! Explicit, read-only and locally scoped transport for official Supervisor.
 //! This does NOT install Apps or connect to a real HAOS Supervisor by itself.
 use crate::app_detail::{AppDetail, detail_path, parse_app_detail};
+use crate::installed_inventory::{RunningInventory, parse_running_inventory};
 use crate::official_store::{ApiVersion, Catalog, parse_store_response};
 use std::{
     fmt,
@@ -43,6 +44,7 @@ pub enum TransportError {
     InvalidStore,
     InvalidAppSlug,
     InvalidAppInfo,
+    InvalidRuntimeInventory,
     #[cfg(feature = "managed-apps-preview")]
     ManagedPreviewDisabled,
     #[cfg(feature = "lab-app-actions")]
@@ -56,6 +58,16 @@ pub struct LocalSupervisorClient {
     token: SupervisorToken,
 }
 impl LocalSupervisorClient {
+    /// Installed Apps, never confused with the Store catalog.
+    pub fn fetch_installed(&self, version: ApiVersion) -> Result<RunningInventory, TransportError> {
+        let path = match version {
+            ApiVersion::V1 => "/addons",
+            ApiVersion::V2 => "/v2/apps",
+        };
+        let body = get_json(self.target, &self.token, path)?;
+        parse_running_inventory(&body, version).map_err(|_| TransportError::InvalidRuntimeInventory)
+    }
+
     pub fn new(target: SocketAddr, token: SupervisorToken) -> Result<Self, TransportError> {
         if !target.ip().is_loopback() || target.port() == 0 {
             return Err(TransportError::UnsupportedHost);
@@ -135,6 +147,22 @@ impl AppSupervisorClient {
 
     pub fn service_name(&self) -> &'static str {
         "supervisor"
+    }
+
+    /// Read actual running Apps from the official Supervisor service.
+    pub fn fetch_installed(&self, version: ApiVersion) -> Result<RunningInventory, TransportError> {
+        use std::net::{IpAddr, ToSocketAddrs};
+        let path = match version {
+            ApiVersion::V1 => "/addons",
+            ApiVersion::V2 => "/v2/apps",
+        };
+        let target = (self.service_name(), 80)
+            .to_socket_addrs()
+            .map_err(|_| TransportError::Io)?
+            .find(|addr| matches!(addr.ip(), IpAddr::V4(ip) if ip.is_private()))
+            .ok_or(TransportError::UnsupportedHost)?;
+        let body = get_json(target, &self.token, path)?;
+        parse_running_inventory(&body, version).map_err(|_| TransportError::InvalidRuntimeInventory)
     }
 
     /// GET only, against the same internal Supervisor service used for the Store.

@@ -699,3 +699,5 @@ mod tests {
         ));
     }
 }
+
+pub mod installed_inventory;
