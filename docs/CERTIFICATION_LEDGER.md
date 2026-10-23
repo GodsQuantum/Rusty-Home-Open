@@ -2,8 +2,8 @@
 
 **Snapshot: 23 October 2026. Status: NOT_PRODUCTION_READY.**
 
-**0 / 15 mandatory production release gates certified.** Five gates have
-partial lab evidence; none is an independently qualified production gate.
+**0 / 15 mandatory production release gates certified.** Nine gates now have
+partial laboratory evidence; none is an independently qualified production gate.
 The nine sample Apps published here are all fictional synthetic fixtures.
 
 ## Verified, narrowly scoped laboratory results
@@ -79,15 +79,45 @@ authorizes a hardware radio handoff or real migration.
   Independent CI on final PR SHA is **pending**, not certified.
   [Preflight scope](STORE_AVAILABILITY_PREFLIGHT.md).
 
+## Scoped laboratory checks with pinned GitHub evidence
+
+**13 independently observed successful GitHub Actions jobs** are recorded in
+[the machine-readable evidence index](../config/lab-evidence.json),
+including exact run URLs and commit SHAs. This certifies only the stated
+**isolated laboratory test results**, never production operation, user data
+or full Home Assistant parity.
+
+| Lab check | Production gate informed (not cleared) | Exact CI evidence |
+| --- | --- | --- |
+| `debian_real_dpkg` | `packaging_updates` | [run 40004128778](https://github.com/GodsQuantum/Rusty-Home-Open/actions/runs/40004128778) |
+| `apt_signed_tamper_refusal` | `packaging_updates` | [run 40004128778](https://github.com/GodsQuantum/Rusty-Home-Open/actions/runs/40004128778) |
+| `official_core_rust_bridge` | `ha_core_hacs_29_runtime` | [run 40004128648](https://github.com/GodsQuantum/Rusty-Home-Open/actions/runs/40004128648) |
+| `selected_hacs_three` | `ha_core_hacs_29_runtime` | [run 40004128648](https://github.com/GodsQuantum/Rusty-Home-Open/actions/runs/40004128648) |
+| `adaptive_media_hacs` | `ha_core_hacs_29_runtime` | [run 40004128595](https://github.com/GodsQuantum/Rusty-Home-Open/actions/runs/40004128595) |
+| `epson_snmp_hacs` | `ha_core_hacs_29_runtime` | [run 40004128595](https://github.com/GodsQuantum/Rusty-Home-Open/actions/runs/40004128595) |
+| `card_announcements_hacs` | `ha_core_hacs_29_runtime` | [run 40004128595](https://github.com/GodsQuantum/Rusty-Home-Open/actions/runs/40004128595) |
+| `native_rust_security_suite` | `authenticated_host_transport` | [run 40004128682](https://github.com/GodsQuantum/Rusty-Home-Open/actions/runs/40004128682) |
+| `official_product_nonroot` | `authenticated_host_transport` | [run 40004128675](https://github.com/GodsQuantum/Rusty-Home-Open/actions/runs/40004128675) |
+| `official_marketplace_abi` | `ha_core_hacs_29_runtime` | [run 40004128906](https://github.com/GodsQuantum/Rusty-Home-Open/actions/runs/40004128906) |
+| `official_haos_kvm` | `supervisor_apps_restore` | [run 40002933713](https://github.com/GodsQuantum/Rusty-Home-Open/actions/runs/40002933713) |
+| `browser_chromium` | `production_ui_auth` | [run 40002934403](https://github.com/GodsQuantum/Rusty-Home-Open/actions/runs/40002934403) |
+| `security_fuzzer` | `security_stress_fuzz` | [run 39997355066](https://github.com/GodsQuantum/Rusty-Home-Open/actions/runs/39997355066) |
+
+The evidence index passes local schema and tampering tests. Each run and
+successful named job was independently checked against GitHub on 23 October 2026;
+an offline index is not a cryptographic certification or a substitute for
+rechecking current external provenance. Independent production signoff
+and the 15 mandatory release gates are separate.
+
 ## Release gate matrix — every gate remains noncertified
 
 | Exact gate identifier | Machine state | Production acceptance still needed |
 | --- | --- | --- |
-| `authenticated_host_transport` | `blocked` | Least-privileged authenticated live transport, expiry, outage recovery and adversarial audit |
+| `authenticated_host_transport` | `lab_partial` | Least-privileged authenticated live transport, expiry, outage recovery and adversarial audit |
 | `ha_core_hacs_29_runtime` | `lab_partial` | Complete lifecycle coverage for all 29 targeted custom integrations |
 | `hacs_github_oauth` | `lab_partial` | Genuine OAuth login, renewal, revocation, recovery and stale-session tests |
 | `apps_9_lifecycle` | `blocked` | Install, start, update, stop and rollback for each of nine actual Apps |
-| `supervisor_apps_restore` | `blocked` | Full App persistent data, ingress and service restore under Supervisor |
+| `supervisor_apps_restore` | `lab_partial` | Full App persistent data, ingress and service restore under Supervisor |
 | `haos_backup_restore` | `lab_partial` | Protected full archive/data recovery end-to-end with user-equivalent data |
 | `rollback_verified` | `blocked` | Revert actual migration including states, persistent data and fabric pairing |
 | `single_radio_owner` | `blocked` | Exactly one real Zigbee, Thread, Matter and other device owner at each transition |
@@ -95,9 +125,9 @@ authorizes a hardware radio handoff or real migration.
 | `production_ui_auth` | `blocked` | Full session, identity, role, token revocation and API authorization testing |
 | `native_drivers_services` | `blocked` | Prove real device driver, service and system integration parity |
 | `performance_full_stack` | `blocked` | Representative whole-stack scale, fault tolerance, resources and soak |
-| `packaging_updates` | `blocked` | Production-signed distributions, installed real upgrades and rollback |
+| `packaging_updates` | `lab_partial` | Production-signed distributions, installed real upgrades and rollback |
 | `third_party_licenses` | `lab_partial` | Complete attribution, notices, source-license trace and signed SBOM |
-| `security_stress_fuzz` | `blocked` | Complete attack-surface fuzz, penetration tests and long security soak |
+| `security_stress_fuzz` | `lab_partial` | Complete attack-surface fuzz, penetration tests and long security soak |
 
 ## Effort estimates — not a certification score
 

@@ -80,5 +80,10 @@ jobs:
         run: python3 scripts/test_public_redaction.py
       - name: Verify public certification gate ledger
         run: python3 scripts/test_public_certification_ledger.py
+      - name: Verify pinned lab evidence is scoped and not a production signoff
+        run: |
+          python3 scripts/verify_lab_evidence.py
+          python3 scripts/test_lab_evidence_truth.py
+          python3 scripts/test_release_gate_evidence_truth.py
       - name: Assert no deployment authorization
         run: python3 scripts/check_release_gate.py --expect-blocked
