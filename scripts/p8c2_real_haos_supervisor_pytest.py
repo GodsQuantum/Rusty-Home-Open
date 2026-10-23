@@ -142,6 +142,88 @@ def test_hars_real_product_app_install_boot(shell, shell_json):
             assert "".join(denial).strip() == "403", (
                 "Restart bypassed ingress authorization at " + route
             )
+        # Distinct durability test: HAOS Supervisor daemon itself is restarted
+        # while the real Rusty Home App remains installed and running. The App
+        # must preserve its security boundaries and be discoverable afterwards.
+        # Only the disposable official HAOS guest, never a household Supervisor.
+        supervisor_unit = "haos-supervisor.service"
+        initial_invocation = "".join(shell.run_check(
+            "systemctl show -p InvocationID --value " + supervisor_unit,
+            timeout=30,
+        )).strip()
+        assert len(initial_invocation) == 32 and all(
+            c in "0123456789abcdef" for c in initial_invocation.lower()
+        ), "Cannot attest original Supervisor systemd invocation"
+        shell.run_check("systemctl restart haos-supervisor.service", timeout=150)
+        next_invocation = "".join(shell.run_check(
+            "systemctl show -p InvocationID --value " + supervisor_unit,
+            timeout=30,
+        )).strip()
+        assert next_invocation and next_invocation != initial_invocation, (
+            "Supervisor restart was not independently evidenced by systemd"
+        )
+        recovered = None
+        for _ in range(45):
+            try:
+                available = shell_json(
+                    "ha supervisor info --no-progress --raw-json", timeout=20
+                )
+                if available.get("result") != "ok":
+                    _sleep(2)
+                    continue
+                response = shell_json(
+                    "ha apps info " + app + " --no-progress --raw-json",
+                    timeout=20,
+                )
+                if response.get("result") == "ok":
+                    data = response.get("data") or {}
+                    if data.get("state") == "started":
+                        recovered = data
+                        break
+            except Exception:
+                # The official CLI may temporarily fail while Supervisor
+                # reconnects; a bounded retry never turns that into success.
+                pass
+            _sleep(2)
+        assert recovered is not None, (
+            "Rusty Home App failed to recover through actual Supervisor daemon restart"
+        )
+        assert recovered.get("protected") is True, (
+            "Supervisor daemon restart discarded App protected mode"
+        )
+        assert recovered.get("hassio_role") == "manager", (
+            "Supervisor daemon restart changed the App permission role"
+        )
+        state_user = "".join(shell.run_check(
+            "docker inspect -f '{{.Config.User}}|{{.State.Running}}' "
+            "app_local_rusty_home",
+            timeout=30,
+        )).strip()
+        assert state_user == "1000:1000|true", (
+            "Supervisor restart left the real product App down or privileged"
+        )
+        post_ips = "".join(shell.run_check(
+            "docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}} {{end}}' "
+            "app_local_rusty_home",
+            timeout=30,
+        )).strip().split()
+        assert post_ips, "Supervisor restart removed App private network"
+        for route in ("health", "api/apps", "api/store", "api/readiness"):
+            denied = shell.run_check(
+                "curl --silent --output /dev/null --write-out '%{http_code}' "
+                "--connect-timeout 3 --max-time 8 "
+                "-H 'X-Remote-User-Id: forged_admin' http://"
+                + post_ips[0] + ":8099/" + route,
+                timeout=20,
+            )
+            assert "".join(denied).strip() == "403", (
+                "Supervisor daemon restart bypassed ingress security at " + route
+            )
+        print(
+            "REAL_RUSTY_HOME_SUPERVISOR_DAEMON_RESTART_PASS: "
+            "systemd new invocation, App running nonroot, mode protected, "
+            "Supervisor manager role unchanged, forged user denied"
+        )
         print("REAL_RUSTY_HOME_RESTART_HAOS_PASS: real container restarted, nonroot, protected, forged ingress denied")
         print("REAL_RUSTY_HOME_PRODUCT_HAOS_PASS: installed, started, nonroot, manager, ingress deny")
     finally:
