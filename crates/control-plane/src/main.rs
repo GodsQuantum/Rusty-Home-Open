@@ -303,6 +303,55 @@ fn live_job_response(adapters: &[Adapter], id: &str) -> (&'static str, String) {
     }
 }
 
+/// Enumerate real Supervisor jobs only for a verified Supervisor Ingress
+/// administrator. This is a read-only discovery convenience, NOT a write
+/// permit. No raw job names, references, stages, errors or metadata escape.
+fn live_jobs_response(
+    adapters: &[Adapter],
+    mode: AccessMode,
+    has_verified_identity: bool,
+    is_admin: bool,
+) -> (&'static str, String) {
+    if mode != AccessMode::SupervisorIngress {
+        return (
+            "404 Not Found",
+            json!({"read_only":true,"error":"Supervisor ingress required"}).to_string(),
+        );
+    }
+    if !has_verified_identity || !is_admin {
+        return (
+            "403 Forbidden",
+            json!({"read_only":true,"error":"Supervisor administrator required"}).to_string(),
+        );
+    }
+    let mut versions = adapters.iter().filter_map(|a| match a.kind {
+        AdapterKind::SupervisorLive(v) => Some(v),
+        _ => None,
+    });
+    let Some(version) = versions.next() else {
+        return (
+            "404 Not Found",
+            json!({"read_only":true,"error":"live Supervisor source not configured"}).to_string(),
+        );
+    };
+    if versions.next().is_some() {
+        return (
+            "503 Service Unavailable",
+            json!({"read_only":true,"error":"ambiguous live Supervisor source"}).to_string(),
+        );
+    }
+    match AppSupervisorClient::from_environment().and_then(|client| client.fetch_jobs(version)) {
+        Ok(list) => (
+            "200 OK",
+            json!({"read_only":true,"jobs":list.jobs,"truncated":list.truncated}).to_string(),
+        ),
+        Err(_) => (
+            "503 Service Unavailable",
+            json!({"read_only":true,"error":"Supervisor job index unavailable"}).to_string(),
+        ),
+    }
+}
+
 /// A live inventory must confirm installation before any privileged stats GET.
 /// Snapshot sources never trigger network reads and cannot impersonate live.
 fn live_stats_response(adapters: &[Adapter], slug: &str) -> (&'static str, String) {
@@ -1120,6 +1169,8 @@ fn handle(
                 json!({"error":"invalid store app slug","read_only":true}).to_string(),
             ),
         }
+    } else if line == "GET /api/jobs HTTP/1.1" || line == "GET /api/jobs HTTP/1.0" {
+        live_jobs_response(adapters, mode, session_identity_present, supervisor_admin)
     } else if let Some(id) = live_job_id(&line) {
         match id {
             Ok(id) => live_job_response(adapters, id),
@@ -1418,6 +1469,32 @@ fn main() {
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn job_discovery_requires_supervisor_admin_and_unique_live_source() {
+        use super::*;
+        let live = Adapter {
+            host: "supervisor".into(),
+            kind: AdapterKind::SupervisorLive(ApiVersion::V1),
+        };
+        for (mode, identity, admin, expected) in [
+            (AccessMode::Loopback, true, true, "404 Not Found"),
+            (AccessMode::SupervisorIngress, false, true, "403 Forbidden"),
+            (AccessMode::SupervisorIngress, true, false, "403 Forbidden"),
+            (AccessMode::SupervisorIngress, true, true, "404 Not Found"),
+        ] {
+            let (status, body) = live_jobs_response(&[], mode, identity, admin);
+            assert_eq!(status, expected);
+            assert!(!body.contains("token"));
+        }
+        let (status, _) = live_jobs_response(
+            &[live.clone(), live],
+            AccessMode::SupervisorIngress,
+            true,
+            true,
+        );
+        assert_eq!(status, "503 Service Unavailable");
+    }
+
     use super::*;
 
     #[test]

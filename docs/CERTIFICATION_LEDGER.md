@@ -6,6 +6,17 @@
 partial laboratory evidence; none is an independently qualified production gate.
 The nine sample Apps published here are all fictional synthetic fixtures.
 
+## Product development evidence — not a production gate
+
+- Supervisor job discovery (work in progress, independent PR CI pending):
+  native Rust GET /jobs/info V1/V2, admin-only authenticated Ingress
+  GET /api/jobs, redacted 24-job UI and TCP/adversarial tests. TDD failed
+  with E0432/E0599 before implementation; 5 new Rust integration tests,
+  full Rust workspace, strict Clippy, all-features Supervisor tests and
+  frontend syntax passed locally in isolated LXC700 DEV. See
+  [scoped implementation evidence](SUPERVISOR_JOBS_DISCOVERY.md).
+  No operation execution, persistent receipt or production authorization.
+
 ## Verified, narrowly scoped laboratory results
 
 | Area | Real verified result | GitHub Actions evidence |

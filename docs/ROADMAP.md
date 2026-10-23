@@ -57,3 +57,7 @@ See [functional scope and limits](LIVE_SUPERVISOR_JOB_PROGRESS.md).
 Next: Core-verified Ingress user RBAC, durable job-to-App/user/action receipts,
 then guarded mutations and restart-safe reconciliation. Job UUID possession
 does not authorize any lifecycle action.
+
+## Official Supervisor job discovery
+
+The product can enumerate and track recent official Supervisor jobs via a redacted admin-only Ingress route, without a fixed App inventory. [Scope and remaining limits](SUPERVISOR_JOBS_DISCOVERY.md). Job IDs do not constitute durable operation receipts or authorize lifecycle changes.
