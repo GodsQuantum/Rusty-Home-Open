@@ -8,7 +8,8 @@ d=json.loads(OUTPUT.read_text())
 validate(d)
 assert len(d["packages"])==217
 assert len(d["relationships"])>=400
-assert sum(pkg["licenseDeclared"]=="NOASSERTION" for pkg in d["packages"])>=7
+assert sum(pkg["licenseDeclared"]=="NOASSERTION" for pkg in d["packages"])==6
+assert next(x for x in d["packages"] if x["name"]=="ha-rust-bridge")["licenseDeclared"]=="MIT"
 assert all(pkg["licenseConcluded"]=="NOASSERTION" for pkg in d["packages"])
 for bad in (
     ("spdxVersion","SPDX-3.0"),
