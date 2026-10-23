@@ -8,7 +8,7 @@ use crate::{
     rbac_lab::{Acknowledgement, Actor, DecisionCode, Policy},
     session_lab::{OpaqueToken, digest_secret, fresh_token},
 };
-use redb::{Database, ReadableTable, TableDefinition};
+use redb::{Database, ReadableTable, ReadableTableMetadata, TableDefinition};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use std::{
@@ -17,6 +17,12 @@ use std::{
     os::unix::fs::{MetadataExt, OpenOptionsExt, PermissionsExt},
     path::Path,
 };
+
+// Hard global caps on durable fixture state; no unbounded redb growth.
+const MAX_SESSIONS: u64 = 1_024;
+const MAX_APPROVALS: u64 = 4_096;
+const MAX_APPROVALS_PER_SESSION: usize = 32;
+const APPROVAL_TTL: u64 = 60;
 
 const SESSIONS: TableDefinition<&str, &str> = TableDefinition::new("lab_sessions_v1");
 const APPROVALS: TableDefinition<&str, &str> = TableDefinition::new("lab_approvals_v1");
@@ -140,6 +146,28 @@ impl DurableFixtureSessions {
         tx.set_two_phase_commit(true);
         {
             let mut table = tx.open_table(SESSIONS).map_err(error)?;
+            // Prune expired, idle and future-clock-skewed fixtures inside the
+            // same ACID transaction before checking capacity.
+            if table.len().map_err(error)? > MAX_SESSIONS {
+                return Err(invalid());
+            }
+            let mut obsolete = Vec::new();
+            for result in table.iter().map_err(error)? {
+                let (id, item) = result.map_err(error)?;
+                let old: SessionRow = serde_json::from_str(item.value()).map_err(error)?;
+                if now < old.last_seen || now >= old.expires || now - old.last_seen >= old.idle {
+                    obsolete.push(id.value().to_owned());
+                }
+            }
+            for id in obsolete {
+                table.remove(id.as_str()).map_err(error)?;
+            }
+            if table.len().map_err(error)? >= MAX_SESSIONS {
+                return Err(io::Error::new(
+                    io::ErrorKind::OutOfMemory,
+                    "durable fixture session cap",
+                ));
+            }
             if table.get(key.as_str()).map_err(error)?.is_some() {
                 return Err(invalid());
             }
@@ -159,6 +187,25 @@ impl DurableFixtureSessions {
             let mut table = tx.open_table(SESSIONS).map_err(error)?;
             table.remove(key.as_str()).map_err(error)?.is_some()
         };
+        // Revoke ALL associated approvals in the same two-phase transaction.
+        // Without this, a burst of revoked sessions leaves dangling tokens
+        // until normal expiration; never keep unbounded abandoned approvals.
+        let mut table = tx.open_table(APPROVALS).map_err(error)?;
+        if table.len().map_err(error)? > MAX_APPROVALS {
+            return Err(invalid());
+        }
+        let mut belonging = Vec::new();
+        for result in table.iter().map_err(error)? {
+            let (id, item) = result.map_err(error)?;
+            let approval: ApprovalRow = serde_json::from_str(item.value()).map_err(error)?;
+            if approval.owner_hash == key {
+                belonging.push(id.value().to_owned());
+            }
+        }
+        for id in belonging {
+            table.remove(id.as_str()).map_err(error)?;
+        }
+        drop(table);
         tx.commit().map_err(error)?;
         Ok(result)
     }
@@ -197,7 +244,7 @@ impl DurableFixtureSessions {
                     {
                         let token = fresh_token().map_err(|_| invalid())?;
                         let approval_key = hashed(token.as_str()).ok_or_else(invalid)?;
-                        let expires = now.checked_add(60).ok_or_else(invalid)?;
+                        let expires = now.checked_add(APPROVAL_TTL).ok_or_else(invalid)?;
                         let approval = serde_json::to_string(&ApprovalRow {
                             owner_hash: key.clone(),
                             request_hash: request_digest(req),
@@ -206,6 +253,32 @@ impl DurableFixtureSessions {
                         .map_err(error)?;
                         {
                             let mut approvals = tx.open_table(APPROVALS).map_err(error)?;
+                            if approvals.len().map_err(error)? > MAX_APPROVALS {
+                                return Err(invalid());
+                            }
+                            let mut expired = Vec::new();
+                            let mut same_session = 0;
+                            for result in approvals.iter().map_err(error)? {
+                                let (id, item) = result.map_err(error)?;
+                                let old: ApprovalRow =
+                                    serde_json::from_str(item.value()).map_err(error)?;
+                                if now >= old.expires {
+                                    expired.push(id.value().to_owned());
+                                } else if old.owner_hash == key {
+                                    same_session += 1;
+                                }
+                            }
+                            for id in expired {
+                                approvals.remove(id.as_str()).map_err(error)?;
+                            }
+                            if approvals.len().map_err(error)? >= MAX_APPROVALS
+                                || same_session >= MAX_APPROVALS_PER_SESSION
+                            {
+                                return Err(io::Error::new(
+                                    io::ErrorKind::OutOfMemory,
+                                    "durable fixture confirmation cap",
+                                ));
+                            }
                             if approvals
                                 .get(approval_key.as_str())
                                 .map_err(error)?
