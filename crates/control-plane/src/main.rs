@@ -209,6 +209,73 @@ fn live_detail_slug(line: &str) -> Option<Result<&str, &'static str>> {
     })
 }
 
+/// Read-only numeric telemetry for installed Apps from official Supervisor.
+fn live_stats_slug(line: &str) -> Option<Result<&str, &'static str>> {
+    let rest = line.strip_prefix("GET /api/apps/")?;
+    let slug = rest
+        .strip_suffix("/stats HTTP/1.1")
+        .or_else(|| rest.strip_suffix("/stats HTTP/1.0"))?;
+    Some(if valid_slug(slug) {
+        Ok(slug)
+    } else {
+        Err("invalid app slug")
+    })
+}
+
+/// A live inventory must confirm installation before any privileged stats GET.
+/// Snapshot sources never trigger network reads and cannot impersonate live.
+fn live_stats_response(adapters: &[Adapter], slug: &str) -> (&'static str, String) {
+    if !valid_slug(slug) {
+        return (
+            "400 Bad Request",
+            json!({"error":"invalid app slug","read_only":true}).to_string(),
+        );
+    }
+    let mut versions = adapters.iter().filter_map(|a| match a.kind {
+        AdapterKind::SupervisorLive(v) => Some(v),
+        _ => None,
+    });
+    let Some(version) = versions.next() else {
+        return (
+            "404 Not Found",
+            json!({"error":"live Supervisor source not configured","read_only":true}).to_string(),
+        );
+    };
+    if versions.next().is_some() {
+        return (
+            "503 Service Unavailable",
+            json!({"error":"ambiguous live Supervisor source","read_only":true}).to_string(),
+        );
+    }
+    let result = AppSupervisorClient::from_environment().and_then(|client| {
+        let inventory = client.fetch_installed(version)?;
+        let matches = inventory.apps.iter().filter(|app| app.slug == slug).count();
+        if matches == 0 {
+            return Ok(None);
+        }
+        if matches != 1 {
+            return Err(
+                hars_supervisor_apps::official_transport::TransportError::InvalidRuntimeInventory,
+            );
+        }
+        client.fetch_app_stats(version, slug).map(Some)
+    });
+    match result {
+        Ok(Some(stats)) => (
+            "200 OK",
+            json!({"read_only":true,"stats":stats}).to_string(),
+        ),
+        Ok(None) => (
+            "404 Not Found",
+            json!({"error":"app not installed","read_only":true}).to_string(),
+        ),
+        Err(_) => (
+            "503 Service Unavailable",
+            json!({"error":"Supervisor App stats unavailable","read_only":true}).to_string(),
+        ),
+    }
+}
+
 /// Details are available only for Apps independently confirmed to be installed
 /// by the authenticated Supervisor, never via a user-supplied data source.
 /// The official API response is parsed into an allowlisted/redacted type.
@@ -825,6 +892,14 @@ fn handle(
                 json!({"error":"invalid store app slug","read_only":true}).to_string(),
             ),
         }
+    } else if let Some(slug) = live_stats_slug(&line) {
+        match slug {
+            Ok(slug) => live_stats_response(adapters, slug),
+            Err(_) => (
+                "400 Bad Request",
+                json!({"error":"invalid app slug","read_only":true}).to_string(),
+            ),
+        }
     } else if let Some(slug) = live_detail_slug(&line) {
         match slug {
             Ok(slug) => live_detail_response(adapters, slug),
@@ -1310,6 +1385,36 @@ mod tests {
             serde_json::from_str::<Value>(&body).unwrap()["read_only"],
             true
         );
+    }
+
+    #[test]
+    fn installed_stats_route_rejects_unsafe_slugs_and_snapshot_sources() {
+        for version in ["HTTP/1.0", "HTTP/1.1"] {
+            let line = format!("GET /api/apps/new_vendor_app/stats {version}");
+            assert_eq!(live_stats_slug(&line), Some(Ok("new_vendor_app")));
+        }
+        for slug in ["", "..", "a/b", "x%2fsecret", "x?token=1"] {
+            let line = format!("GET /api/apps/{slug}/stats HTTP/1.1");
+            assert_eq!(live_stats_slug(&line), Some(Err("invalid app slug")));
+        }
+        assert_eq!(live_stats_slug("POST /api/apps/x/stats HTTP/1.1"), None);
+        let snapshot = Adapter {
+            host: "fixture".into(),
+            kind: AdapterKind::SupervisorSnapshot("runtime/fixture.json".into()),
+        };
+        assert_eq!(
+            live_stats_response(&[snapshot], "new_vendor_app").0,
+            "404 Not Found"
+        );
+        let live = Adapter {
+            host: "live".into(),
+            kind: AdapterKind::SupervisorLive(ApiVersion::V1),
+        };
+        assert_eq!(
+            live_stats_response(&[live.clone(), live], "new_vendor_app").0,
+            "503 Service Unavailable"
+        );
+        assert_eq!(live_stats_response(&[], "../secret").0, "400 Bad Request");
     }
 
     #[test]

@@ -189,6 +189,28 @@ function renderApps(){
     finally{button.disabled=false;}
    });
    card.append(button,detail);
+   const statsButton=node("button","Ressources en direct");
+   statsButton.type="button";
+   const stats=node("p",undefined,"muted");stats.hidden=true;
+   statsButton.addEventListener("click",async()=>{
+    if(!stats.hidden){stats.hidden=true;return;}
+    stats.hidden=false;stats.textContent="Lecture des ressources Supervisor…";statsButton.disabled=true;
+    try{
+     const response=await fetch("api/apps/"+encodeURIComponent(app.slug)+"/stats",{cache:"no-store"});
+     if(!response.ok)throw Error("Supervisor unavailable");
+     const data=await response.json(),m=data.stats;
+     if(data.read_only!==true||!m||m.read_only!==true||m.slug!==app.slug
+       ||!Number.isSafeInteger(m.memory_usage)||m.memory_usage<0
+       ||!Number.isSafeInteger(m.memory_limit)||m.memory_limit<0
+       ||(m.cpu_percent!==null&&m.cpu_percent!==undefined
+         &&(!Number.isFinite(m.cpu_percent)||m.cpu_percent<0)))throw Error("Untrusted metrics");
+     const cpu=m.cpu_percent===null||m.cpu_percent===undefined?"inconnu":m.cpu_percent.toFixed(1)+" %";
+     const mib=n=>(n/1048576).toFixed(1)+" Mio";
+     stats.textContent="CPU : "+cpu+" · RAM : "+mib(m.memory_usage)+" / "+mib(m.memory_limit);
+    }catch(e){stats.textContent="Ressources indisponibles ou accès Supervisor refusé.";}
+    finally{statsButton.disabled=false;}
+   });
+   card.append(statsButton,stats);
   }
   if(app.update_available===true)card.append(node("p","Mise à jour disponible (information uniquement)","update"));
   select("#apps").append(card);

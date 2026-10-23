@@ -127,6 +127,18 @@ impl LocalSupervisorClient {
         crate::job_status::parse_job_response(&body, id).map_err(|_| TransportError::InvalidJob)
     }
 
+    /// Read official numeric resource metrics for an installed App, no raw logs.
+    pub fn fetch_app_stats(
+        &self,
+        version: ApiVersion,
+        slug: &str,
+    ) -> Result<crate::app_stats::AppStats, TransportError> {
+        let path = crate::app_stats::stats_path(version, slug)
+            .map_err(|_| TransportError::InvalidAppSlug)?;
+        let body = get_json(self.target, &self.token, &path)?;
+        crate::app_stats::parse_app_stats(&body, slug).map_err(|_| TransportError::BadResponse)
+    }
+
     /// Authenticated, read-only details of an arbitrary installed App.
     /// Sensitive options and device addresses are dropped by the typed parser.
     pub fn fetch_app_detail(
@@ -260,6 +272,24 @@ impl AppSupervisorClient {
             .ok_or(TransportError::UnsupportedHost)?;
         let body = get_json(target, &self.token, &path)?;
         crate::job_status::parse_job_response(&body, id).map_err(|_| TransportError::InvalidJob)
+    }
+
+    /// Read current Supervisor numeric metrics for an installed App.
+    pub fn fetch_app_stats(
+        &self,
+        version: ApiVersion,
+        slug: &str,
+    ) -> Result<crate::app_stats::AppStats, TransportError> {
+        use std::net::{IpAddr, ToSocketAddrs};
+        let path = crate::app_stats::stats_path(version, slug)
+            .map_err(|_| TransportError::InvalidAppSlug)?;
+        let target = (self.service_name(), 80)
+            .to_socket_addrs()
+            .map_err(|_| TransportError::Io)?
+            .find(|a| matches!(a.ip(), IpAddr::V4(ip) if ip.is_private()))
+            .ok_or(TransportError::UnsupportedHost)?;
+        let body = get_json(target, &self.token, &path)?;
+        crate::app_stats::parse_app_stats(&body, slug).map_err(|_| TransportError::BadResponse)
     }
 
     /// GET only, against the same internal Supervisor service used for the Store.
