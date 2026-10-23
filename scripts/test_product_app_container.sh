@@ -18,6 +18,8 @@ trap cleanup EXIT
 
 cp "$ROOT/packaging/product-app/rusty_home/Dockerfile" "$CONTEXT/Dockerfile"
 install -m 0555 "$BIN" "$CONTEXT/rusty-home"
+# Rootless scratch image must actually ship the first-party MIT text.
+install -m 0644 "$ROOT/LICENSE" "$CONTEXT/LICENSE"
 docker build -q -t "$IMAGE" "$CONTEXT"
 
 CONTAINER="$(docker run --detach --rm --read-only --cap-drop=ALL \
@@ -30,6 +32,11 @@ for _ in {1..30}; do
 done
 [[ "$(docker inspect --format '{{.State.Running}}' "$CONTAINER")" == "true" ]]
 [[ "$(docker inspect --format '{{.Config.User}}' "$CONTAINER")" == "1000:1000" ]]
+docker cp "$CONTAINER:/usr/share/licenses/rusty-home/LICENSE" - |
+  tar -xO | cmp - "$ROOT/LICENSE" || {
+    echo "FAIL: distributed Rusty Home container lacks exact MIT notice" >&2
+    exit 1
+  }
 for route in / /health /api/apps /api/readiness; do
   status="$(curl -s -o /dev/null -w '%{http_code}' --max-time 3 \
     -H 'X-Remote-User-Id: admin' http://127.0.0.1:18795"$route")"
