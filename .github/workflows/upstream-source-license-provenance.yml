@@ -1,0 +1,39 @@
+name: P11 source-pinned upstream Rust dependency license evidence
+on:
+  pull_request:
+    paths:
+      - "Cargo.lock"
+      - "audits/UPSTREAM_ROOT_LICENSE_PINS_2026-10-23.json"
+      - "scripts/verify_upstream_license_pins.py"
+      - "scripts/test_upstream_license_pins.py"
+      - ".github/workflows/upstream-source-license-provenance.yml"
+      - "docs/THIRD_PARTY_PROVENANCE.md"
+  push:
+    branches: [main]
+  workflow_dispatch:
+  schedule:
+    - cron: "27 4 * * 1"
+permissions:
+  contents: read
+jobs:
+  verified-upstream-source:
+    name: Exact version and SHA-256 of six upstream license files
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - name: Strict offline license and privacy contracts
+        run: |
+          python3 scripts/test_upstream_license_pins.py
+          python3 scripts/test_public_redaction.py
+      - name: Independently re-fetch six upstream texts at pinned Git commits
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh --version
+          python3 scripts/verify_upstream_license_pins.py --verify-upstream
+      - name: Assert no automatic legal clearance
+        run: |
+          python3 scripts/check_release_gate.py --expect-blocked
