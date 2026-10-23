@@ -43,6 +43,17 @@ Rusty Home（实验阶段）
 
 技术文档：[架构](docs/ARCHITECTURE.md) · [上游组件](docs/UPSTREAMS.md) · [安全](docs/SECURITY.md) · [生产认证门槛](docs/PRODUCTION_READINESS_2026-10-18.md)。
 
+### Home Assistant Marketplace 兼容计划
+
+Home Assistant **2026.11（尚未正式发布）**将 HACS 集成进 Core，
+名称为 **设置 > Marketplace**。Rusty Home 已实现并测试连接官方 Core
+Marketplace WebSocket **只读命令**的 Rust 适配层。软件安装、更新、
+GitHub OAuth 以及旧 HACS 数据迁移均由 **Home Assistant Core** 管理，
+不会在 Rusty Home 中重复实现商店。**2026.10 仍使用独立 HACS**；
+HAOS Apps 则通过 Supervisor 管理。此功能尚未获得生产认证。
+
+详见[架构与兼容性测试](docs/MARKETPLACE_CORE_2026_11_ARCHITECTURE.md)。
+
 ## 开发者快速开始：仅用于隔离实验环境
 
 需要 Rust、Python 3 和 Linux；部分高级实验需要 Docker/QEMU。

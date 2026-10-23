@@ -2,6 +2,7 @@
 //! Does NOT download, install, execute or certify runtime compatibility.
 //! HACS 2026.10 and planned Marketplace 2026.11 have different category support.
 pub mod marketplace_transition;
+pub mod marketplace_ws;
 use serde_json::Value;
 use std::fs::{self, Metadata};
 use std::path::{Component, Path, PathBuf};
@@ -210,6 +211,26 @@ pub fn inspect(
     }
     validate_tree(root)?;
     let opts = values(root, store)?;
+    if store == Store::Marketplace2026_11 {
+        // Official Marketplace requires a root README for every package type.
+        // A symlink is not a safe substitute for a published file.
+        let readme = root.join("README.md");
+        if !readme.exists() {
+            return Err(InspectError::InvalidLayout);
+        }
+        ordinary_file(&readme)?;
+    }
+    if let Some(zip) = opts.get("zip_release") {
+        if !zip.is_boolean() {
+            return Err(InspectError::InvalidManifest);
+        }
+        if zip == true {
+            // This offline structural inspector has no release ZIP to
+            // examine, even though Core accepts certain integration ZIPs.
+            // Never claim an uninspected release asset was validated.
+            return Err(InspectError::UnsupportedKind);
+        }
+    }
     let content_in_root = opts.get("content_in_root").and_then(Value::as_bool) == Some(true);
     let target = match kind {
         Kind::Integration => {
@@ -402,6 +423,11 @@ mod tests {
     fn meta(root: &Path) {
         write(
             root,
+            "README.md",
+            "# Synthetic package for laboratory tests",
+        );
+        write(
+            root,
             "hacs.json",
             r#"{"name":"Test","content_in_root":false}"#,
         );
@@ -567,6 +593,7 @@ mod tests {
     fn content_in_root_future_custom_integration() {
         let d = dir();
         write(d.path(), "hacs.json", r#"{"content_in_root":true}"#);
+        write(d.path(), "README.md", "# Synthetic future integration");
         write(
             d.path(),
             "manifest.json",
@@ -628,5 +655,39 @@ mod tests {
             )
             .is_err()
         );
+    }
+    #[test]
+    fn future_marketplace_requires_safe_root_readme_and_fails_closed_on_zip() {
+        let d = dir();
+        write(d.path(), "hacs.json", r#"{"name":"Example"}"#);
+        write(d.path(), "themes/example.yaml", "example: {}");
+        assert!(matches!(
+            inspect(d.path(), Store::Marketplace2026_11, Kind::Theme, "example"),
+            Err(InspectError::InvalidLayout)
+        ));
+        write(d.path(), "README.md", "# Readable");
+        assert!(inspect(d.path(), Store::Marketplace2026_11, Kind::Theme, "example").is_ok());
+        write(
+            d.path(),
+            "hacs.json",
+            r#"{"zip_release":true,"filename":"release.zip"}"#,
+        );
+        assert!(matches!(
+            inspect(d.path(), Store::Marketplace2026_11, Kind::Theme, "example"),
+            Err(InspectError::UnsupportedKind)
+        ));
+        write(d.path(), "hacs.json", r#"{"zip_release":"true"}"#);
+        assert!(matches!(
+            inspect(d.path(), Store::Marketplace2026_11, Kind::Theme, "example"),
+            Err(InspectError::InvalidManifest)
+        ));
+        write(d.path(), "hacs.json", r#"{"zip_release":false}"#);
+        assert!(inspect(d.path(), Store::Marketplace2026_11, Kind::Theme, "example").is_ok());
+        fs::remove_file(d.path().join("README.md")).unwrap();
+        std::os::unix::fs::symlink("themes/example.yaml", d.path().join("README.md")).unwrap();
+        assert!(matches!(
+            inspect(d.path(), Store::Marketplace2026_11, Kind::Theme, "example"),
+            Err(InspectError::UnsafePayload)
+        ));
     }
 }

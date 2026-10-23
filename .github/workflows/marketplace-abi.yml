@@ -1,0 +1,32 @@
+name: HA Core 2026.11 Marketplace source ABI
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/marketplace-abi.yml"
+      - "scripts/test_marketplace_core_contract.py"
+      - "crates/community-packages/**"
+      - "Cargo.lock"
+  push:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  real-official-core-marketplace-abi:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy
+      - name: Official pinned HA Core WS schema and require-admin contract
+        run: python3 scripts/test_marketplace_core_contract.py
+      - name: Rust read-only adapter and migration policy tests
+        run: |
+          cargo test --locked -p hars-community-packages
+          cargo clippy --locked -p hars-community-packages --all-targets -- -D warnings
+      - name: Production certification remains blocked
+        run: python3 scripts/check_release_gate.py --expect-blocked

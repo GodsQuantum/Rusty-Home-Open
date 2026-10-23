@@ -43,6 +43,19 @@ Rusty Home (experimental)
 
 Rusty Home uses pinned upstream libraries where appropriate and does not redistribute reference checkouts. See [architecture](docs/ARCHITECTURE.md), [upstream inventory](docs/UPSTREAMS.md), [security](docs/SECURITY.md) and [production gates](docs/PRODUCTION_READINESS_2026-10-18.md).
 
+### Home Assistant Marketplace compatibility
+
+Home Assistant **2026.11 (upcoming)** incorporates HACS into Core as
+**Settings > Marketplace**. Rusty Home now has a tested Rust-only,
+read-only WebSocket request adapter to the official Core Marketplace.
+All downloads, GitHub OAuth, installations, updates, and existing HACS
+migration remain owned by **Home Assistant Core**, not a duplicate store
+inside Rusty Home. **2026.10 remains on separate HACS.** HAOS Apps are
+managed separately by Supervisor. This is an *experimental compatibility
+contract*, not a finished integration or a production release.
+
+See [architecture and independent upstream contract evidence](docs/MARKETPLACE_CORE_2026_11_ARCHITECTURE.md).
+
 ## Quick start: development labs only
 
 Requires Rust, Python 3 and a private, isolated Linux development workspace. Some advanced labs need Docker/QEMU.
