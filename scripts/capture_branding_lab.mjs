@@ -44,6 +44,36 @@ try {
   if(!(await mobile.locator('#readiness').innerText()).includes('en développement'))throw Error('Mobile release gate state not visible');
   if((await mobile.locator('.card').count())!==4)throw Error('Mobile synthetic app count incorrect');
   await mobile.screenshot({path:'branding/lab-dashboard-mobile.png',fullPage:true,animations:'disabled'});
+  // Browser-level product test: many arbitrary third-party Apps, not 4 recognized names.
+  const catalog = Array.from({length:83},(_,i)=>({
+   host:'dynamic-lab',backend:i%2===0?'docker':'supervisor',
+   display_name:'Future Provider '+String(i).padStart(4,'0'),
+   app_type:i%2===0?'generic_container':'supervisor_app',
+   classification:i%2===0?'docker':'supervisor',
+   state:'running',version:'synthetic'
+  }));
+  catalog[82].display_name='<img src=x onerror=alert(1)> Future Provider 0082';
+  let requests=0;
+  await page.route('**/api/apps', async route=>{
+   requests++;
+   await route.fulfill({status:200,contentType:'application/json',
+    body:JSON.stringify({...apps,apps:catalog})});
+  });
+  await page.locator('#refresh').click();
+  await page.waitForFunction(()=>document.querySelector('#count')?.textContent==='83');
+  if((await page.locator('.card').count())!==24)throw Error('Not paginated to 24 visible Apps');
+  if(!(await page.locator('#page-status').innerText()).includes('1 / 4'))throw Error('Wrong page count for unknown apps');
+  await page.locator('#next-page').click();
+  if(!(await page.locator('#page-status').innerText()).includes('2 / 4'))throw Error('Next page incorrect');
+  await page.locator('#filter').selectOption('docker');
+  if((await page.locator('#count').innerText())!=='42 / 83')throw Error('Unexpected source filter total');
+  await page.locator('#search').fill('Future Provider 0050');
+  if((await page.locator('.card').count())!==1)throw Error('Generic name search incorrect');
+  if(requests!==1)throw Error('UI filtering must not re-fetch private App inventory');
+  await page.locator('#search').fill('<img');
+  if((await page.locator('article.card img').count())!==0)throw Error('Untrusted App name injected HTML');
+  if((await page.locator('.card').count())!==1)throw Error('Unsafe App name hidden');
+  console.log('UNIVERSAL_DASHBOARD_E2E_PASS: 83 unknown Apps, 24/page, source/search, no unsafe HTML or unnecessary fetch');
   console.log('BRANDING_SCREENSHOTS_PASS: actual desktop and mobile HTML, 4 synthetic apps, zero production data');
  } finally { await browser.close(); }
 } finally {await new Promise(r=>server.close(r));}

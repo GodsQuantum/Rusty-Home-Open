@@ -91,3 +91,10 @@ Real HAOS production credentials and data were not touched.
 **Not yet implemented:** production user RBAC, arbitrary App installation,
 start/stop/update actions with job tracking, configuration mutation,
 complete recovery or a connected end-user frontend for App detail.
+
+The read-only dashboard now supports live name/host/image search and
+source filters without re-fetching Supervisor data, plus 24 cards per
+page with previous/next navigation and deterministic name ordering.
+Failed refreshes invalidate the previous in-memory catalog. An isolated
+Chromium regression test injects 83 unknown Apps and validates safe DOM
+text rendering, pagination and filtering.
