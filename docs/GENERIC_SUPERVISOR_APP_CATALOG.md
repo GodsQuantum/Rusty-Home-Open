@@ -128,3 +128,24 @@ model. IDs are validated before any HTTP request is made.
 This is a functioning backend component for future install/start/stop/update
 workflows. Operator authorization, action submission, job persistence,
 reconnection and rollback remain unfinished product features.
+
+## Completion reconciliation for any Supervisor App lifecycle action
+
+The default Rust build now includes `operation_reconcile`, which combines
+**two independent official observations**: the correlated Supervisor job
+result and a complete post-operation installed-App snapshot. It covers
+install, start, stop, restart and update for any App slug or repository,
+without name-based classification.
+
+A job is not marked verified merely because its HTTP response was OK,
+its progress was 100%, or its state was `done`. The matching job UUID must
+have succeeded **and** the required App postcondition must be observed.
+For an update the prior version must be known and the new version must
+differ, with no update pending. A missing snapshot, stopped service, stale
+version or mismatched job UUID returns a pending/unverified result, not
+a fabricated success.
+
+The component is read-only reconciliation. User authentication, authorization,
+real Supervisor writes and durable recovery are separate unfinished product
+functions. The tests cover 903 previously unknown App identifiers and
+adversarial mismatched/failed/unavailable observations.

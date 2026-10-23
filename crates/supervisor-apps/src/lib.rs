@@ -703,3 +703,5 @@ mod tests {
 pub mod installed_inventory;
 
 pub mod job_status;
+
+pub mod operation_reconcile;
