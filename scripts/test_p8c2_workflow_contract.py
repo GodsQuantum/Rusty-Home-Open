@@ -50,6 +50,14 @@ assert (ROOT / "scripts/test_p8g_mutation_contract.py").is_file()
 
 assert "test_hars_real_product_app_install_boot" in code
 assert '"ha apps restart " + app' in code, "actual product must survive real Supervisor restart"
+assert "systemctl restart haos-supervisor.service" in code, "genuine Supervisor service restart required"
+assert "InvocationID" in code, "Supervisor restart must be evidenced by new service invocation"
+assert "REAL_RUSTY_HOME_SUPERVISOR_DAEMON_RESTART_PASS" in code, "no supervised App preservation verdict"
+assert "p8c2_serial_invocation import parse_systemd_invocation" in code
+assert (ROOT / "scripts/p8c2_serial_invocation.py").is_file()
+assert (ROOT / "scripts/test_p8c2_serial_invocation.py").is_file()
+assert "python3 scripts/test_p8c2_serial_invocation.py" in config
+
 assert 'docker inspect -f \'{{.State.StartedAt}}\' app_local_rusty_home' in code, "restart must verify a new container start"
 assert 'REAL_RUSTY_HOME_RESTART_HAOS_PASS' in code, "restart success evidence must be explicit"
 

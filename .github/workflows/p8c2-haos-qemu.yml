@@ -42,6 +42,7 @@ jobs:
           cargo build --locked -p hars-supervisor-apps --example parse_official_store
           cargo test --locked -p hars-supervisor-apps --test supervisor_local_transport
           python3 scripts/test_p8c2_workflow_contract.py
+          python3 scripts/test_p8c2_serial_invocation.py
 
       - name: Install official HAOS QEMU upstream test dependencies
         run: |
