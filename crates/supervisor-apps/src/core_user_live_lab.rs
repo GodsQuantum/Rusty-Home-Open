@@ -1,4 +1,5 @@
-//! P8i.d.6: fixed-target, read-only Core WebSocket user list in isolated QEMU.
+//! Fixed-target, read-only Core WebSocket user list for Supervisor Ingress.
+//! Only the separately gated probe may run in disposable QEMU.
 //! Home Assistant Supervisor owns the credentials; never send token to a UI.
 //! Do not interpret manager-role App token as an authenticated human account.
 //! Only command issued: config/auth/list. No call_service or mutate commands.
@@ -7,13 +8,18 @@ use serde_json::{Value, json};
 use std::io::{Read, Write};
 use std::{
     env,
-    net::{IpAddr, SocketAddr, TcpStream, ToSocketAddrs},
+    net::{Ipv4Addr, SocketAddr, TcpStream, ToSocketAddrs},
     time::Duration,
 };
 use tungstenite::{Message, WebSocket, client::IntoClientRequest, client::client};
 const TIMEOUT: Duration = Duration::from_secs(8);
 const MAX_TEXT: usize = 524_288;
 const COMMAND_ID: u64 = 17;
+const OFFICIAL_SUPERVISOR_IP: Ipv4Addr = Ipv4Addr::new(172, 30, 32, 2);
+
+fn is_official_supervisor(addr: SocketAddr) -> bool {
+    matches!(addr, SocketAddr::V4(v4) if *v4.ip() == OFFICIAL_SUPERVISOR_IP && v4.port() == 80)
+}
 
 #[derive(Debug, PartialEq, Eq)]
 pub enum CoreLiveError {
@@ -93,12 +99,10 @@ fn run_protocol<S: Read + Write>(
         })?;
     Ok(CoreLiveResult::Users(snapshot))
 }
-/// Uses only the Supervisor-internal WebSocket proxy, no caller supplied URL.
-/// Must run solely inside the disposable, explicitly marked QEMU App.
-pub fn fetch_official_core_users_qemu(now: u64) -> Result<CoreLiveResult, CoreLiveError> {
-    if env::var("HARS_P8H_QEMU_ONLY").ok().as_deref() != Some("1") {
-        return Err(CoreLiveError::LabDisabled);
-    }
+/// Read-only current Core account inventory, obtained via the fixed Supervisor
+/// internal proxy. This is information only, NEVER an App write capability.
+/// Call only after independently verifying the accepted TCP Ingress peer.
+pub fn fetch_official_core_users_readonly(now: u64) -> Result<CoreLiveResult, CoreLiveError> {
     let token = env::var("SUPERVISOR_TOKEN")
         .ok()
         .filter(|x| !x.is_empty() && x.len() <= 4096 && x.bytes().all(|c| !c.is_ascii_control()))
@@ -106,14 +110,8 @@ pub fn fetch_official_core_users_qemu(now: u64) -> Result<CoreLiveResult, CoreLi
     let addr = ("supervisor", 80)
         .to_socket_addrs()
         .map_err(|_| CoreLiveError::ConnectionFailed)?
-        .find(|x| {
-            matches!(x,SocketAddr::V4(v4) if v4.ip().is_private()
-            && !v4.ip().is_loopback() && !v4.ip().is_link_local())
-        })
+        .find(|addr| is_official_supervisor(*addr))
         .ok_or(CoreLiveError::HostNotInternal)?;
-    if !matches!(addr.ip(), IpAddr::V4(_)) {
-        return Err(CoreLiveError::HostNotInternal);
-    }
     let stream =
         TcpStream::connect_timeout(&addr, TIMEOUT).map_err(|_| CoreLiveError::ConnectionFailed)?;
     stream
@@ -132,6 +130,15 @@ pub fn fetch_official_core_users_qemu(now: u64) -> Result<CoreLiveResult, CoreLi
     req.headers_mut().insert("Authorization", value);
     let (mut ws, _) = client(req, stream).map_err(|_| CoreLiveError::ConnectionFailed)?;
     run_protocol(&mut ws, &token, now)
+}
+
+/// Preserve the explicit QEMU marker for the existing independent lab probe.
+#[cfg(feature = "core-user-live-lab")]
+pub fn fetch_official_core_users_qemu(now: u64) -> Result<CoreLiveResult, CoreLiveError> {
+    if env::var("HARS_P8H_QEMU_ONLY").ok().as_deref() != Some("1") {
+        return Err(CoreLiveError::LabDisabled);
+    }
+    fetch_official_core_users_readonly(now)
 }
 #[cfg(test)]
 mod tests {
@@ -170,9 +177,16 @@ mod tests {
             assert_eq!(cmd["type"], "config/auth/list");
             assert_eq!(cmd["id"], COMMAND_ID);
             let result = match s.as_str() {
-                "ok" => json!({"type":"result","id":17,"success":true,"result":[{
-                    "id":"testuser","is_owner":true,"is_active":true,"system_generated":false,
-                    "group_ids":["system-admin"]}]}),
+                "ok" | "revoked" | "system" | "member" => json!({
+                    "type":"result","id":17,"success":true,"result":[{
+                    "id":"testuser","is_owner":s == "ok","is_active":s != "revoked",
+                    "system_generated":s == "system",
+                    "group_ids": if s == "ok" || s == "system" {
+                        vec!["system-admin"]
+                    } else {
+                        vec!["system-users"]
+                    }
+                }]}),
                 "denied" => {
                     json!({"type":"result","id":17,"success":false,"error":{"code":"unauthorized"}})
                 }
@@ -190,6 +204,21 @@ mod tests {
         response
     }
     #[test]
+    fn core_user_transport_never_accepts_alternate_private_dns_or_port() {
+        assert!(is_official_supervisor("172.30.32.2:80".parse().unwrap()));
+        for addr in [
+            "172.30.32.2:443",
+            "172.30.32.3:80",
+            "172.16.0.2:80",
+            "10.0.0.2:80",
+            "127.0.0.1:80",
+            "[::1]:80",
+            "[fd00::2]:80",
+        ] {
+            assert!(!is_official_supervisor(addr.parse().unwrap()), "{addr}");
+        }
+    }
+    #[test]
     fn real_loopback_websocket_protocol_with_no_mutation_command() {
         assert!(matches!(mock("ok"), Ok(CoreLiveResult::Users(_))));
         assert!(matches!(
@@ -199,9 +228,33 @@ mod tests {
         assert!(matches!(mock("wrong"), Err(CoreLiveError::Protocol)));
     }
     #[test]
+    fn authenticated_core_websocket_observes_current_revocation_and_role() {
+        use crate::core_user_snapshot_lab::CoreAccountStatus;
+        use crate::ingress_identity_lab::ingress_user_claim;
+        use std::net::{Ipv4Addr, SocketAddrV4};
+        let claim = ingress_user_claim(
+            SocketAddr::V4(SocketAddrV4::new(Ipv4Addr::new(172, 30, 32, 2), 3000)),
+            &[("X-Remote-User-Id", "testuser")],
+        )
+        .unwrap();
+        for (fixture, expected) in [
+            ("ok", CoreAccountStatus::ActiveAdmin),
+            ("member", CoreAccountStatus::ActiveNonAdmin),
+            ("revoked", CoreAccountStatus::Denied),
+            ("system", CoreAccountStatus::Denied),
+        ] {
+            let CoreLiveResult::Users(users) = mock(fixture).unwrap() else {
+                panic!("expected current Core user list");
+            };
+            assert_eq!(users.status(&claim, 100).unwrap(), expected);
+            assert!(users.status(&claim, 115).is_err(), "stale Core grant");
+        }
+    }
+    #[test]
     fn rejects_auth_invalid_and_unmarked_environment() {
         assert!(matches!(mock("invalid"), Err(CoreLiveError::Unauthorized)));
-        // No proxy connection occurs without explicit QEMU marker.
+        // The independent QEMU probe retains its separate explicit marker.
+        #[cfg(feature = "core-user-live-lab")]
         if env::var("HARS_P8H_QEMU_ONLY").ok().as_deref() != Some("1") {
             assert!(matches!(
                 fetch_official_core_users_qemu(100),

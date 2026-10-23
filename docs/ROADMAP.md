@@ -86,6 +86,18 @@ Next: trusted Core-verified RBAC, durable operation receipts and guarded
 lifecycle operations. No production release gate is certified.
 
 
+## Independent Core session verification (read-only increment)
+
+The native Rust `GET /api/session/core` endpoint correlates the verified
+Supervisor Ingress TCP user with a freshly authenticated official Core
+WebSocket user list, never with a browser-supplied role. The dashboard
+shows the Core result separately and fails closed on revocation or outage.
+No App mutation is enabled. See [scope](CORE_VERIFIED_INGRESS_SESSION.md).
+
+Next: independent disposable-HAOS end-to-end Core authorization and
+revocation proof; durable per-App grants and operation receipts; only then
+guarded, idempotent Supervisor lifecycle writes and restart reconciliation.
+
 ## Supervisor job detail access hardening
 
 Both official job discovery and individual job status now require a verified

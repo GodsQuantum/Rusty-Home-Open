@@ -68,6 +68,31 @@ try {
   await page.locator('#refresh').click();
   await page.waitForFunction(()=>document.querySelector('#session-status')?.textContent?.includes('droits administrateur absents'));
   console.log('NATIVE_SUPERVISOR_SESSION_UI_PASS: verified admin/non-admin shown without write permit or identity leaks');
+  // New product route checks current Core users separately from Supervisor
+  // header groups. These browser responses are synthetic, not Core evidence.
+  let coreReads=0;
+  await page.route('**/api/session/core',route=>{
+   coreReads++;
+   return route.fulfill({status:200,contentType:'application/json',
+    body:JSON.stringify({authenticated:true,administrator:true,
+     authority:'supervisor_ingress_plus_core_ws',actions_authorized:false,
+     read_only:true,user_id:'PRIVATE_USER_MUST_NOT_RENDER'})});
+  });
+  await page.locator('#refresh').click();
+  await page.waitForFunction(()=>document.querySelector('#core-session-status')?.textContent?.includes('confirmé par Core'));
+  if(coreReads!==1)throw Error('Independent Core session not requested');
+  if((await page.locator('body').innerText()).includes('PRIVATE_USER_MUST_NOT_RENDER'))
+   throw Error('Core user identifier leaked into UI');
+  await page.unroute('**/api/session/core');
+  await page.route('**/api/session/core',route=>route.fulfill({
+   status:503,contentType:'application/json',body:JSON.stringify({
+    error:'Core verification unavailable',read_only:true
+   })
+  }));
+  await page.locator('#refresh').click();
+  await page.waitForFunction(()=>document.querySelector('#core-session-status')?.textContent?.includes('non confirmés'));
+  console.log('CORE_VERIFIED_SESSION_UI_PASS: Core role and outage shown without leaked identity or write grants');
+
   // Browser-level product test: many arbitrary third-party Apps, not 4 recognized names.
   const catalog = Array.from({length:83},(_,i)=>({
    host:'dynamic-lab',backend:i%2===0?'docker':'supervisor',
