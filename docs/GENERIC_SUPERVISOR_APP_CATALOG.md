@@ -171,3 +171,28 @@ Trusted user authentication and management UI remain incomplete.
 
 CI covers an actual loopback HTTP denial with no token, plus
 1,403 arbitrary unknown App fixtures in the Rust formatter test.
+
+## Authenticated Home Assistant ingress (read-only)
+
+Rusty Home can be exposed **only through official Supervisor ingress**
+using the new --ingress option, with --supervisor-live and an HTTP bind
+such as 0.0.0.0:8099 inside the App container. The published App
+configuration must enable official ingress with the matching ingress_port.
+This does NOT authorize internet exposure or host-level port forwarding.
+
+The server rejects every TCP peer except the official Supervisor ingress
+proxy 172.30.32.2. It requires the Supervisor-injected X-Remote-User-Id
+and rejects duplicate identity headers, forged local requests, cross-site
+Origin/Fetch-Site headers and mutating HTTP methods. No header alone can
+grant a role or permission to manage Apps. The authenticated read-only
+dashboard uses the same typed, secret-redacting Supervisor backend and
+continues to mark source failures as degraded.
+
+This ingress path is tested against forged admin headers on actual loopback
+TCP, and against a trusted source-address simulation in Rust unit tests.
+It is not yet certified on a deployed official HAOS App, and contains
+no production user RBAC, app write routes or backup-and-restore controls.
+
+Official design guidance:
+https://developers.home-assistant.io/docs/add-ons/presentation#ingress
+https://contributors.home-assistant.io/apps/guides/ingress/
