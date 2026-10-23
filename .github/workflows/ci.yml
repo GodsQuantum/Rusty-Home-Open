@@ -39,6 +39,8 @@ jobs:
           bash scripts/smoke-http.sh
           bash scripts/smoke-supervisor-live.sh
           bash scripts/smoke-supervisor-ingress.sh
+      - name: Native Supervisor administrator Ingress remains read-only
+        run: python3 scripts/test_supervisor_ingress_groups_contract.py
       - name: P19 real TCP slow-client worker admission
         run: |
           cargo build --locked -p ha-rust-bridge

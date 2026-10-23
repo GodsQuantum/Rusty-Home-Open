@@ -44,6 +44,30 @@ try {
   if(!(await mobile.locator('#readiness').innerText()).includes('en développement'))throw Error('Mobile release gate state not visible');
   if((await mobile.locator('.card').count())!==4)throw Error('Mobile synthetic app count incorrect');
   await mobile.screenshot({path:'branding/lab-dashboard-mobile.png',fullPage:true,animations:'disabled'});
+  // The real UI must never confuse a native Supervisor admin session with
+  // permission to perform lifecycle writes. Only synthetic session responses.
+  let sessionFetches=0;
+  await page.route('**/api/session',async route=>{
+   sessionFetches++;
+   await route.fulfill({status:200,contentType:'application/json',
+    body:JSON.stringify({authenticated:true,administrator:true,
+     authority:'supervisor_ingress',actions_authorized:false,read_only:true,
+     token:'SHOULD_NOT_RENDER',user_id:'SHOULD_NOT_RENDER'})});
+  });
+  await page.locator('#refresh').click();
+  await page.waitForFunction(()=>document.querySelector('#session-status')?.textContent?.includes('administrateur vérifiée'));
+  if(sessionFetches!==1)throw Error('Admin session not read from native API');
+  if((await page.locator('body').innerText()).includes('SHOULD_NOT_RENDER'))
+   throw Error('Session API leaked identity into dashboard');
+  await page.unroute('**/api/session');
+  await page.route('**/api/session',route=>route.fulfill({status:200,
+   contentType:'application/json',body:JSON.stringify({
+    authenticated:true,administrator:false,authority:'supervisor_ingress',
+    actions_authorized:false,read_only:true
+   })}));
+  await page.locator('#refresh').click();
+  await page.waitForFunction(()=>document.querySelector('#session-status')?.textContent?.includes('droits administrateur absents'));
+  console.log('NATIVE_SUPERVISOR_SESSION_UI_PASS: verified admin/non-admin shown without write permit or identity leaks');
   // Browser-level product test: many arbitrary third-party Apps, not 4 recognized names.
   const catalog = Array.from({length:83},(_,i)=>({
    host:'dynamic-lab',backend:i%2===0?'docker':'supervisor',

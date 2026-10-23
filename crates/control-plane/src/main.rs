@@ -733,6 +733,40 @@ enum AccessMode {
     SupervisorIngress,
 }
 
+/// Informational native Supervisor session status; never an execution
+/// capability. The upstream Supervisor owns login, admin validation and
+/// injection of the sanitized effective group header on each request.
+/// No user id, group names or tokens are emitted to the browser.
+fn supervisor_session_response(
+    mode: AccessMode,
+    has_verified_identity: bool,
+    is_admin: bool,
+) -> (&'static str, String) {
+    if mode != AccessMode::SupervisorIngress {
+        return (
+            "404 Not Found",
+            json!({"read_only":true,"error":"supervisor ingress required"}).to_string(),
+        );
+    }
+    if !has_verified_identity {
+        return (
+            "403 Forbidden",
+            json!({"read_only":true,"error":"verified Supervisor user required"}).to_string(),
+        );
+    }
+    (
+        "200 OK",
+        json!({
+            "authenticated":true,
+            "administrator":is_admin,
+            "authority":"supervisor_ingress",
+            "read_only":true,
+            "actions_authorized":false
+        })
+        .to_string(),
+    )
+}
+
 // Bounded, independent request handling: 8 workers, at most 32 pending.
 // No unbounded thread-per-connection allocation or blocking send in accept().
 const LAB_HTTP_WORKERS: usize = 8;
@@ -807,9 +841,9 @@ fn handle(
         Ok(addr) => addr,
         Err(_) => return,
     };
-    let (line, claimed_user) = match mode {
+    let (line, claimed_user, supervisor_admin) = match mode {
         AccessMode::Loopback => match parse_local_http_request(&buffer[..size], local) {
-            Ok(line) => (line.to_owned(), None),
+            Ok(line) => (line.to_owned(), None, false),
             Err(_) => {
                 let _ = reply(
                     &mut conn,
@@ -826,7 +860,7 @@ fn handle(
                 Err(_) => return,
             };
             match ingress::verified_route(&buffer[..size], peer) {
-                Ok(identity) => (identity.route, Some(identity.user_id)),
+                Ok(identity) => (identity.route, Some(identity.user_id), identity.is_admin),
                 Err(_) => {
                     let _ = reply(
                         &mut conn,
@@ -839,8 +873,10 @@ fn handle(
             }
         }
     };
-    // The identity permits read-only access, never App mutation or admin
-    // status. Reserved for a separate, trusted Core permission lookup.
+    // Supervisor already verified the authenticated user's effective groups
+    // for the ingress session; this is only an informational read-only flag.
+    // NEVER treat this or any header alone as an App write permit.
+    let session_identity_present = claimed_user.is_some();
     drop(claimed_user);
     if line == "GET / HTTP/1.1" || line == "GET / HTTP/1.0" {
         let _ = reply(
@@ -872,6 +908,8 @@ fn handle(
     let verified = checked.as_ref();
     let (status, response) = if line == "GET /health HTTP/1.1" || line == "GET /health HTTP/1.0" {
         ("200 OK", json!({"status":"ok","mode":"LAB","read_only":true,"version":env!("CARGO_PKG_VERSION")}).to_string())
+    } else if line == "GET /api/session HTTP/1.1" || line == "GET /api/session HTTP/1.0" {
+        supervisor_session_response(mode, session_identity_present, supervisor_admin)
     } else if line == "GET /api/apps HTTP/1.1" || line == "GET /api/apps HTTP/1.0" {
         ("200 OK", report(adapters, verified).to_string())
     } else if line == "GET /api/store HTTP/1.1" || line == "GET /api/store HTTP/1.0" {
@@ -1292,6 +1330,36 @@ mod tests {
         assert_eq!(rows.len(), 1);
         assert!(!rows[0].to_string().contains("NEVER_EXPOSE"));
         assert_eq!(rows[0]["app_type"], "supervisor_app");
+    }
+
+    #[test]
+    fn native_ingress_session_is_information_only_never_a_write_permit() {
+        let (status, content) =
+            supervisor_session_response(AccessMode::SupervisorIngress, true, true);
+        assert_eq!(status, "200 OK");
+        let data: Value = serde_json::from_str(&content).unwrap();
+        assert_eq!(data["authenticated"], true);
+        assert_eq!(data["administrator"], true);
+        assert_eq!(data["actions_authorized"], false);
+        assert_eq!(data["read_only"], true);
+        for secret in ["user_id", "token", "group_ids", "SUPERVISOR_TOKEN"] {
+            assert!(!content.contains(secret));
+        }
+        let (status, content) =
+            supervisor_session_response(AccessMode::SupervisorIngress, true, false);
+        assert_eq!(status, "200 OK");
+        assert_eq!(
+            serde_json::from_str::<Value>(&content).unwrap()["administrator"],
+            false
+        );
+        assert_eq!(
+            supervisor_session_response(AccessMode::SupervisorIngress, false, true).0,
+            "403 Forbidden"
+        );
+        assert_eq!(
+            supervisor_session_response(AccessMode::Loopback, false, false).0,
+            "404 Not Found"
+        );
     }
 
     #[test]
