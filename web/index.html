@@ -69,6 +69,31 @@ function renderStore(){
    node("p",app.installed?"Installée":"Non installée","label"),
    node("p",app.available?"Compatible avec ce système":"Non disponible sur ce système","label"));
   if(app.update_available)card.append(node("p","Mise à jour disponible (information uniquement)","update"));
+  const detailButton=node("button","Détails du Store");
+  detailButton.type="button";
+  const detail=node("div",undefined,"muted");detail.hidden=true;
+  detailButton.addEventListener("click",async()=>{
+   if(!detail.hidden){detail.hidden=true;return;}
+   detail.hidden=false;detail.textContent="Chargement des détails du Store…";
+   detailButton.disabled=true;
+   try{
+    const response=await fetch("api/store/apps/"+encodeURIComponent(app.slug)+"/detail",{cache:"no-store"});
+    if(!response.ok)throw Error("Supervisor unavailable");
+    const data=await response.json();
+    if(data.read_only!==true||!data.app||data.app.slug!==app.slug
+       ||data.app.activation_authorized!==false||data.app.official_supervisor_owner!==true)
+       throw Error("Untrusted detail");
+    detail.replaceChildren();
+    for(const [caption,key] of [["Dépôt","repository"],["Version","version"],["Dernière version","latest_version"],
+        ["État","state"],["Ingress","ingress"],["Disponible","available"],["Mise à jour","update_available"]]){
+     const value=data.app[key];if(value===null||value===undefined)continue;
+     detail.append(node("p",caption+" : "+(typeof value==="boolean"?(value?"Oui":"Non"):String(value))));
+    }
+    if(!detail.childNodes.length)detail.textContent="Aucun détail public disponible.";
+   }catch(e){detail.textContent="Détails du Store indisponibles ou accès Supervisor refusé.";}
+   finally{detailButton.disabled=false;}
+  });
+  card.append(detailButton,detail);
   select("#store-apps").append(card);
  }
 }

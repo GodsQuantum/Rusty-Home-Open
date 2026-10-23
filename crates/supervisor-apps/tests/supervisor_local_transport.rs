@@ -291,3 +291,27 @@ fn supervisor_jobs_readonly_v1_v2_authorized_http() {
         Err(TransportError::InvalidJob)
     );
 }
+
+#[test]
+fn official_store_detail_fetches_uninstalled_unknown_app_and_redacts_secrets() {
+    let payload = serde_json::json!({"result":"ok","data":{
+        "slug":"unknown_new_2060","name":"Unknown New App",
+        "repository":"future_vendor","available":true,
+        "version_latest":"4.0","installed":false,
+        "options":{"api_key":"SECRET_MUST_NOT_LEAK"},
+        "host_network":true,"devices":["/dev/private"]
+    }});
+    let (addr, worker) = serve(ok(&payload.to_string()));
+    let app = client(addr)
+        .fetch_store_app_detail(ApiVersion::V1, "unknown_new_2060")
+        .unwrap();
+    assert_eq!(app.slug, "unknown_new_2060");
+    assert_eq!(app.repository.as_deref(), Some("future_vendor"));
+    assert!(!app.activation_authorized);
+    let safe = serde_json::to_string(&app).unwrap();
+    assert!(!safe.contains("SECRET_MUST_NOT_LEAK"));
+    assert!(!safe.contains("devices"));
+    let request = worker.join().unwrap();
+    assert!(request.starts_with("GET /store/addons/unknown_new_2060 HTTP/1.1"));
+    assert!(request.contains("Authorization: Bearer fixture_value_123"));
+}

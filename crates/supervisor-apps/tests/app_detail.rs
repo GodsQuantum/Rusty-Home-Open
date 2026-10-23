@@ -76,3 +76,22 @@ fn fails_closed_on_forged_identifiers_bad_status_and_duplicate_json() {
         Err(InfoError::TooLarge)
     );
 }
+
+#[test]
+fn store_detail_paths_support_uninstalled_future_apps_but_not_traversal() {
+    use hars_supervisor_apps::app_detail::store_detail_path;
+    assert_eq!(
+        store_detail_path(ApiVersion::V1, "unseen_vendor_app").unwrap(),
+        "/store/addons/unseen_vendor_app"
+    );
+    assert_eq!(
+        store_detail_path(ApiVersion::V2, "unseen_vendor_app").unwrap(),
+        "/v2/store/apps/unseen_vendor_app"
+    );
+    for slug in ["", "../secret", "bad/path", "bad?query=1", "bad%2fslug"] {
+        assert_eq!(
+            store_detail_path(ApiVersion::V1, slug),
+            Err(InfoError::UnsafeSlug)
+        );
+    }
+}

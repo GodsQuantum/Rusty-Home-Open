@@ -21,6 +21,21 @@ All of these are valid experiments with specific scopes. None accesses a
 real household, proves all 29 custom components or all nine Apps, or
 authorizes a hardware radio handoff or real migration.
 
+## Product development evidence (NOT production certification)
+
+- **2026-10-23, PR #37:** real read-only Supervisor Store App details for
+  installed and uninstalled Apps, arbitrary vendor slugs, native Rust
+  authenticated HTTP client, current Store membership validation and
+  user-facing dashboard. Code commit:
+  `8d1654b11fbcd8d19b099bf96a3b4bc43b7e617e`.
+  TDD initially failed for missing methods/routes, then all Rust workspace
+  all-target tests, strict Clippy and dashboard JavaScript syntax passed in
+  isolated DEV. Independent GitHub CI on the final PR SHA must be checked
+  before merge; these tests do NOT prove real HAOS App compatibility or
+  authorization for App lifecycle writes. See
+  [Store detail scope](STORE_LIVE_DETAILS.md) and
+  [PR #37](https://github.com/GodsQuantum/Rusty-Home-Open/pull/37).
+
 ## Release gate matrix — every gate remains noncertified
 
 | Exact gate identifier | Machine state | Production acceptance still needed |

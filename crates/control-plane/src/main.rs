@@ -282,6 +282,86 @@ fn supervisor_store_response(adapters: &[Adapter]) -> (&'static str, String) {
     }
 }
 
+/// Store details work for installed and uninstalled Apps alike.
+fn store_detail_slug(line: &str) -> Option<Result<&str, &'static str>> {
+    let rest = line.strip_prefix("GET /api/store/apps/")?;
+    let slug = rest
+        .strip_suffix("/detail HTTP/1.1")
+        .or_else(|| rest.strip_suffix("/detail HTTP/1.0"))?;
+    Some(if hars_supervisor_apps::app_detail::valid_slug(slug) {
+        Ok(slug)
+    } else {
+        Err("invalid store app slug")
+    })
+}
+
+/// Do not issue an App detail request unless the authenticated Store
+/// enumerates that exact slug. Never fall back to an offline fixture.
+fn checked_store_detail<F>(
+    catalog: &hars_supervisor_apps::official_store::Catalog,
+    slug: &str,
+    fetch_detail: F,
+) -> Result<
+    Option<hars_supervisor_apps::app_detail::AppDetail>,
+    hars_supervisor_apps::official_transport::TransportError,
+>
+where
+    F: FnOnce() -> Result<
+        hars_supervisor_apps::app_detail::AppDetail,
+        hars_supervisor_apps::official_transport::TransportError,
+    >,
+{
+    if !catalog.apps.iter().any(|app| app.slug == slug) {
+        return Ok(None);
+    }
+    fetch_detail().map(Some)
+}
+
+fn supervisor_store_detail_response(adapters: &[Adapter], slug: &str) -> (&'static str, String) {
+    if !hars_supervisor_apps::app_detail::valid_slug(slug) {
+        return (
+            "400 Bad Request",
+            json!({"read_only":true,"error":"invalid store app slug"}).to_string(),
+        );
+    }
+    let mut versions = adapters.iter().filter_map(|a| match a.kind {
+        AdapterKind::SupervisorLive(v) => Some(v),
+        _ => None,
+    });
+    let Some(version) = versions.next() else {
+        return (
+            "404 Not Found",
+            json!({"read_only":true,"error":"no live Supervisor Store source"}).to_string(),
+        );
+    };
+    if versions.next().is_some() {
+        return (
+            "503 Service Unavailable",
+            json!({"read_only":true,"error":"ambiguous Supervisor Store source"}).to_string(),
+        );
+    }
+    // Verify membership in the current authenticated Store before fetching.
+    // No caller-selected host, offline snapshot fallback or raw options.
+    let result = AppSupervisorClient::from_environment().and_then(|client| {
+        let catalog = client.fetch_store(version)?;
+        checked_store_detail(&catalog, slug, || {
+            client.fetch_store_app_detail(version, slug)
+        })
+    });
+    match result {
+        Ok(Some(app)) => ("200 OK", json!({"read_only":true,"app":app}).to_string()),
+        Ok(None) => (
+            "404 Not Found",
+            json!({"read_only":true,"error":"app not in current Store"}).to_string(),
+        ),
+        Err(_) => (
+            "503 Service Unavailable",
+            json!({"read_only":true,"error":"Supervisor Store App details unavailable"})
+                .to_string(),
+        ),
+    }
+}
+
 fn manifest_sources(body: &str) -> Result<Vec<Adapter>, String> {
     let doc: Value = serde_json::from_str(body).map_err(|_| "invalid manifest JSON")?;
     let list = doc
@@ -653,6 +733,14 @@ fn handle(
         ("200 OK", report(adapters, verified).to_string())
     } else if line == "GET /api/store HTTP/1.1" || line == "GET /api/store HTTP/1.0" {
         supervisor_store_response(adapters)
+    } else if let Some(slug) = store_detail_slug(&line) {
+        match slug {
+            Ok(slug) => supervisor_store_detail_response(adapters, slug),
+            Err(_) => (
+                "400 Bad Request",
+                json!({"error":"invalid store app slug","read_only":true}).to_string(),
+            ),
+        }
     } else if let Some(slug) = live_detail_slug(&line) {
         match slug {
             Ok(slug) => live_detail_response(adapters, slug),
@@ -1137,6 +1225,86 @@ mod tests {
         assert_eq!(
             serde_json::from_str::<Value>(&body).unwrap()["read_only"],
             true
+        );
+    }
+
+    #[test]
+    fn missing_store_app_does_not_trigger_detail_fetch() {
+        use hars_supervisor_apps::official_store::{App, Catalog, Repo};
+        use std::cell::Cell;
+        let catalog = Catalog {
+            api_version: ApiVersion::V1,
+            repositories: vec![Repo {
+                slug: "vendor".into(),
+                name: "Vendor".into(),
+            }],
+            apps: vec![App {
+                slug: "known_app".into(),
+                repository: "vendor".into(),
+                name: "Known".into(),
+                available: true,
+                installed: false,
+                update_available: false,
+            }],
+            official_supervisor_owner: true,
+            activation_authorized: false,
+        };
+        let called = Cell::new(false);
+        let result = checked_store_detail(&catalog, "unknown_app", || {
+            called.set(true);
+            panic!("unlisted App detail must never be requested");
+        });
+        assert!(result.unwrap().is_none());
+        assert!(!called.get());
+    }
+
+    #[test]
+    fn store_details_are_reachable_from_real_dashboard_without_write_routes() {
+        let html = include_str!("../../../web/index.html");
+        assert!(html.contains("api/store/apps/"));
+        assert!(html.contains("encodeURIComponent(app.slug)"));
+        assert!(html.contains("data.app.activation_authorized!==false"));
+        assert!(!html.contains("method:"));
+    }
+
+    #[test]
+    fn store_details_route_supports_uninstalled_apps_without_traversal() {
+        for slug in ["unlisted_vendor_2099", "core_mosquitto"] {
+            for version in ["HTTP/1.0", "HTTP/1.1"] {
+                let line = format!("GET /api/store/apps/{slug}/detail {version}");
+                assert_eq!(store_detail_slug(&line), Some(Ok(slug)));
+            }
+        }
+        for slug in ["", "..", "a/b", "x%2fprivate", "x?token=1", "x#fragment"] {
+            let line = format!("GET /api/store/apps/{slug}/detail HTTP/1.1");
+            assert_eq!(
+                store_detail_slug(&line),
+                Some(Err("invalid store app slug"))
+            );
+        }
+        assert_eq!(
+            store_detail_slug("POST /api/store/apps/vendor/detail HTTP/1.1"),
+            None
+        );
+    }
+
+    #[test]
+    fn store_details_require_live_supervisor_not_snapshot_or_ambiguous_source() {
+        let snapshot = Adapter {
+            host: "synthetic".into(),
+            kind: AdapterKind::SupervisorSnapshot("runtime/synthetic.json".into()),
+        };
+        assert_eq!(
+            supervisor_store_detail_response(&[snapshot], "future_vendor").0,
+            "404 Not Found"
+        );
+        let live = Adapter {
+            host: "live".into(),
+            kind: AdapterKind::SupervisorLive(ApiVersion::V1),
+        };
+        assert_eq!(
+            supervisor_store_detail_response(&[live.clone(), live], "future_vendor").0,
+            "503 Service Unavailable"
         );
     }
 

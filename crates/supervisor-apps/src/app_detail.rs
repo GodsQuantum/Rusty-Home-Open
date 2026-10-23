@@ -43,6 +43,16 @@ pub fn detail_path(version: ApiVersion, slug: &str) -> Result<String, InfoError>
         ApiVersion::V2 => format!("/v2/apps/{slug}/info"),
     })
 }
+/// Official Store detail endpoint works for installed AND uninstalled Apps.
+pub fn store_detail_path(version: ApiVersion, slug: &str) -> Result<String, InfoError> {
+    if !valid_slug(slug) {
+        return Err(InfoError::UnsafeSlug);
+    }
+    Ok(match version {
+        ApiVersion::V1 => format!("/store/addons/{slug}"),
+        ApiVersion::V2 => format!("/v2/store/apps/{slug}"),
+    })
+}
 fn optional_str(
     data: &serde_json::Map<String, Value>,
     key: &str,
