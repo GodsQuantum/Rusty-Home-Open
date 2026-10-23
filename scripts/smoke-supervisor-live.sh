@@ -39,4 +39,9 @@ traversal_status="$(curl --path-as-is --silent --output /dev/null --write-out '%
   echo "FAIL: invalid App slug must be rejected ($traversal_status)"
   exit 1
 }
-echo "PASS: Supervisor live dashboard and details are read-only and reject unauthorized access"
+store_status="$(curl --silent --output /dev/null --write-out '%{http_code}' --max-time 3 "http://127.0.0.1:$PORT/api/store")"
+[[ "$store_status" == "503" ]] || {
+  echo "FAIL: unauthenticated Supervisor Store must return 503 ($store_status)"
+  exit 1
+}
+echo "PASS: Supervisor Store, live dashboard and App details reject unauthorized access"

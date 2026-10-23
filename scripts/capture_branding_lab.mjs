@@ -81,7 +81,7 @@ try {
   const liveSlug='future_vendor_92021';
   await page.route('**/api/apps', async route=>route.fulfill({
    status:200,contentType:'application/json',
-   body:JSON.stringify({...apps,apps:[{
+   body:JSON.stringify({...apps,sources:[{host:'test-supervisor',kind:'supervisor-live',live:true,status:'ok',count:1}],apps:[{
     host:'test-supervisor',backend:'supervisor',live:true,slug:liveSlug,
     display_name:'Future Third Party',state:'started',
     app_type:'supervisor_app',version:'1.0',classification:'supervisor'
@@ -103,6 +103,30 @@ try {
   await page.waitForFunction(()=>document.querySelector('article.card .muted:last-child')?.textContent?.includes('vendor_92021'));
   if(detailCalls!==1)throw Error('Live details must only fetch upon explicit user action');
   if((await page.locator('article.card').innerText()).includes('MUST_NOT_LEAK'))throw Error('Unsafe details leaked');
+  const entries=Array.from({length:125},(_,i)=>({
+   slug:'community_new_'+i,repository:'unfamiliar_'+(i%17),
+   name:'Future Community App '+String(i).padStart(3,'0'),
+   available:true,installed:i%3===0,update_available:false
+  }));
+  entries[124].name='<img src=x onerror=alert(1)> New Third Party';
+  let storeCalls=0;
+  await page.route('**/api/store', async route=>{
+   storeCalls++;
+   await route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({
+    read_only:true,catalog:{official_supervisor_owner:true,
+      activation_authorized:false,api_version:'V1',apps:entries,repositories:[]}
+   })});
+  });
+  await page.locator('#load-store').click();
+  await page.waitForFunction(()=>document.querySelector('#store-page')?.textContent?.includes('1 / 6'));
+  if((await page.locator('#store-apps .card').count())!==24)throw Error('Store must paginate every vendor');
+  await page.locator('#store-search').fill('Future Community App 063');
+  if((await page.locator('#store-apps .card').count())!==1)throw Error('Store search across unknown Apps broken');
+  await page.locator('#store-search').fill('<img');
+  if((await page.locator('#store-apps .card').count())!==1)throw Error('Unsafe name filtered incorrectly');
+  if((await page.locator('#store-apps img').count())!==0)throw Error('Store rendered untrusted HTML');
+  if(storeCalls!==1)throw Error('Local Store filtering must not re-fetch catalog');
+  console.log('SUPERVISOR_STORE_BROWSER_PASS: 125 arbitrary Apps, 24/page, search and safe rendering');
   console.log('LIVE_APP_DETAIL_BROWSER_PASS: unknown live App detail loaded on demand, no write action');
   console.log('UNIVERSAL_DASHBOARD_E2E_PASS: 83 unknown Apps, 24/page, source/search, no unsafe HTML or unnecessary fetch');
   console.log('BRANDING_SCREENSHOTS_PASS: actual desktop and mobile HTML, 4 synthetic apps, zero production data');

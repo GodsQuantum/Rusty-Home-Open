@@ -249,6 +249,39 @@ fn live_detail_response(adapters: &[Adapter], slug: &str) -> (&'static str, Stri
     }
 }
 
+/// Read-only official Supervisor Store. The Marketplace for Core custom
+/// integrations is a DIFFERENT service, owned by Home Assistant Core.
+fn supervisor_store_response(adapters: &[Adapter]) -> (&'static str, String) {
+    let mut versions = adapters.iter().filter_map(|a| match a.kind {
+        AdapterKind::SupervisorLive(v) => Some(v),
+        _ => None,
+    });
+    let Some(version) = versions.next() else {
+        return (
+            "404 Not Found",
+            json!({"read_only":true,"error":"no live Supervisor Store source"}).to_string(),
+        );
+    };
+    if versions.next().is_some() {
+        return (
+            "503 Service Unavailable",
+            json!({"read_only":true,"error":"ambiguous Supervisor Store source"}).to_string(),
+        );
+    }
+    let result =
+        AppSupervisorClient::from_environment().and_then(|client| client.fetch_store(version));
+    match result {
+        Ok(catalog) => (
+            "200 OK",
+            json!({"read_only":true,"catalog":catalog}).to_string(),
+        ),
+        Err(_) => (
+            "503 Service Unavailable",
+            json!({"read_only":true,"error":"Supervisor Store unavailable"}).to_string(),
+        ),
+    }
+}
+
 fn manifest_sources(body: &str) -> Result<Vec<Adapter>, String> {
     let doc: Value = serde_json::from_str(body).map_err(|_| "invalid manifest JSON")?;
     let list = doc
@@ -618,6 +651,8 @@ fn handle(
         ("200 OK", json!({"status":"ok","mode":"LAB","read_only":true,"version":env!("CARGO_PKG_VERSION")}).to_string())
     } else if line == "GET /api/apps HTTP/1.1" || line == "GET /api/apps HTTP/1.0" {
         ("200 OK", report(adapters, verified).to_string())
+    } else if line == "GET /api/store HTTP/1.1" || line == "GET /api/store HTTP/1.0" {
+        supervisor_store_response(adapters)
     } else if let Some(slug) = live_detail_slug(&line) {
         match slug {
             Ok(slug) => live_detail_response(adapters, slug),
@@ -1103,6 +1138,30 @@ mod tests {
             serde_json::from_str::<Value>(&body).unwrap()["read_only"],
             true
         );
+    }
+
+    #[test]
+    fn official_store_is_unavailable_for_snapshots_or_untrusted_env() {
+        let snapshots = [Adapter {
+            host: "fixture".into(),
+            kind: AdapterKind::SupervisorSnapshot("runtime/fixture.json".into()),
+        }];
+        let (status, body) = supervisor_store_response(&snapshots);
+        assert_eq!(status, "404 Not Found");
+        assert_eq!(
+            serde_json::from_str::<Value>(&body).unwrap()["read_only"],
+            true
+        );
+        let live = [Adapter {
+            host: "future".into(),
+            kind: AdapterKind::SupervisorLive(ApiVersion::V1),
+        }];
+        // Never interpret missing Supervisor token as an empty Store catalogue.
+        // This test only holds if the environment has no Supervisor token.
+        if std::env::var_os("SUPERVISOR_TOKEN").is_none() {
+            let (status, _) = supervisor_store_response(&live);
+            assert_eq!(status, "503 Service Unavailable");
+        }
     }
 
     #[test]
