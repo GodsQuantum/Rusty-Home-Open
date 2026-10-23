@@ -1,6 +1,7 @@
 # Live Supervisor Store availability preflight — product increment
 
 **Code:** `afc1b6065771db60367d65357e7f83154f09b416`
+**Installed-inventory reconciliation:** `260fac994745a1bc7e5a1fc5288ace689c3a4506`
 **Scope:** universal, read-only platform availability for arbitrary Supervisor Apps.
 **Production certification:** none. The 15 release gates remain unchanged.
 

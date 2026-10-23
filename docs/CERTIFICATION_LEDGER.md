@@ -43,7 +43,8 @@ authorizes a hardware radio handoff or real migration.
   merge commit `a36cd02a35361af8a272b7b81ea5614990df97dc`.
   This does not establish human UI authentication or migration readiness.
 - **2026-10-23, Store availability preflight:** Rust product code
-  `afc1b6065771db60367d65357e7f83154f09b416` adds live V1/V2
+  `afc1b6065771db60367d65357e7f83154f09b416` and installed-inventory
+  reconciliation `260fac994745a1bc7e5a1fc5288ace689c3a4506` add live V1/V2
   availability reconciliation, fail-closed typed read-only API and dashboard.
   TDD first failed at E0432, then seven adversarial native tests, two
   control-plane tests, full Rust workspace all-target tests, strict Clippy,
