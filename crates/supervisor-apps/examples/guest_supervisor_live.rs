@@ -6,16 +6,22 @@ use hars_supervisor_apps::{
 };
 use std::io::Write;
 fn main() {
-    let outcome = AppSupervisorClient::from_environment()
-        .and_then(|client| client.fetch_store(ApiVersion::V1));
+    let outcome = AppSupervisorClient::from_environment().and_then(|client| {
+        let catalog = client.fetch_store(ApiVersion::V1)?;
+        // Genuine, authenticated HAOS QEMU GET /jobs/info, not a mock.
+        let jobs = client.fetch_jobs(ApiVersion::V1)?;
+        Ok((catalog, jobs))
+    });
     match outcome {
-        Ok(catalog) if !catalog.repositories.is_empty() && !catalog.apps.is_empty() => {
+        Ok((catalog, jobs)) if !catalog.repositories.is_empty() && !catalog.apps.is_empty() => {
             // Prints only aggregates, never URLs, tokens, store names or secrets.
             println!(
-                "P8E_REAL_RUST_SUPERVISOR_AUTH_PASS repos={} apps={} readonly={}",
+                "P8E_REAL_RUST_SUPERVISOR_AUTH_PASS repos={} apps={} readonly={} jobs={} jobs_readonly={}",
                 catalog.repositories.len(),
                 catalog.apps.len(),
-                !catalog.activation_authorized
+                !catalog.activation_authorized,
+                jobs.jobs.len(),
+                jobs.read_only
             );
             // The CLI's one-shot probe still returns immediately. Only the
             // dedicated Supervisor App stays alive after a successful GET.

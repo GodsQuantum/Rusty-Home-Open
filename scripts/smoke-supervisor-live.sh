@@ -46,7 +46,7 @@ store_status="$(curl --silent --output /dev/null --write-out '%{http_code}' --ma
 }
 job="0123456789abcdef0123456789abcdef"
 job_status="$(curl --silent --output /dev/null --write-out '%{http_code}' --max-time 3 "http://127.0.0.1:$PORT/api/jobs/$job")"
-[[ "$job_status" == "503" ]] || { echo "FAIL: job without Supervisor token must return 503 ($job_status)"; exit 1; }
+[[ "$job_status" == "404" ]] || { echo "FAIL: loopback cannot inspect Supervisor jobs ($job_status)"; exit 1; }
 bad_job="$(curl --path-as-is --silent --output /dev/null --write-out '%{http_code}' --max-time 3 "http://127.0.0.1:$PORT/api/jobs/../secret")"
 [[ "$bad_job" == "404" || "$bad_job" == "400" ]] || { echo "FAIL: unsafe job route accepted ($bad_job)"; exit 1; }
 bad_uuid="$(curl --silent --output /dev/null --write-out '%{http_code}' --max-time 3 "http://127.0.0.1:$PORT/api/jobs/ABCDEF0123456789ABCDEF0123456789")"

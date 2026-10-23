@@ -48,6 +48,9 @@ footer{border-top:1px solid #313f50;margin-top:2.5rem;padding-top:1rem;font-size
 <section id="supervisor-job-tracker"><div class="sectionhead"><h2>Suivi des jobs Supervisor</h2></div>
 <p class="muted">Consultez un identifiant de job officiel déjà connu (32 caractères hexadécimaux). Lecture seule ; aucun job n’autorise une opération ni ne prouve un droit administrateur.</p>
 <div class="catalog-controls"><label for="job-id">Identifiant du job <input id="job-id" type="text" maxlength="32" autocomplete="off" spellcheck="false" placeholder="32 caractères hexadécimaux" disabled></label><button id="load-job" type="button" disabled>Suivre le job</button></div>
+<div class="catalog-controls"><button id="load-jobs" type="button" disabled>Découvrir les jobs récents</button></div>
+<p class="muted">La liste des jobs est réservée à une session administrateur Supervisor vérifiée. Seuls les identifiants, états, pourcentages et nombres d’erreurs sont affichés.</p>
+<div id="job-list" aria-live="polite"></div>
 <p id="job-status" role="status" aria-live="polite">Disponible uniquement via Supervisor authentifié.</p>
 </section>
 <footer>Prototype sans commandes de pilotage. L'inventaire Supervisor en direct n'est disponible que depuis l'App installée, avec autorisation Ingress. HACS et la migration complète ne sont pas encore disponibles.</footer>
@@ -76,8 +79,53 @@ function validatedStoreRepositories(repos){
  return [...repos].sort((a,b)=>a.name.localeCompare(b.name));
 }
 
-let jobTimer=null,jobGeneration=0,supervisorAvailable=false;
+let jobTimer=null,jobGeneration=0,jobsGeneration=0,supervisorAvailable=false,supervisorAdmin=false;
+async function discoverSupervisorJobs(){
+ const button=select("#load-jobs"),target=select("#job-list");
+ if(!supervisorAvailable||!supervisorAdmin)return;
+ const generation=++jobsGeneration;
+ button.disabled=true;target.replaceChildren(node("p","Lecture de la liste officielle Supervisor…"));
+ try{
+  const response=await fetch("api/jobs",{cache:"no-store"});
+  if(!response.ok)throw Error("Supervisor jobs unavailable");
+  const data=await response.json();
+  if(data.read_only!==true||!Array.isArray(data.jobs)||data.jobs.length>24
+     ||typeof data.truncated!=="boolean")throw Error("Invalid jobs index");
+  const seen=new Set(),fragment=document.createDocumentFragment();
+  for(const j of data.jobs){
+   if(!j||j.read_only!==true||typeof j.id!=="string"
+      ||!/^[0-9a-f]{32}$/.test(j.id)||seen.has(j.id)
+      ||!["queued","running","succeeded","failed"].includes(j.state)
+      ||!Number.isFinite(j.progress)||j.progress<0||j.progress>100
+      ||!Number.isSafeInteger(j.error_count)||j.error_count<0)
+      throw Error("Invalid job");
+   seen.add(j.id);
+   const button=node("button",j.id+" · "+j.state+" · "+j.progress.toFixed(1)+" %");
+   button.type="button";
+   button.addEventListener("click",()=>{
+    select("#job-id").value=j.id;
+    void refreshSupervisorJob();
+   });
+   fragment.append(button);
+  }
+  if(generation!==jobsGeneration||!supervisorAvailable||!supervisorAdmin)return;
+  target.replaceChildren();
+  if(data.jobs.length===0)target.append(node("p","Aucun job récent."));
+  target.append(fragment);
+  if(data.truncated)target.append(node("p","Liste limitée aux 24 jobs les plus récents."));
+ }catch(e){
+  if(generation===jobsGeneration)target.replaceChildren(node("p","Liste indisponible ou accès refusé."));
+ }
+ finally{if(generation===jobsGeneration)button.disabled=!(supervisorAvailable&&supervisorAdmin);}
+}
+
 async function refreshSupervisorJob(){
+ if(!supervisorAvailable||!supervisorAdmin){
+  clearTimeout(jobTimer);jobGeneration++;
+  select("#load-job").disabled=true;
+  select("#job-status").textContent="Consultation réservée à une session administrateur Supervisor.";
+  return;
+ }
  const id=select("#job-id").value.trim();
  const generation=++jobGeneration;
  clearTimeout(jobTimer);
@@ -95,15 +143,15 @@ async function refreshSupervisorJob(){
      ||!["queued","running","succeeded","failed"].includes(j.state)
      ||!Number.isFinite(j.progress)||j.progress<0||j.progress>100
      ||!Number.isSafeInteger(j.error_count)||j.error_count<0)throw Error("Untrusted job");
-  if(generation!==jobGeneration)return;
+  if(generation!==jobGeneration||!supervisorAdmin||!supervisorAvailable)return;
   const states={queued:"En attente",running:"En cours",succeeded:"Terminé",failed:"Échec"};
   select("#job-status").textContent=states[j.state]+" · "+j.progress.toFixed(1)+" % · erreurs : "+j.error_count+" (lecture seule)";
   if(j.state==="queued"||j.state==="running")
-   jobTimer=setTimeout(()=>{if(generation===jobGeneration)refreshSupervisorJob()},3000);
+   jobTimer=setTimeout(()=>{if(generation===jobGeneration&&supervisorAdmin&&supervisorAvailable)refreshSupervisorJob()},3000);
  }catch(e){
   if(generation===jobGeneration)select("#job-status").textContent="Job indisponible ou accès Supervisor refusé.";
  }finally{
-  if(generation===jobGeneration)select("#load-job").disabled=false;
+  if(generation===jobGeneration)select("#load-job").disabled=!(supervisorAvailable&&supervisorAdmin);
  }
 }
 
@@ -358,19 +406,46 @@ function renderApps(){
  }
 }
 async function loadSession(){
- const line=select("#session-status");
+ const line=select("#session-status"),generation=++jobsGeneration;
+ supervisorAdmin=false;
+ clearTimeout(jobTimer);jobGeneration++;
+ select("#job-id").value="";
+ select("#job-id").disabled=true;
+ select("#load-job").disabled=true;
+ select("#job-status").textContent="Identité administrateur en cours de vérification.";
+ select("#load-jobs").disabled=true;
+ select("#job-list").replaceChildren();
  line.textContent="Identité : vérification via Supervisor…";
  try{
   const response=await fetch("api/session",{cache:"no-store"});
   if(!response.ok)throw Error("session unavailable");
   const value=await response.json();
+  if(generation!==jobsGeneration)return;
   if(value.read_only!==true||value.authenticated!==true
      ||value.authority!=="supervisor_ingress"||value.actions_authorized!==false
      ||typeof value.administrator!=="boolean")throw Error("invalid session evidence");
+  supervisorAdmin=value.administrator;
+  const mayTrack=supervisorAvailable&&supervisorAdmin;
+  select("#job-id").disabled=!mayTrack;
+  select("#load-job").disabled=!mayTrack;
+  select("#job-status").textContent=mayTrack
+   ?"Identité administrateur vérifiée · consultation de jobs en lecture seule."
+   :"Consultation des jobs indisponible sans droits administrateur.";
+  select("#load-jobs").disabled=!mayTrack;
   line.textContent=value.administrator
     ?"Session administrateur vérifiée par Supervisor · lecture seule"
     :"Session Home Assistant vérifiée · droits administrateur absents · lecture seule";
- }catch(e){line.textContent="Identité non confirmée · lecture seule";}
+ }catch(e){
+  if(generation!==jobsGeneration)return;
+  supervisorAdmin=false;
+  select("#job-id").value="";
+  select("#job-id").disabled=true;
+  select("#load-job").disabled=true;
+  select("#job-status").textContent="Consultation des jobs indisponible sans identité vérifiée.";
+  select("#load-jobs").disabled=true;
+  select("#job-list").replaceChildren();
+  line.textContent="Identité non confirmée · lecture seule";
+ }
 }
 async function loadCoreSession(){
  const line=select("#core-session-status");
@@ -418,8 +493,15 @@ async function load(){
   const hasLiveSupervisor=sources.some(src=>src.kind==="supervisor-live"&&src.live===true&&src.status==="ok");
   supervisorAvailable=hasLiveSupervisor;
   select("#load-store").disabled=!hasLiveSupervisor;
-  select("#job-id").disabled=!hasLiveSupervisor;
-  select("#load-job").disabled=!hasLiveSupervisor;
+  select("#job-id").disabled=!(hasLiveSupervisor&&supervisorAdmin);
+  select("#load-job").disabled=!(hasLiveSupervisor&&supervisorAdmin);
+  select("#load-jobs").disabled=!(hasLiveSupervisor&&supervisorAdmin);
+  if(!hasLiveSupervisor){
+   jobsGeneration++;
+   supervisorAdmin=false;
+   select("#load-jobs").disabled=true;
+   select("#job-list").replaceChildren();
+  }
   if(!hasLiveSupervisor){clearTimeout(jobTimer);jobGeneration++;select("#job-status").textContent="Supervisor authentifié indisponible.";}
   const att=data.attestation||{};
   select("#proof").textContent=att.status==="verified"
@@ -439,10 +521,13 @@ async function load(){
  }catch(e){allApps=[];pageIndex=0;renderApps();select("#status").textContent="Impossible de charger l'inventaire";select("#proof").textContent="Authenticité ou fraîcheur non vérifiable";select("#count").textContent="—";}
 }
 select("#load-job").addEventListener("click",refreshSupervisorJob);
+select("#load-jobs").addEventListener("click",discoverSupervisorJobs);
 select("#job-id").addEventListener("input",()=>{
  clearTimeout(jobTimer);jobGeneration++;
- select("#load-job").disabled=!supervisorAvailable;
- select("#job-status").textContent="Prêt pour une consultation en lecture seule.";
+ select("#load-job").disabled=!(supervisorAvailable&&supervisorAdmin);
+ select("#job-status").textContent=supervisorAdmin
+  ?"Prêt pour une consultation en lecture seule."
+  :"Consultation réservée aux administrateurs.";
 });
 select("#load-store").addEventListener("click",loadStore);
 select("#store-search").addEventListener("input",()=>{storePageIndex=0;renderStore()});

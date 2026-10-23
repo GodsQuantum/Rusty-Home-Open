@@ -116,6 +116,19 @@ impl LocalSupervisorClient {
         Ok(Self { target, token })
     }
 
+    /// Read the official job index, with a strict redacted result and no writes.
+    pub fn fetch_jobs(
+        &self,
+        version: ApiVersion,
+    ) -> Result<crate::job_status::JobListing, TransportError> {
+        let body = get_json(
+            self.target,
+            &self.token,
+            crate::job_status::jobs_info_path(version),
+        )?;
+        crate::job_status::parse_jobs_info_response(&body).map_err(|_| TransportError::InvalidJob)
+    }
+
     /// Read one official Supervisor job with validated ID and no mutations.
     pub fn fetch_job(
         &self,
@@ -267,6 +280,26 @@ impl AppSupervisorClient {
             .ok_or(TransportError::UnsupportedHost)?;
         let body = get_json(target, &self.token, path)?;
         parse_running_inventory(&body, version).map_err(|_| TransportError::InvalidRuntimeInventory)
+    }
+
+    /// Official Supervisor job discovery. All fields except safe progress,
+    /// state and error count are discarded before crossing the API boundary.
+    pub fn fetch_jobs(
+        &self,
+        version: ApiVersion,
+    ) -> Result<crate::job_status::JobListing, TransportError> {
+        use std::net::{IpAddr, ToSocketAddrs};
+        let target = (self.service_name(), 80)
+            .to_socket_addrs()
+            .map_err(|_| TransportError::Io)?
+            .find(|addr| matches!(addr.ip(), IpAddr::V4(ip) if ip.is_private()))
+            .ok_or(TransportError::UnsupportedHost)?;
+        let body = get_json(
+            target,
+            &self.token,
+            crate::job_status::jobs_info_path(version),
+        )?;
+        crate::job_status::parse_jobs_info_response(&body).map_err(|_| TransportError::InvalidJob)
     }
 
     /// Read job progress on the authenticated internal Supervisor service.

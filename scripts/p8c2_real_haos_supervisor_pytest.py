@@ -354,7 +354,10 @@ def test_hars_rust_supervisor_direct(shell):
     )
     assert "readonly=true" in sanitized
     assert "repos=" in sanitized and "apps=" in sanitized
-    print("P8E_GUEST_PROOF Rust authenticated HTTP GET /store succeeded in genuine Supervisor CLI container")
+    assert "jobs=" in sanitized and "jobs_readonly=true" in sanitized, (
+        "Rust failed its real authenticated Supervisor GET /jobs/info"
+    )
+    print("P8E_GUEST_PROOF Rust authenticated HTTP GET /store and /jobs/info succeeded in genuine Supervisor CLI container")
 
 
 @pytest.mark.dependency(depends=["test_start_supervisor"])
