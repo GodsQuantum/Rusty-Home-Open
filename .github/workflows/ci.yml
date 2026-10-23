@@ -24,6 +24,8 @@ jobs:
           cargo fmt --all -- --check
           cargo test --locked --all
           cargo clippy --locked --workspace --all-targets -- -D warnings
+      - name: Universal official Supervisor App catalog paging/search (1317 unknown Apps)
+        run: python3 scripts/test_generic_supervisor_catalog_cli.py
       - name: Test the isolated 9-App migration policy
         run: python3 scripts/test_app_migration_policy.py
       - name: Synthetic inventory and loopback HTTP integration
