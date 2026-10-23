@@ -17,3 +17,8 @@ Use the official Marketplace as the single authoritative community package store
 The generic Supervisor Store App browsing API, including unknown and future repositories, is implemented with search, paging and CLI access. [Functional details](GENERIC_SUPERVISOR_APP_CATALOG.md). Real App mutation/job management and complete user-facing UI remain to be built **before** product certification.
 
 <!-- Product-first development: generic installed App runtime inventory and status reconciliation are in progress. -->
+
+The live Supervisor App operation observer now reads the official job and installed
+inventory APIs together, with fail-closed postcondition reconciliation. It is
+read-only and does not provide trusted operation receipts, user RBAC, lifecycle
+mutations or durable restart recovery. See [scope and limitations](LIVE_SUPERVISOR_OPERATION_OBSERVATION.md).
