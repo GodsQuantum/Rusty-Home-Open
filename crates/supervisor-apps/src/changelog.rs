@@ -22,7 +22,7 @@ pub fn changelog_path(version: ApiVersion, slug: &str) -> Result<String, Changel
         return Err(ChangelogError::UnsafeSlug);
     }
     Ok(match version {
-        ApiVersion::V1 => format!("/addons/{slug}/changelog"),
+        ApiVersion::V1 => format!("/store/addons/{slug}/changelog"),
         ApiVersion::V2 => format!("/v2/store/apps/{slug}/changelog"),
     })
 }

@@ -8,7 +8,7 @@ Status: code implemented in DEV; independent GitHub CI required before merge.
 - For **any currently installed App slug** reported by the official authenticated
   Supervisor inventory, `GET /api/apps/{slug}/changelog` fetches its release
   notes from the official Supervisor endpoint.
-- V1: `GET /addons/{slug}/changelog`; V2: `GET /v2/store/apps/{slug}/changelog`
+- V1: `GET /store/addons/{slug}/changelog`; V2: `GET /v2/store/apps/{slug}/changelog`
   (the latter requires the Supervisor V2 API feature flag).
 - The Rust backend validates the slug and current installed inventory, then
   issues a bounded authenticated read from the fixed internal Supervisor
@@ -36,3 +36,9 @@ release gate changes state.
 Next: trusted Core-verified per-request RBAC and durable user/App/action/job
 receipts; then guarded install/start/stop/update, cancellation/retry and
 restart-safe reconciliation in disposable HAOS KVM.
+
+
+The V1 Store path follows the canonical upstream Supervisor API
+[Store endpoints](https://contributors.home-assistant.io/apps/supervisor-api/store/).
+The legacy installed-App path is intentionally not used; V2 is an explicitly
+selected experimental API, not assumed available on every Supervisor.

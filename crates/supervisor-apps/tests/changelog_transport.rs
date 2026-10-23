@@ -37,7 +37,7 @@ fn client(addr: SocketAddr) -> LocalSupervisorClient {
 #[test]
 fn official_v1_and_v2_changelog_read_only_authenticated_tcp() {
     for (version, expected) in [
-        (ApiVersion::V1, "/addons/unknown_vendor_app/changelog"),
+        (ApiVersion::V1, "/store/addons/unknown_vendor_app/changelog"),
         (
             ApiVersion::V2,
             "/v2/store/apps/unknown_vendor_app/changelog",
