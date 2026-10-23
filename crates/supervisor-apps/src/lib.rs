@@ -19,6 +19,7 @@ pub mod core_user_snapshot_lab;
 pub mod ingress_identity_lab;
 
 pub mod app_detail;
+pub mod app_stats;
 pub mod catalog_filter;
 pub mod official_store;
 pub mod official_transport;
