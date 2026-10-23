@@ -23,7 +23,7 @@ def test_hars_real_product_app_install_boot(shell, shell_json):
     app = "local_rusty_home"
     directory = "/mnt/data/supervisor/apps/local/rusty_home"
     shell.run_check("mkdir -p " + directory)
-    for asset in ("config.yaml", "Dockerfile", "rusty-home"):
+    for asset in ("config.yaml", "Dockerfile", "LICENSE", "rusty-home"):
         shell.run_check(
             "curl --fail --silent --show-error --max-time 90 "
             "http://10.0.2.2:18673/rusty_home/" + asset

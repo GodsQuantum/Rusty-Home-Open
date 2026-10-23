@@ -152,6 +152,33 @@ try {
   await page.waitForFunction(()=>document.querySelector('article.card .app-detail')?.textContent?.includes('vendor_92021'));
   if(detailCalls!==1)throw Error('Live details must only fetch upon explicit user action');
   if((await page.locator('article.card').innerText()).includes('MUST_NOT_LEAK'))throw Error('Unsafe details leaked');
+  // Real installed App configuration is schema-only, on demand, across arbitrary vendors.
+  let configCalls=0;
+  await page.route('**/api/apps/'+liveSlug+'/config-schema',async route=>{
+   configCalls++;
+   await route.fulfill({status:200,contentType:'application/json',
+    body:JSON.stringify({read_only:true,configuration:{
+      slug:liveSlug,read_only:true,activation_authorized:false,
+      configuration_supported:true,values_included:false,
+      fields:[{name:'access_token',kind:'secret',required:true,sensitive:true},
+              {name:'concurrent_clients',kind:'integer',required:false,sensitive:false}],
+      options:{access_token:'DO_NOT_EXPOSE_PRIVATE_VALUE'}
+    }})});
+  });
+  if(configCalls!==0)throw Error('Configuration schema must never auto-fetch');
+  await page.getByRole('button',{name:'Champs de configuration'}).click();
+  await page.waitForFunction(()=>document.querySelector('article.card .app-config-schema')
+     ?.textContent?.includes('access_token'));
+  if(configCalls!==1)throw Error('Schema should fetch exactly once when requested');
+  const visibleSchema=await page.locator('article.card .app-config-schema').innerText();
+  if(!visibleSchema.includes('concurrent_clients')||!visibleSchema.includes('valeur masquée'))
+     throw Error('Vendor-independent config fields not rendered');
+  if(visibleSchema.includes('DO_NOT_EXPOSE_PRIVATE_VALUE'))
+     throw Error('Stored App secrets leaked through schema UI');
+  await page.getByRole('button',{name:'Champs de configuration'}).click();
+  if(!(await page.locator('article.card .app-config-schema').isHidden()))
+     throw Error('Config schema visibility toggle failed');
+  console.log('LIVE_VENDOR_CONFIG_SCHEMA_UI_PASS: on-demand fields, no private values or App writes');
   // New read-only live telemetry is fetched on demand, never from fixtures.
   let statsCalls=0;
   await page.route('**/api/apps/'+liveSlug+'/stats', async route=>{

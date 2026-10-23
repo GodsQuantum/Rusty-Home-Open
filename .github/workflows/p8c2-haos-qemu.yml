@@ -113,6 +113,7 @@ jobs:
           mkdir -p "$RUNNER_TEMP/hars-app-assets/rusty_home"
           cp "$GITHUB_WORKSPACE/packaging/product-app/rusty_home/config.yaml" "$RUNNER_TEMP/hars-app-assets/rusty_home/config.yaml"
           cp "$GITHUB_WORKSPACE/packaging/product-app/rusty_home/Dockerfile" "$RUNNER_TEMP/hars-app-assets/rusty_home/Dockerfile"
+          cp "$GITHUB_WORKSPACE/LICENSE" "$RUNNER_TEMP/hars-app-assets/rusty_home/LICENSE"
           cp "$GITHUB_WORKSPACE/target/x86_64-unknown-linux-musl/release/ha-rust-bridge" "$RUNNER_TEMP/hars-app-assets/rusty_home/rusty-home"
           mkdir -p "$RUNNER_TEMP/hars-app-assets/hars_rust_probe"
           cp "$GITHUB_WORKSPACE/packaging/supervisor-app/hars_rust_probe/config.yaml" "$RUNNER_TEMP/hars-app-assets/hars_rust_probe/"
