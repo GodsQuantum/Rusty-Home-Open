@@ -30,3 +30,22 @@ jobs:
           cargo clippy --locked -p hars-community-packages --all-targets -- -D warnings
       - name: Production certification remains blocked
         run: python3 scripts/check_release_gate.py --expect-blocked
+
+  official-core-dev-runtime-registration:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - name: Import actual immutable HA 2026.11 development container and register real WS handlers
+        run: |
+          docker run --rm --network none --read-only --cap-drop ALL \
+            --security-opt no-new-privileges --pids-limit 96 \
+            --memory 1536m --cpus 2 --tmpfs /tmp:rw,nosuid,nodev \
+            --mount type=bind,source="$PWD/scripts",target=/lab,readonly \
+            --entrypoint python \
+            ghcr.io/home-assistant/home-assistant@sha256:ab9a72edb5cf22bc43047a58a62805bb4d378a6fb85dc5178ee3476eb0523f27 \
+            /lab/test_core_dev_marketplace_registration.py
+      - name: Production gate stays blocked
+        run: python3 scripts/check_release_gate.py --expect-blocked

@@ -78,3 +78,19 @@ Official references:
 - https://contributors.home-assistant.io/marketplace/reference/repository-structure/
 - https://contributors.home-assistant.io/marketplace/reference/validation/
 - https://www.home-assistant.io/apps
+
+## Genuine official 2026.11-dev OCI runtime registration test
+
+The separate GitHub Actions job runs the actual pre-release Core image
+from ghcr.io/home-assistant/home-assistant pinned to digest
+sha256:ab9a72edb5cf22bc43047a58a62805bb4d378a6fb85dc5178ee3476eb0523f27
+inside a fresh disposable Docker container with no network, no Linux
+capabilities, a read-only root filesystem and no production secrets. It
+imports the actual Core Marketplace Python modules and invokes the real
+WebSocket command registration function with an instrumented registry,
+checking that the three required reader handlers and original writer
+handlers exist and that registration has no duplicates. This is a **real
+pre-release Core runtime import/registration test**, distinct from the
+pinned official Python SOURCE decorator contract test. It does not
+exercise a fully authenticated admin WebSocket exchange, nor claim
+production app/marketplace compatibility.
