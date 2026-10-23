@@ -20,3 +20,10 @@ in that case the new route returns 503 and the UI shows unverified status.
 Next: independent HAOS KVM end-to-end proof for an active and revoked Core
 user, followed by durable, per-App and per-action grants and operation
 receipts before implementing Supervisor lifecycle mutations.
+
+
+The disposable HAOS KVM regression additionally requests this route directly
+from the private App network with a forged user header, both before and
+after a real Supervisor daemon restart. Both requests must return 403
+without ever reaching Core. This is a negative boundary test, **not** a
+positive Core role/revocation end-to-end certification.
