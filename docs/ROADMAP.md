@@ -37,3 +37,12 @@ Supervisor Store catalogue with App details for arbitrary vendors. The result
 never grants installation permissions. See [scope and test evidence](STORE_AVAILABILITY_PREFLIGHT.md).
 Next: trusted user identity/RBAC, durable operation receipts, then guarded
 install/start/stop/update with independent disposable-HAOS end-to-end tests.
+
+## Live installed App resource metrics
+
+The universal dashboard now queries authenticated official Supervisor
+V1/V2 numeric stats for any installed App, with no provider list and
+without exposing raw logs or options. See
+[LIVE_SUPERVISOR_APP_STATS.md](LIVE_SUPERVISOR_APP_STATS.md).
+Next: trusted Core-verified user RBAC, durable operation receipts,
+idempotent lifecycle writes and restart reconciliation.

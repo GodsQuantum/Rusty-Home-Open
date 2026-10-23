@@ -100,9 +100,26 @@ try {
   await page.locator('#refresh').click();
   await page.waitForFunction(()=>document.querySelector('#count')?.textContent==='1');
   await page.getByRole('button',{name:'Détails de l’App'}).click();
-  await page.waitForFunction(()=>document.querySelector('article.card .muted:last-child')?.textContent?.includes('vendor_92021'));
+  await page.waitForFunction(()=>document.querySelector('article.card .app-detail')?.textContent?.includes('vendor_92021'));
   if(detailCalls!==1)throw Error('Live details must only fetch upon explicit user action');
   if((await page.locator('article.card').innerText()).includes('MUST_NOT_LEAK'))throw Error('Unsafe details leaked');
+  // New read-only live telemetry is fetched on demand, never from fixtures.
+  let statsCalls=0;
+  await page.route('**/api/apps/'+liveSlug+'/stats', async route=>{
+   statsCalls++;
+   await route.fulfill({status:200,contentType:'application/json',
+    body:JSON.stringify({read_only:true,stats:{slug:liveSlug,read_only:true,
+      cpu_percent:12.5,memory_usage:52428800,memory_limit:104857600,
+      token:'MUST_NOT_LEAK'}})});
+  });
+  if(statsCalls!==0)throw Error('Stats must not fetch without user action');
+  await page.getByRole('button',{name:'Ressources en direct'}).click();
+  await page.waitForFunction(()=>document.querySelector('article.card .app-stats')?.textContent?.includes('CPU : 12.5 %'));
+  if(statsCalls!==1)throw Error('Stats should fetch once on explicit action');
+  if(!(await page.locator('article.card .app-stats').innerText()).includes('50.0 Mio / 100.0 Mio'))
+   throw Error('Wrong numeric resource display');
+  if((await page.locator('article.card').innerText()).includes('MUST_NOT_LEAK'))
+   throw Error('Unsafe stats field leaked into dashboard');
   const entries=Array.from({length:125},(_,i)=>({
    slug:'community_new_'+i,repository:'unfamiliar_'+(i%17),
    name:'Future Community App '+String(i).padStart(3,'0'),
@@ -128,6 +145,7 @@ try {
   if(storeCalls!==1)throw Error('Local Store filtering must not re-fetch catalog');
   console.log('SUPERVISOR_STORE_BROWSER_PASS: 125 arbitrary Apps, 24/page, search and safe rendering');
   console.log('LIVE_APP_DETAIL_BROWSER_PASS: unknown live App detail loaded on demand, no write action');
+  console.log('LIVE_APP_STATS_BROWSER_PASS: on-demand read-only CPU/RAM and secret-field isolation');
   console.log('UNIVERSAL_DASHBOARD_E2E_PASS: 83 unknown Apps, 24/page, source/search, no unsafe HTML or unnecessary fetch');
   console.log('BRANDING_SCREENSHOTS_PASS: actual desktop and mobile HTML, 4 synthetic apps, zero production data');
  } finally { await browser.close(); }

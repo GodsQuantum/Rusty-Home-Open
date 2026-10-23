@@ -23,6 +23,19 @@ authorizes a hardware radio handoff or real migration.
 
 ## Product development evidence (NOT production certification)
 
+- **2026-10-23, live installed-App telemetry (product feature, PR pending):**
+  native Rust V1/V2 Supervisor stats client, current installed-inventory
+  gating, numeric-only redacted API and dashboard resource panel for
+  arbitrary App slugs. Code commit
+  1a5a0fe98bec4936b47438a78ead4163b5fd7098.
+  TDD E0432/E0599 failure reproduced; four new adversarial loopback tests,
+  Rust workspace all-target tests, strict Clippy, rustfmt, JavaScript syntax
+  and public fixture guard passed in isolated LXC700 DEV.
+  **Independent CI on the final PR SHA remains pending.**
+  This does not certify production user RBAC, write permissions, HAOS
+  integration, or any release gate.
+  [Functional scope](LIVE_SUPERVISOR_APP_STATS.md).
+
 - **2026-10-23, PR #37:** real read-only Supervisor Store App details for
   installed and uninstalled Apps, arbitrary vendor slugs, native Rust
   authenticated HTTP client, current Store membership validation and
