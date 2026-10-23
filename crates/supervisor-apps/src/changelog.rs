@@ -26,6 +26,16 @@ pub fn changelog_path(version: ApiVersion, slug: &str) -> Result<String, Changel
         ApiVersion::V2 => format!("/v2/store/apps/{slug}/changelog"),
     })
 }
+/// Official Store DOCS.md works for installed and uninstalled community Apps.
+pub fn store_documentation_path(version: ApiVersion, slug: &str) -> Result<String, ChangelogError> {
+    if !valid_slug(slug) {
+        return Err(ChangelogError::UnsafeSlug);
+    }
+    Ok(match version {
+        ApiVersion::V1 => format!("/store/addons/{slug}/documentation"),
+        ApiVersion::V2 => format!("/v2/store/apps/{slug}/documentation"),
+    })
+}
 pub fn parse_changelog(raw: &[u8], slug: &str) -> Result<AppChangelog, ChangelogError> {
     if !valid_slug(slug) {
         return Err(ChangelogError::UnsafeSlug);

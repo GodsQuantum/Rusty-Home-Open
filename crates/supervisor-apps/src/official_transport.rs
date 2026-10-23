@@ -165,6 +165,19 @@ impl LocalSupervisorClient {
         crate::changelog::parse_changelog(&body, slug).map_err(|_| TransportError::InvalidChangelog)
     }
 
+    /// Official Store DOCS.md for any vendor, plaintext only, never HTML.
+    /// Reuses the bounded changelog parser: neither document is executable.
+    pub fn fetch_store_documentation(
+        &self,
+        version: ApiVersion,
+        slug: &str,
+    ) -> Result<crate::changelog::AppChangelog, TransportError> {
+        let path = crate::changelog::store_documentation_path(version, slug)
+            .map_err(|_| TransportError::InvalidAppSlug)?;
+        let text = get_text(self.target, &self.token, &path)?;
+        crate::changelog::parse_changelog(&text, slug).map_err(|_| TransportError::InvalidChangelog)
+    }
+
     /// Authenticated, read-only details of an arbitrary installed App.
     /// Sensitive options and device addresses are dropped by the typed parser.
     pub fn fetch_app_detail(
@@ -354,6 +367,25 @@ impl AppSupervisorClient {
             .ok_or(TransportError::UnsupportedHost)?;
         let body = get_text(target, &self.token, &path)?;
         crate::changelog::parse_changelog(&body, slug).map_err(|_| TransportError::InvalidChangelog)
+    }
+
+    /// Official Store DOCS.md text from fixed internal Supervisor service.
+    /// Never fall back to caller-supplied URLs or untrusted HTML evaluation.
+    pub fn fetch_store_documentation(
+        &self,
+        version: ApiVersion,
+        slug: &str,
+    ) -> Result<crate::changelog::AppChangelog, TransportError> {
+        use std::net::{IpAddr, ToSocketAddrs};
+        let path = crate::changelog::store_documentation_path(version, slug)
+            .map_err(|_| TransportError::InvalidAppSlug)?;
+        let target = (self.service_name(), 80)
+            .to_socket_addrs()
+            .map_err(|_| TransportError::Io)?
+            .find(|a| matches!(a.ip(),IpAddr::V4(ip) if ip.is_private()))
+            .ok_or(TransportError::UnsupportedHost)?;
+        let text = get_text(target, &self.token, &path)?;
+        crate::changelog::parse_changelog(&text, slug).map_err(|_| TransportError::InvalidChangelog)
     }
 
     /// GET only, against the same internal Supervisor service used for the Store.

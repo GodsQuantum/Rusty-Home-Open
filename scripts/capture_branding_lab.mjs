@@ -202,6 +202,28 @@ try {
   if((await page.locator('#store-catalog img').count())!==0)
    throw Error('Untrusted repository metadata was rendered as HTML');
   if(storeCalls!==1)throw Error('Changing repository must never issue another HTTP request');
+  // Third-party Store DOCS.md is fetched on demand and never interpreted as HTML.
+  let documentationCalls=0;
+  const untrustedDocs='# Unknown vendor\n<img src=x onerror=alert(1)> Markdown only';
+  await page.route('**/api/store/apps/**/documentation',async route=>{
+   documentationCalls++;
+   if(route.request().method()!=='GET')throw Error('Store documentation must be GET only');
+   const found=route.request().url().match(/\/api\/store\/apps\/([^/]+)\/documentation$/);
+   if(!found)throw Error('Unexpected Store documentation route');
+   const slug=decodeURIComponent(found[1]);
+   await route.fulfill({status:200,contentType:'application/json',
+     body:JSON.stringify({read_only:true,documentation:{slug,read_only:true,text:untrustedDocs}})});
+  });
+  if(documentationCalls!==0)throw Error('Unsolicited Store documentation request');
+  await page.getByRole('button',{name:'Documentation officielle'}).click();
+  await page.waitForFunction(()=>document.querySelector('#store-apps .store-documentation')
+      ?.textContent?.includes('Unknown vendor'));
+  if(documentationCalls!==1)throw Error('Store documentation should be fetched once');
+  if((await page.locator('#store-apps .store-documentation img').count())!==0)
+   throw Error('Malicious Store DOCS HTML executed');
+  if(!(await page.locator('#store-apps .store-documentation').innerText()).includes('<img'))
+   throw Error('Inert Markdown document was not rendered verbatim');
+  console.log('SUPERVISOR_STORE_DOCS_UI_PASS: arbitrary vendor DOCS.md inert, no POST');
   let operationCalls=0;
   await page.route('**/api/store/apps/**/operations',async route=>{
    operationCalls++;
