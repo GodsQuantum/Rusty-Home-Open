@@ -24,3 +24,11 @@
 !/corpus/supervisor_store/ambiguous-version.bin
 !/corpus/supervisor_store/duplicate-json-key.bin
 !/corpus/supervisor_store/untrusted-payload.bin
+
+/corpus/lifecycle_preflight/*
+!/corpus/lifecycle_preflight/consistent-install.bin
+!/corpus/lifecycle_preflight/conflicting-state.bin
+!/corpus/lifecycle_preflight/update-snapshot.bin
+!/corpus/lifecycle_preflight/unauthorized-source.bin
+!/corpus/lifecycle_preflight/bad-repository.bin
+!/corpus/lifecycle_preflight/duplicate-app.bin

@@ -11,6 +11,8 @@ on:
       - "crates/supervisor-apps/src/core_user_snapshot_lab.rs"
       - "crates/control-plane/src/ingress.rs"
       - "crates/supervisor-apps/src/official_store.rs"
+      - "crates/supervisor-apps/src/operation_preflight.rs"
+      - "crates/supervisor-apps/src/store_availability.rs"
       - "scripts/test_p15_fuzz_workflow_contract.py"
 
 permissions:
@@ -24,7 +26,7 @@ jobs:
   fuzz-core-user:
     name: Core auth, ingress and Store security (libFuzzer / AddressSanitizer)
     runs-on: ubuntu-24.04
-    timeout-minutes: 25
+    timeout-minutes: 40
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7 immutable pin
         with:
@@ -40,6 +42,7 @@ jobs:
           test -f fuzz/corpus/core_user_snapshot/valid-admin-user.json
           test -f fuzz/corpus/ingress_http/trusted-read.bin
           test -f fuzz/corpus/supervisor_store/v2-installed.bin
+          test -f fuzz/corpus/lifecycle_preflight/consistent-install.bin
           test -f fuzz/Cargo.lock
       - name: Execute real sanitizer-instrumented libFuzzer smoke
         working-directory: fuzz
@@ -47,6 +50,15 @@ jobs:
           cargo +nightly-2026-10-15 fuzz run core_user_snapshot -- -max_total_time=45 -timeout=8 -rss_limit_mb=2048
           cargo +nightly-2026-10-15 fuzz run ingress_http -- -max_total_time=45 -timeout=8 -rss_limit_mb=2048
           cargo +nightly-2026-10-15 fuzz run supervisor_store -- -max_total_time=45 -timeout=8 -rss_limit_mb=2048
+          cargo +nightly-2026-10-15 fuzz run lifecycle_preflight -- -max_total_time=45 -timeout=8 -rss_limit_mb=2048
+      - name: Extended sanitizer fuzz of all four protected surfaces
+        if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+        working-directory: fuzz
+        run: |
+          cargo +nightly-2026-10-15 fuzz run core_user_snapshot -- -max_total_time=180 -timeout=8 -rss_limit_mb=2048
+          cargo +nightly-2026-10-15 fuzz run ingress_http -- -max_total_time=180 -timeout=8 -rss_limit_mb=2048
+          cargo +nightly-2026-10-15 fuzz run supervisor_store -- -max_total_time=180 -timeout=8 -rss_limit_mb=2048
+          cargo +nightly-2026-10-15 fuzz run lifecycle_preflight -- -max_total_time=180 -timeout=8 -rss_limit_mb=2048
       - name: Attach crash artifacts only if instrumented run failed
         if: failure()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2 verified GitHub tag
@@ -56,5 +68,6 @@ jobs:
             fuzz/artifacts/core_user_snapshot/
             fuzz/artifacts/ingress_http/
             fuzz/artifacts/supervisor_store/
+            fuzz/artifacts/lifecycle_preflight/
           retention-days: 7
           if-no-files-found: ignore

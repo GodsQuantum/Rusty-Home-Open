@@ -22,7 +22,7 @@ class FuzzIsolation(unittest.TestCase):
                          "cargo install cargo-fuzz --version 0.13.2 --locked",
                          "fuzz run core_user_snapshot",
                          "-max_total_time=45", "-rss_limit_mb=2048",
-                         "contents: read", "pull_request:", "timeout-minutes: 25"):
+                         "contents: read", "pull_request:", "timeout-minutes: 40"):
             self.assertIn(expected,ci)
         self.assertNotIn("pull_request_target:",ci)
         self.assertNotIn("deployment_authorized: true",ci)
@@ -66,6 +66,36 @@ class FuzzIsolation(unittest.TestCase):
             self.assertNotIn(b"real-person",file.read_bytes())
         self.assertIn("/corpus/supervisor_store/*",(ROOT/"fuzz/.gitignore").read_text())
         self.assertIn("fuzz/corpus/supervisor_store/*.bin binary",(ROOT/".gitattributes").read_text())
+
+    def test_native_lifecycle_preflight_seven_actions_fuzz_and_isolated_extended_soak(self):
+        cargo=tomllib.loads((ROOT/"fuzz/Cargo.toml").read_text())
+        self.assertTrue(any(x["name"]=="lifecycle_preflight" for x in cargo["bin"]))
+        target=(ROOT/"fuzz/fuzz_targets/lifecycle_preflight.rs").read_text()
+        for item in ("assess_lifecycle_evidence(", "LifecycleAction::Install",
+                     "LifecycleAction::Start", "LifecycleAction::Stop",
+                     "LifecycleAction::Restart", "LifecycleAction::Update",
+                     "LifecycleAction::Backup", "LifecycleAction::Restore",
+                     "assert!(!plan.activation_authorized)", "assert!(plan.read_only)"):
+            self.assertIn(item,target)
+        for banned in ("SUPERVISOR_TOKEN","TcpStream","TcpListener","Docker",
+                       "hassio_token","authorize_recorded","AuditedPermit"):
+            self.assertNotIn(banned,target)
+        seeds=list((ROOT/"fuzz/corpus/lifecycle_preflight").glob("*.bin"))
+        self.assertEqual(len(seeds),6)
+        for file in seeds:
+            self.assertLess(file.stat().st_size,4096)
+            self.assertNotIn(b"SUPERVISOR_TOKEN",file.read_bytes())
+        ci=(ROOT/".github/workflows/fuzz.yml").read_text()
+        self.assertIn("fuzz run lifecycle_preflight",ci)
+        self.assertIn("crates/supervisor-apps/src/operation_preflight.rs",ci)
+        self.assertIn("crates/supervisor-apps/src/store_availability.rs",ci)
+        self.assertIn("-max_total_time=180",ci)
+        self.assertIn("github.event_name == 'schedule'",ci)
+        self.assertIn("fuzz/artifacts/lifecycle_preflight/",ci)
+        self.assertIn("/corpus/lifecycle_preflight/*",
+                      (ROOT/"fuzz/.gitignore").read_text())
+        self.assertIn("fuzz/corpus/lifecycle_preflight/*.bin binary",
+                      (ROOT/".gitattributes").read_text())
 
     def test_release_still_blocked_and_no_real_personal_ids_in_corpus(self):
         data=json.loads((ROOT/"config/release-gates.json").read_text())
