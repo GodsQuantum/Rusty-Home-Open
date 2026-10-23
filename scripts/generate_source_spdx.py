@@ -48,7 +48,12 @@ def build(data):
         if typ is None:
             raise ValueError("unsupported dependency origin")
         pkid=pkg["id"]
-        identifier="SPDXRef-Package-"+hashlib.sha256(pkid.encode()).hexdigest()[:24]
+        # Cargo metadata workspace IDs contain absolute checkout paths.
+        # Fingerprint only source-neutral package coordinates; otherwise CI
+        # and Cloud9 generate different SPDXIDs for identical Cargo.lock.
+        stable_source="workspace" if typ=="workspace" else str(src)
+        stable_coordinate=f"{typ}:{name}@{version}:{stable_source}"
+        identifier="SPDXRef-Package-"+hashlib.sha256(stable_coordinate.encode()).hexdigest()[:24]
         if identifier in ids.values():
             raise ValueError("package SPDX identifier collision")
         ids[pkid]=identifier
