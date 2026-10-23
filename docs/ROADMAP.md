@@ -29,3 +29,11 @@ The universal Store dashboard now has a native, authenticated, read-only
 details path for any catalog-listed App, including uninstalled Apps. See
 [scope, limits and next increment](STORE_LIVE_DETAILS.md). This is product
 code, not an end-to-end production certification.
+
+## Live Store availability preflight
+
+The native read-only API and dashboard now reconcile the current official
+Supervisor Store catalogue with App details for arbitrary vendors. The result
+never grants installation permissions. See [scope and test evidence](STORE_AVAILABILITY_PREFLIGHT.md).
+Next: trusted user identity/RBAC, durable operation receipts, then guarded
+install/start/stop/update with independent disposable-HAOS end-to-end tests.
