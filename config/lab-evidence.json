@@ -1,0 +1,152 @@
+{
+  "schema_version": 1,
+  "base_main_sha": "7234873317765b4dc2ea87c82611b4dd061ba14a",
+  "claims": [
+    {
+      "id": "debian_real_dpkg",
+      "release_gate": "packaging_updates",
+      "status": "verified_lab_only",
+      "run_id": 40004128778,
+      "head_sha": "7234873317765b4dc2ea87c82611b4dd061ba14a",
+      "workflow": "Real isolated Debian and signed APT package lifecycle",
+      "job": "Real dpkg install, upgrade, downgrade, purge and reproduction",
+      "scope": "Disposable Ubuntu packaging fixture: install, upgrade, downgrade, purge, reproduction",
+      "url": "https://github.com/GodsQuantum/Rusty-Home-Open/actions/runs/40004128778"
+    },
+    {
+      "id": "apt_signed_tamper_refusal",
+      "release_gate": "packaging_updates",
+      "status": "verified_lab_only",
+      "run_id": 40004128778,
+      "head_sha": "7234873317765b4dc2ea87c82611b4dd061ba14a",
+      "workflow": "Real isolated Debian and signed APT package lifecycle",
+      "job": "Actual offline signed APT install, update and tamper refusal",
+      "scope": "Ephemeral-key signed offline APT rejects tampered Release signatures",
+      "url": "https://github.com/GodsQuantum/Rusty-Home-Open/actions/runs/40004128778"
+    },
+    {
+      "id": "official_core_rust_bridge",
+      "release_gate": "ha_core_hacs_29_runtime",
+      "status": "verified_lab_only",
+      "run_id": 40004128648,
+      "head_sha": "7234873317765b4dc2ea87c82611b4dd061ba14a",
+      "workflow": "Official Home Assistant Core interoperability labs",
+      "job": "Genuine Core 2026.10.2 to isolated Rust HTTP bridge",
+      "scope": "Real Core 2026.10.2 and synthetic entities through isolated Rust bridge",
+      "url": "https://github.com/GodsQuantum/Rusty-Home-Open/actions/runs/40004128648"
+    },
+    {
+      "id": "selected_hacs_three",
+      "release_gate": "ha_core_hacs_29_runtime",
+      "status": "verified_lab_only",
+      "run_id": 40004128648,
+      "head_sha": "7234873317765b4dc2ea87c82611b4dd061ba14a",
+      "workflow": "Official Home Assistant Core interoperability labs",
+      "job": "Three pinned HACS integrations inside official Core (isolated)",
+      "scope": "Three selected real integrations on official isolated Core",
+      "url": "https://github.com/GodsQuantum/Rusty-Home-Open/actions/runs/40004128648"
+    },
+    {
+      "id": "adaptive_media_hacs",
+      "release_gate": "ha_core_hacs_29_runtime",
+      "status": "verified_lab_only",
+      "run_id": 40004128595,
+      "head_sha": "7234873317765b4dc2ea87c82611b4dd061ba14a",
+      "workflow": "Expanded genuine HACS on official Core",
+      "job": "Genuine Adaptive Lighting 1.32.0 and Universal Media Player 1.9.0",
+      "scope": "Two pinned HACS integrations on isolated Core",
+      "url": "https://github.com/GodsQuantum/Rusty-Home-Open/actions/runs/40004128595"
+    },
+    {
+      "id": "epson_snmp_hacs",
+      "release_gate": "ha_core_hacs_29_runtime",
+      "status": "verified_lab_only",
+      "run_id": 40004128595,
+      "head_sha": "7234873317765b4dc2ea87c82611b4dd061ba14a",
+      "workflow": "Expanded genuine HACS on official Core",
+      "job": "Genuine Epson SNMP 0.1.3 Core, missing device fail-closed",
+      "scope": "Real Epson SNMP integration missing-hardware denial",
+      "url": "https://github.com/GodsQuantum/Rusty-Home-Open/actions/runs/40004128595"
+    },
+    {
+      "id": "card_announcements_hacs",
+      "release_gate": "ha_core_hacs_29_runtime",
+      "status": "verified_lab_only",
+      "run_id": 40004128595,
+      "head_sha": "7234873317765b4dc2ea87c82611b4dd061ba14a",
+      "workflow": "Expanded genuine HACS on official Core",
+      "job": "Genuine Card Builder 2.6.0 and Smart Announcements 0.8.3",
+      "scope": "Two pinned HACS integrations on isolated Core",
+      "url": "https://github.com/GodsQuantum/Rusty-Home-Open/actions/runs/40004128595"
+    },
+    {
+      "id": "native_rust_security_suite",
+      "release_gate": "authenticated_host_transport",
+      "status": "verified_lab_only",
+      "run_id": 40004128682,
+      "head_sha": "7234873317765b4dc2ea87c82611b4dd061ba14a",
+      "workflow": "Rusty Home public CI",
+      "job": "native-rust-and-security-labs",
+      "scope": "Native Rust tests, isolated ingress forged-peer refusal, durable lab sessions and RBAC",
+      "url": "https://github.com/GodsQuantum/Rusty-Home-Open/actions/runs/40004128682"
+    },
+    {
+      "id": "official_product_nonroot",
+      "release_gate": "authenticated_host_transport",
+      "status": "verified_lab_only",
+      "run_id": 40004128675,
+      "head_sha": "7234873317765b4dc2ea87c82611b4dd061ba14a",
+      "workflow": "Rusty Home experimental Supervisor App image",
+      "job": "real-product-supervisor-container",
+      "scope": "Nonroot read-only Supervisor product image with authenticated ingress",
+      "url": "https://github.com/GodsQuantum/Rusty-Home-Open/actions/runs/40004128675"
+    },
+    {
+      "id": "official_marketplace_abi",
+      "release_gate": "ha_core_hacs_29_runtime",
+      "status": "verified_lab_only",
+      "run_id": 40004128906,
+      "head_sha": "7234873317765b4dc2ea87c82611b4dd061ba14a",
+      "workflow": "HA Core 2026.11 Marketplace source ABI",
+      "job": "real-official-core-marketplace-abi",
+      "scope": "Real official Core dev Marketplace source ABI integration laboratory",
+      "url": "https://github.com/GodsQuantum/Rusty-Home-Open/actions/runs/40004128906"
+    },
+    {
+      "id": "official_haos_kvm",
+      "release_gate": "supervisor_apps_restore",
+      "status": "verified_lab_only",
+      "run_id": 40002933713,
+      "head_sha": "17d3d27a64ed97650496d44453fcef74a1bfead4",
+      "workflow": "P8c2 — genuine isolated HAOS Supervisor repository catalogue",
+      "job": "Official HAOS 18.3 KVM and genuine Supervisor Store",
+      "scope": "Isolated official HAOS 18.3 / genuine Supervisor lifecycle and Rust product KVM test",
+      "url": "https://github.com/GodsQuantum/Rusty-Home-Open/actions/runs/40002933713",
+      "merged_pr": 50
+    },
+    {
+      "id": "browser_chromium",
+      "release_gate": "production_ui_auth",
+      "status": "verified_lab_only",
+      "run_id": 40002934403,
+      "head_sha": "17d3d27a64ed97650496d44453fcef74a1bfead4",
+      "workflow": "Real isolated Rusty Home dashboard screenshot",
+      "job": "synthetic-real-frontend",
+      "scope": "Chromium verified read-only marketplace and operation preflight UI",
+      "url": "https://github.com/GodsQuantum/Rusty-Home-Open/actions/runs/40002934403",
+      "merged_pr": 50
+    },
+    {
+      "id": "security_fuzzer",
+      "release_gate": "security_stress_fuzz",
+      "status": "verified_lab_only",
+      "run_id": 39997355066,
+      "head_sha": "330bfb875648a97c9b6e0905a8e216e55e243230",
+      "workflow": "Rusty Home - instrumented Core, ingress and Supervisor Store fuzz",
+      "job": "Core auth, ingress and Store security (libFuzzer / AddressSanitizer)",
+      "scope": "Pinned AddressSanitizer fuzz smoke for genuine Core, ingress and Store parsers",
+      "url": "https://github.com/GodsQuantum/Rusty-Home-Open/actions/runs/39997355066",
+      "merged_pr": 47
+    }
+  ]
+}

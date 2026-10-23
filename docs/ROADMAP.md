@@ -61,3 +61,22 @@ no production authorization is inferred.
 Next: trusted Core user RBAC, durable App-operation receipts with verified
 Supervisor job identity, then explicitly authorized lifecycle operations
 and crash-safe reconciliation. See [scope](STORE_DYNAMIC_REPOSITORY_FILTER.md).
+
+## Live Supervisor job progress (23 October 2026)
+
+The native Rust read-only `/api/jobs/{uuid}` API and dashboard poll the
+official authenticated Supervisor V1/V2 job endpoint for arbitrary operations,
+with strict UUID validation, minimal redacted output and no write route.
+See [functional scope and limits](LIVE_SUPERVISOR_JOB_PROGRESS.md).
+Next: Core-verified Ingress user RBAC, durable job-to-App/user/action receipts,
+then guarded mutations and restart-safe reconciliation. Job UUID possession
+does not authorize any lifecycle action.
+
+## Official App release notes (read-only)
+
+The native Rust dashboard now offers on-demand official Supervisor changelogs
+for any currently installed App. The backend validates current installed
+inventory and bounds plain-text responses; the UI never executes Markdown or
+HTML. [Scope and limits](LIVE_SUPERVISOR_APP_CHANGELOG.md).
+Next: trusted Core-verified RBAC, durable operation receipts and guarded
+lifecycle operations. No production release gate is certified.

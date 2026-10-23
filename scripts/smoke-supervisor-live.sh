@@ -44,4 +44,25 @@ store_status="$(curl --silent --output /dev/null --write-out '%{http_code}' --ma
   echo "FAIL: unauthenticated Supervisor Store must return 503 ($store_status)"
   exit 1
 }
+job="0123456789abcdef0123456789abcdef"
+job_status="$(curl --silent --output /dev/null --write-out '%{http_code}' --max-time 3 "http://127.0.0.1:$PORT/api/jobs/$job")"
+[[ "$job_status" == "503" ]] || { echo "FAIL: job without Supervisor token must return 503 ($job_status)"; exit 1; }
+bad_job="$(curl --path-as-is --silent --output /dev/null --write-out '%{http_code}' --max-time 3 "http://127.0.0.1:$PORT/api/jobs/../secret")"
+[[ "$bad_job" == "404" || "$bad_job" == "400" ]] || { echo "FAIL: unsafe job route accepted ($bad_job)"; exit 1; }
+bad_uuid="$(curl --silent --output /dev/null --write-out '%{http_code}' --max-time 3 "http://127.0.0.1:$PORT/api/jobs/ABCDEF0123456789ABCDEF0123456789")"
+[[ "$bad_uuid" == "400" ]] || { echo "FAIL: noncanonical job UUID accepted ($bad_uuid)"; exit 1; }
+job_post="$(curl --silent --output /dev/null --write-out '%{http_code}' -X POST --max-time 3 "http://127.0.0.1:$PORT/api/jobs/$job")"
+[[ "$job_post" == "404" ]] || { echo "FAIL: unexpected job mutation route ($job_post)"; exit 1; }
+echo "PASS: official job progress denies missing auth, unsafe UUID and mutation verbs"
+
+changelog_status="$(curl --silent --output /dev/null --write-out '%{http_code}' --max-time 3 "http://127.0.0.1:$PORT/api/apps/future_unknown_vendor/changelog")"
+[[ "$changelog_status" == "503" ]] || {
+  echo "FAIL: unauthenticated App changelog must return 503 ($changelog_status)"
+  exit 1
+}
+changelog_traversal="$(curl --path-as-is --silent --output /dev/null --write-out '%{http_code}' --max-time 3 "http://127.0.0.1:$PORT/api/apps/%2e%2e/changelog")"
+[[ "$changelog_traversal" == "400" ]] || {
+  echo "FAIL: invalid App changelog slug must return 400 ($changelog_traversal)"
+  exit 1
+}
 echo "PASS: Supervisor Store, live dashboard and App details reject unauthorized access"
