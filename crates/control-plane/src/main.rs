@@ -1415,6 +1415,9 @@ mod tests {
             "503 Service Unavailable"
         );
         assert_eq!(live_stats_response(&[], "../secret").0, "400 Bad Request");
+        let html = include_str!("../../../web/index.html");
+        assert!(html.contains("Ressources en direct"));
+        assert!(html.contains("/stats"));
     }
 
     #[test]
