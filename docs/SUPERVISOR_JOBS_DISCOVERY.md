@@ -34,6 +34,9 @@ requiring a user to paste an opaque UUID.
   oversized data and private metadata are rejected/redacted.
 - Control-plane unit tests deny local, anonymous, non-admin and ambiguous
   sources before any network request.
+- Independent HAOS 18.3 KVM GitHub Actions must run the compiled Rust guest
+  client against the genuine Supervisor /jobs/info, asserting a redacted
+  response; this is not substituted with a local mock.
 - Workspace, Clippy, frontend syntax and independent PR CI must be recorded
   with the final SHA; no CI success is implied by this document.
 
