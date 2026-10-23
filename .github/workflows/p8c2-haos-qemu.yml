@@ -12,6 +12,8 @@ on:
       - "scripts/test_p8j_supervisor_store_recovery.py"
       - ".github/workflows/p8c2-haos-qemu.yml"
       - "packaging/supervisor-app/**"
+      - "packaging/product-app/**"
+      - "crates/control-plane/**"
       - "crates/supervisor-apps/**"
 
 permissions:
@@ -49,6 +51,7 @@ jobs:
         run: |
           sudo apt-get install -y --no-install-recommends musl-tools
           rustup target add x86_64-unknown-linux-musl
+          cargo build --release --locked -p ha-rust-bridge --target x86_64-unknown-linux-musl
           cargo build --locked -p hars-supervisor-apps --example guest_supervisor_live --target x86_64-unknown-linux-musl
           cargo build --locked -p hars-supervisor-apps --target x86_64-unknown-linux-musl --features lab-app-actions --example guest_supervisor_lab_lifecycle
           cargo build --locked -p hars-supervisor-apps --target x86_64-unknown-linux-musl --features managed-apps-preview --example guest_supervisor_managed_preview
@@ -94,6 +97,12 @@ jobs:
           export HARS_SUPERVISOR_PARSER="$GITHUB_WORKSPACE/target/debug/examples/parse_official_store"
           # Make ONLY the static, nonsecret Rust executable reachable through
           # the QEMU usermode NAT host gateway. No LAN listener or host devices.
+          # Package the actual release Rusty Home App separately from legacy
+          # laboratory probes; only the local App is visible to disposable HAOS.
+          mkdir -p "$RUNNER_TEMP/hars-app-assets/rusty_home"
+          cp "$GITHUB_WORKSPACE/packaging/product-app/rusty_home/config.yaml" "$RUNNER_TEMP/hars-app-assets/rusty_home/config.yaml"
+          cp "$GITHUB_WORKSPACE/packaging/product-app/rusty_home/Dockerfile" "$RUNNER_TEMP/hars-app-assets/rusty_home/Dockerfile"
+          cp "$GITHUB_WORKSPACE/target/x86_64-unknown-linux-musl/release/ha-rust-bridge" "$RUNNER_TEMP/hars-app-assets/rusty_home/rusty-home"
           mkdir -p "$RUNNER_TEMP/hars-app-assets/hars_rust_probe"
           cp "$GITHUB_WORKSPACE/packaging/supervisor-app/hars_rust_probe/config.yaml" "$RUNNER_TEMP/hars-app-assets/hars_rust_probe/"
           cp "$GITHUB_WORKSPACE/packaging/supervisor-app/hars_rust_probe/Dockerfile" "$RUNNER_TEMP/hars-app-assets/hars_rust_probe/"
@@ -133,6 +142,7 @@ jobs:
             supervisor_test/test_supervisor.py::test_hars_real_official_file_editor_app_lifecycle_qemu \
             supervisor_test/test_supervisor.py::test_hars_rust_supervisor_direct \
             supervisor_test/test_supervisor.py::test_hars_manager_role_app \
+            supervisor_test/test_supervisor.py::test_hars_real_product_app_install_boot \
             supervisor_test/test_supervisor.py::test_app_install \
             supervisor_test/test_supervisor.py::test_create_backup \
             supervisor_test/test_supervisor.py::test_app_uninstall \

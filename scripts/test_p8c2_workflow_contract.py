@@ -40,6 +40,11 @@ assert "P8G_REAL_RUST_MANAGER_START_PASS" in code
 assert "guest_supervisor_lab_lifecycle" in config
 assert (ROOT / "scripts/test_p8g_mutation_contract.py").is_file()
 
+assert "test_hars_real_product_app_install_boot" in code
+assert "test_hars_real_product_app_install_boot" in config
+assert "cargo build --release --locked -p ha-rust-bridge" in config
+assert "packaging/product-app/**" in config
+assert '"rusty-home"' in code
 assert "test_hars_rust_supervisor_direct" in config
 assert "guest_supervisor_live" in config
 assert "x86_64-unknown-linux-musl" in config
