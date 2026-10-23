@@ -1,5 +1,7 @@
 name: Expanded genuine HACS on official Core
 on:
+  schedule:
+    - cron: "27 2 * * 1"
   push:
     branches: [main]
   pull_request:
