@@ -85,7 +85,10 @@ pub fn parse_plan(yaml: &str) -> Result<Plan> {
     {
         bail!("unsafe or oversized YAML automation");
     }
-    let mut raw: RawAutomation = serde_yaml_ng::from_str(yaml)?;
+    let mut raw: RawAutomation = serde_saphyr::from_str_with_options(
+        yaml,
+        serde_saphyr::options! { reject_unsupported_tags: true },
+    )?;
     if raw.triggers.is_some() && raw.trigger.is_some()
         || raw.conditions.is_some() && raw.condition.is_some()
         || raw.actions.is_some() && raw.action.is_some()

@@ -6,7 +6,11 @@ fn project() -> PathBuf {
 fn experimental_app_declares_real_ingress_and_no_unnecessary_host_privileges() {
     let root = project();
     let yaml = fs::read_to_string(root.join("config.yaml")).unwrap();
-    let config: serde_json::Value = serde_yaml_ng::from_str(&yaml).unwrap();
+    let config: serde_json::Value = serde_saphyr::from_str_with_options(
+        &yaml,
+        serde_saphyr::options! { reject_unsupported_tags: true },
+    )
+    .unwrap();
     assert_eq!(config["slug"], "rusty_home");
     assert_eq!(config["stage"], "experimental");
     assert_eq!(config["boot"], "manual");

@@ -24,7 +24,7 @@ core-user-live-lab = ["core-user-snapshot-lab", "dep:tungstenite"]
 [dependencies]
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
-serde_yaml_ng = "=0.10.0"
+serde-saphyr = "=2.0.0"
 nix = { version = "0.31", features = ["user"] }
 getrandom = { version = "0.4", optional = true }
 sha2 = { version = "0.10", optional = true }

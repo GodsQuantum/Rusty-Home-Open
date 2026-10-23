@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Contract: independently audit BOTH lockfiles, with no silent vulnerability exemptions."""
 from pathlib import Path
+import tomllib
 
 ROOT = Path(__file__).resolve().parent.parent
 ci = (ROOT / ".github/workflows/rustsec-locked-audit.yml").read_text()
@@ -18,6 +19,11 @@ for token in (
     assert token in ci, f"missing RustSec fail-closed workflow contract: {token}"
 assert "pull_request_target:" not in ci
 assert "--ignore" not in ci and "--no-fetch" not in ci and "audit fix" not in ci
-assert (ROOT / "Cargo.lock").is_file()
-assert (ROOT / "fuzz/Cargo.lock").is_file()
-print("RUSTSEC_AUDIT_CONTRACT_PASS: two immutable lockfiles, no exclusions, no auto-fix")
+for lock in ("Cargo.lock", "fuzz/Cargo.lock"):
+    file = ROOT / lock
+    assert file.is_file()
+    crates = {pkg["name"] for pkg in tomllib.loads(file.read_text())["package"]}
+    assert "serde-saphyr" in crates, lock
+    assert "unsafe-libyaml" not in crates, lock
+    assert "serde_yaml_ng" not in crates, lock
+print("RUSTSEC_AUDIT_CONTRACT_PASS: two lockfiles, safe YAML parser, no exclusions or auto-fix")
