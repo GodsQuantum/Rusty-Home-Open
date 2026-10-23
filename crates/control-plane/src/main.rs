@@ -2,6 +2,7 @@
 //! No Docker socket exposed, no write paths, no HAOS device control or automation.
 mod attestation;
 mod ingress;
+use hars_supervisor_apps::app_detail::valid_slug;
 use hars_supervisor_apps::installed_inventory::RunningInventory;
 use hars_supervisor_apps::official_store::ApiVersion;
 use hars_supervisor_apps::official_transport::AppSupervisorClient;
@@ -177,6 +178,8 @@ fn supervisor_live_rows(inventory: &RunningInventory, host: &str) -> Vec<Value> 
             json!({
                 "id": format!("{host}:supervisor:{}", app.slug),
                 "host": host,
+                "slug": app.slug,
+                "live": true,
                 "display_name": bounded(&app.name),
                 "image": Value::Null,
                 "state": app.state.as_deref().unwrap_or("unknown"),
@@ -190,6 +193,93 @@ fn supervisor_live_rows(inventory: &RunningInventory, host: &str) -> Vec<Value> 
             })
         })
         .collect()
+}
+
+/// Route only ASCII Supervisor slugs. Encoded separators, traversal and
+/// unbounded paths must never reach the privileged internal Supervisor API.
+fn live_detail_slug(line: &str) -> Option<Result<&str, &'static str>> {
+    let rest = line.strip_prefix("GET /api/apps/")?;
+    let slug = rest
+        .strip_suffix("/detail HTTP/1.1")
+        .or_else(|| rest.strip_suffix("/detail HTTP/1.0"))?;
+    Some(if valid_slug(slug) {
+        Ok(slug)
+    } else {
+        Err("invalid app slug")
+    })
+}
+
+/// Details are available only for Apps independently confirmed to be installed
+/// by the authenticated Supervisor, never via a user-supplied data source.
+/// The official API response is parsed into an allowlisted/redacted type.
+fn live_detail_response(adapters: &[Adapter], slug: &str) -> (&'static str, String) {
+    let mut versions = adapters.iter().filter_map(|a| match a.kind {
+        AdapterKind::SupervisorLive(v) => Some(v),
+        _ => None,
+    });
+    let Some(version) = versions.next() else {
+        return (
+            "404 Not Found",
+            json!({"error":"live Supervisor source not configured","read_only":true}).to_string(),
+        );
+    };
+    if versions.next().is_some() {
+        return (
+            "503 Service Unavailable",
+            json!({"error":"ambiguous live Supervisor source","read_only":true}).to_string(),
+        );
+    }
+    let result = AppSupervisorClient::from_environment().and_then(|client| {
+        let inventory = client.fetch_installed(version)?;
+        if !inventory.apps.iter().any(|app| app.slug == slug) {
+            return Ok(None);
+        }
+        client.fetch_app_detail(version, slug).map(Some)
+    });
+    match result {
+        Ok(Some(app)) => ("200 OK", json!({"read_only":true,"app":app}).to_string()),
+        Ok(None) => (
+            "404 Not Found",
+            json!({"error":"app not installed","read_only":true}).to_string(),
+        ),
+        Err(_) => (
+            "503 Service Unavailable",
+            json!({"error":"Supervisor App details unavailable","read_only":true}).to_string(),
+        ),
+    }
+}
+
+/// Read-only official Supervisor Store. The Marketplace for Core custom
+/// integrations is a DIFFERENT service, owned by Home Assistant Core.
+fn supervisor_store_response(adapters: &[Adapter]) -> (&'static str, String) {
+    let mut versions = adapters.iter().filter_map(|a| match a.kind {
+        AdapterKind::SupervisorLive(v) => Some(v),
+        _ => None,
+    });
+    let Some(version) = versions.next() else {
+        return (
+            "404 Not Found",
+            json!({"read_only":true,"error":"no live Supervisor Store source"}).to_string(),
+        );
+    };
+    if versions.next().is_some() {
+        return (
+            "503 Service Unavailable",
+            json!({"read_only":true,"error":"ambiguous Supervisor Store source"}).to_string(),
+        );
+    }
+    let result =
+        AppSupervisorClient::from_environment().and_then(|client| client.fetch_store(version));
+    match result {
+        Ok(catalog) => (
+            "200 OK",
+            json!({"read_only":true,"catalog":catalog}).to_string(),
+        ),
+        Err(_) => (
+            "503 Service Unavailable",
+            json!({"read_only":true,"error":"Supervisor Store unavailable"}).to_string(),
+        ),
+    }
 }
 
 fn manifest_sources(body: &str) -> Result<Vec<Adapter>, String> {
@@ -561,6 +651,16 @@ fn handle(
         ("200 OK", json!({"status":"ok","mode":"LAB","read_only":true,"version":env!("CARGO_PKG_VERSION")}).to_string())
     } else if line == "GET /api/apps HTTP/1.1" || line == "GET /api/apps HTTP/1.0" {
         ("200 OK", report(adapters, verified).to_string())
+    } else if line == "GET /api/store HTTP/1.1" || line == "GET /api/store HTTP/1.0" {
+        supervisor_store_response(adapters)
+    } else if let Some(slug) = live_detail_slug(&line) {
+        match slug {
+            Ok(slug) => live_detail_response(adapters, slug),
+            Err(_) => (
+                "400 Bad Request",
+                json!({"error":"invalid app slug","read_only":true}).to_string(),
+            ),
+        }
     } else if line == "GET /api/readiness HTTP/1.1" || line == "GET /api/readiness HTTP/1.0" {
         ("200 OK", readiness_report().to_string())
     } else if line == "GET /api/python-core HTTP/1.1" || line == "GET /api/python-core HTTP/1.0" {
@@ -1006,6 +1106,94 @@ mod tests {
             "test-host",
         );
         assert!(source.is_empty());
+    }
+
+    #[test]
+    fn live_detail_routes_accept_unknown_future_vendors_and_reject_traversal() {
+        for slug in ["core_mosquitto", "thirdparty_brand_A-493", "future_9000"] {
+            for version in ["HTTP/1.1", "HTTP/1.0"] {
+                let line = format!("GET /api/apps/{slug}/detail {version}");
+                assert_eq!(live_detail_slug(&line), Some(Ok(slug)));
+            }
+        }
+        for slug in ["", "..", "%2f", "a/b", "a?secret=true", "a%00b"] {
+            let line = format!("GET /api/apps/{slug}/detail HTTP/1.1");
+            assert_eq!(live_detail_slug(&line), Some(Err("invalid app slug")));
+        }
+        assert_eq!(
+            live_detail_slug("POST /api/apps/core_mosquitto/detail HTTP/1.1"),
+            None
+        );
+    }
+
+    #[test]
+    fn live_detail_requires_real_supervisor_not_signed_or_local_snapshots() {
+        let sources = [Adapter {
+            host: "any-vendor".into(),
+            kind: AdapterKind::SupervisorSnapshot("runtime/fixture.json".into()),
+        }];
+        let (status, body) = live_detail_response(&sources, "core_mosquitto");
+        assert_eq!(status, "404 Not Found");
+        assert_eq!(
+            serde_json::from_str::<Value>(&body).unwrap()["read_only"],
+            true
+        );
+    }
+
+    #[test]
+    fn official_store_is_unavailable_for_snapshots_or_untrusted_env() {
+        let snapshots = [Adapter {
+            host: "fixture".into(),
+            kind: AdapterKind::SupervisorSnapshot("runtime/fixture.json".into()),
+        }];
+        let (status, body) = supervisor_store_response(&snapshots);
+        assert_eq!(status, "404 Not Found");
+        assert_eq!(
+            serde_json::from_str::<Value>(&body).unwrap()["read_only"],
+            true
+        );
+        let live = [Adapter {
+            host: "future".into(),
+            kind: AdapterKind::SupervisorLive(ApiVersion::V1),
+        }];
+        // Never interpret missing Supervisor token as an empty Store catalogue.
+        // This test only holds if the environment has no Supervisor token.
+        if std::env::var_os("SUPERVISOR_TOKEN").is_none() {
+            let (status, _) = supervisor_store_response(&live);
+            assert_eq!(status, "503 Service Unavailable");
+        }
+    }
+
+    #[test]
+    fn safe_detail_json_never_includes_app_options_or_credentials() {
+        let raw = json!({"result":"ok","data":{
+            "slug":"unfamiliar_vendor_a", "name":"Third-party App",
+            "state":"started","version":"3.8",
+            "options":{"password":"MUST_NOT_LEAK"},
+            "devices":["/dev/private"],"ingress_token":"SECRET",
+            "system_managed":false
+        }})
+        .to_string();
+        let app = hars_supervisor_apps::app_detail::parse_app_detail(
+            raw.as_bytes(),
+            "unfamiliar_vendor_a",
+        )
+        .unwrap();
+        let serialized = json!({"read_only":true,"app":app}).to_string();
+        assert!(serialized.contains("unfamiliar_vendor_a"));
+        assert_eq!(
+            serde_json::from_str::<Value>(&serialized).unwrap()["app"]["activation_authorized"],
+            false
+        );
+        for forbidden in [
+            "MUST_NOT_LEAK",
+            "SECRET",
+            "/dev/private",
+            "password",
+            "devices",
+        ] {
+            assert!(!serialized.contains(forbidden));
+        }
     }
 
     #[test]

@@ -38,13 +38,57 @@ footer{border-top:1px solid #313f50;margin-top:2.5rem;padding-top:1rem;font-size
 <section aria-labelledby="readiness-title"><div class="sectionhead"><h2 id="readiness-title">État du développement</h2></div><p id="readiness" aria-live="polite">Chargement de l’état du prototype…</p><p id="core-ipc" aria-live="polite">Pont Python Home Assistant : vérification…</p></section>
 <section><div class="sectionhead"><h2>Sources</h2><span id="status" aria-live="polite">Chargement…</span></div><p id="proof">Authenticité des données : vérification en cours</p><div id="sources" aria-live="polite"></div></section>
 <section><div class="sectionhead"><h2>Applications <span id="count">—</span></h2><div class="catalog-controls"><label for="search">Rechercher <input id="search" type="search" maxlength="120" placeholder="Nom, source ou image"></label><label for="filter">Afficher <select id="filter"><option value="all" selected>Toutes les applications</option><option value="supervisor">Apps Supervisor</option><option value="docker">Conteneurs Docker</option></select></label></div></div><div class="cards" id="apps" aria-live="polite"></div><nav class="pager" aria-label="Pages du catalogue"><button id="previous-page" type="button">Précédente</button><span id="page-status" aria-live="polite">Page 1 / 1</span><button id="next-page" type="button">Suivante</button></nav></section>
-<footer>Prototype sans commandes de pilotage. Les Apps HAOS proviennent d'un instantané hors ligne, non d'une connexion directe au Supervisor. HACS et la migration complète ne sont pas encore disponibles.</footer>
+<section id="store-catalog"><div class="sectionhead"><h2>Store Supervisor · Apps communautaires</h2><button id="load-store" type="button" disabled>Consulter le Store</button></div>
+<p class="muted">Catalogue officiel des Apps Home Assistant OS, distinct du Marketplace des intégrations Home Assistant Core. Consultation uniquement ; aucune installation ou mise à jour n’est autorisée.</p>
+<p id="store-status" aria-live="polite">Disponible uniquement via une connexion Supervisor authentifiée.</p>
+<div class="catalog-controls"><label for="store-search">Rechercher une App <input id="store-search" type="search" maxlength="120" placeholder="Nom, dépôt, identifiant" disabled></label></div>
+<div class="cards" id="store-apps" aria-live="polite"></div>
+<nav class="pager" aria-label="Pages du Store Supervisor"><button id="store-prev" type="button" disabled>Précédente</button><span id="store-page" aria-live="polite">Page 1 / 1</span><button id="store-next" type="button" disabled>Suivante</button></nav>
+</section>
+<footer>Prototype sans commandes de pilotage. L'inventaire Supervisor en direct n'est disponible que depuis l'App installée, avec autorisation Ingress. HACS et la migration complète ne sont pas encore disponibles.</footer>
 <script>
 const select=q=>document.querySelector(q);
 const node=(tag,value,cls)=>{const n=document.createElement(tag);if(value!==undefined)n.textContent=value;if(cls)n.className=cls;return n};
 const PAGE_SIZE=24;
 let allApps=[];
 let pageIndex=0;
+let storeApps=[],storePageIndex=0;
+function renderStore(){
+ const q=select("#store-search").value.trim().toLocaleLowerCase();
+ const matching=storeApps.filter(a=>!q||[a.name,a.slug,a.repository].some(x=>String(x||"").toLocaleLowerCase().includes(q)));
+ const pages=Math.max(1,Math.ceil(matching.length/PAGE_SIZE));
+ storePageIndex=Math.min(storePageIndex,pages-1);
+ select("#store-page").textContent="Page "+(storePageIndex+1)+" / "+pages+" · "+matching.length+" App(s)";
+ select("#store-prev").disabled=storePageIndex===0;
+ select("#store-next").disabled=storePageIndex+1>=pages;
+ select("#store-apps").replaceChildren();
+ for(const app of matching.slice(storePageIndex*PAGE_SIZE,(storePageIndex+1)*PAGE_SIZE)){
+  const card=node("article",undefined,"card");
+  card.append(node("h3",app.name),node("p","Dépôt : "+app.repository,"muted"),
+   node("p","Identifiant : "+app.slug,"muted"),
+   node("p",app.installed?"Installée":"Non installée","label"),
+   node("p",app.available?"Compatible avec ce système":"Non disponible sur ce système","label"));
+  if(app.update_available)card.append(node("p","Mise à jour disponible (information uniquement)","update"));
+  select("#store-apps").append(card);
+ }
+}
+async function loadStore(){
+ select("#load-store").disabled=true;
+ select("#store-status").textContent="Lecture du Store Supervisor…";
+ try{
+  const response=await fetch("api/store",{cache:"no-store"});
+  if(!response.ok)throw Error("Store unavailable");
+  const data=await response.json();
+  if(data.read_only!==true||!data.catalog||data.catalog.official_supervisor_owner!==true
+      ||data.catalog.activation_authorized!==false||!Array.isArray(data.catalog.apps))throw Error("Untrusted catalog");
+  storeApps=data.catalog.apps;
+  storePageIndex=0;select("#store-search").disabled=false;renderStore();
+  select("#store-status").textContent=storeApps.length+" Apps de tous les dépôts accessibles, en lecture seule.";
+ }catch(e){
+  storeApps=[];storePageIndex=0;renderStore();
+  select("#store-status").textContent="Catalogue indisponible ou accès Supervisor refusé.";
+ }finally{select("#load-store").disabled=false;}
+}
 function renderApps(){
  const backend=select("#filter").value;
  const search=select("#search").value.trim().toLocaleLowerCase();
@@ -73,6 +117,29 @@ function renderApps(){
   const type=node("p",String(app.app_type||"application")+" · "+String(app.classification||"unknown"));
   const version=app.version?node("p","Version : "+app.version):node("p","Image : "+(app.image||"—"));
   card.append(state,heading,host,type,version);
+  if(app.backend==="supervisor"&&app.live===true&&typeof app.slug==="string"){
+   const button=node("button","Détails de l’App");
+   button.type="button";
+   const detail=node("div",undefined,"muted");detail.hidden=true;
+   button.addEventListener("click",async()=>{
+    if(!detail.hidden){detail.hidden=true;return;}
+    detail.hidden=false;detail.textContent="Chargement des détails…";button.disabled=true;
+    try{
+     const response=await fetch("api/apps/"+encodeURIComponent(app.slug)+"/detail",{cache:"no-store"});
+     if(!response.ok)throw Error("Supervisor unavailable");
+     const data=await response.json();
+     if(data.read_only!==true||!data.app||data.app.slug!==app.slug||data.app.activation_authorized!==false)throw Error("Untrusted detail");
+     detail.replaceChildren();
+     for(const [caption,key] of [["Dépôt","repository"],["Version installée","version"],["Dernière version","latest_version"],["État","state"],["Ingress","ingress"],["Disponible","available"],["Mise à jour","update_available"]]){
+      const value=data.app[key];if(value===null||value===undefined)continue;
+      detail.append(node("p",caption+" : "+(typeof value==="boolean"?(value?"Oui":"Non"):String(value))));
+     }
+     if(!detail.childNodes.length)detail.textContent="Aucun détail disponible.";
+    }catch(e){detail.textContent="Détails indisponibles ou accès Supervisor refusé.";}
+    finally{button.disabled=false;}
+   });
+   card.append(button,detail);
+  }
   if(app.update_available===true)card.append(node("p","Mise à jour disponible (information uniquement)","update"));
   select("#apps").append(card);
  }
@@ -102,6 +169,7 @@ async function load(){
   if(!response.ok)throw Error("HTTP "+response.status);
   const data=await response.json();if(data.read_only!==true)throw Error("mode inattendu");
   const sources=Array.isArray(data.sources)?data.sources:[],apps=Array.isArray(data.apps)?data.apps:[];
+  select("#load-store").disabled=!sources.some(src=>src.kind==="supervisor-live"&&src.live===true&&src.status==="ok");
   const att=data.attestation||{};
   select("#proof").textContent=att.status==="verified"
     ?"Inventaire signé par sample lab host · valide jusqu’au "+new Date(att.expires_at*1000).toLocaleString("fr-FR")
@@ -119,6 +187,10 @@ async function load(){
 
  }catch(e){allApps=[];pageIndex=0;renderApps();select("#status").textContent="Impossible de charger l'inventaire";select("#proof").textContent="Authenticité ou fraîcheur non vérifiable";select("#count").textContent="—";}
 }
+select("#load-store").addEventListener("click",loadStore);
+select("#store-search").addEventListener("input",()=>{storePageIndex=0;renderStore()});
+select("#store-prev").addEventListener("click",()=>{if(storePageIndex>0){storePageIndex--;renderStore()}});
+select("#store-next").addEventListener("click",()=>{storePageIndex++;renderStore()});
 select("#refresh").addEventListener("click",load);
 select("#filter").addEventListener("change",()=>{pageIndex=0;renderApps()});
 select("#search").addEventListener("input",()=>{pageIndex=0;renderApps()});
