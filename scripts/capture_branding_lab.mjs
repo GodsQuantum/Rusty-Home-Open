@@ -73,6 +73,37 @@ try {
   await page.locator('#search').fill('<img');
   if((await page.locator('article.card img').count())!==0)throw Error('Untrusted App name injected HTML');
   if((await page.locator('.card').count())!==1)throw Error('Unsafe App name hidden');
+  // A new unknown live App can expose official redacted detail, never credentials.
+  // No production user, transport, token or App is used in this browser lab.
+  await page.unroute('**/api/apps');
+  await page.locator('#filter').selectOption('all');
+  await page.locator('#search').fill('');
+  const liveSlug='future_vendor_92021';
+  await page.route('**/api/apps', async route=>route.fulfill({
+   status:200,contentType:'application/json',
+   body:JSON.stringify({...apps,apps:[{
+    host:'test-supervisor',backend:'supervisor',live:true,slug:liveSlug,
+    display_name:'Future Third Party',state:'started',
+    app_type:'supervisor_app',version:'1.0',classification:'supervisor'
+   }]})
+  }));
+  let detailCalls=0;
+  await page.route('**/api/apps/'+liveSlug+'/detail', async route=>{
+   detailCalls++;
+   await route.fulfill({status:200,contentType:'application/json',
+    body:JSON.stringify({read_only:true,app:{
+      slug:liveSlug,name:'Future Third Party',version:'1.0',
+      repository:'vendor_92021',state:'started',activation_authorized:false,
+      available:true,ingress:false
+    }})});
+  });
+  await page.locator('#refresh').click();
+  await page.waitForFunction(()=>document.querySelector('#count')?.textContent==='1');
+  await page.getByRole('button',{name:'Détails de l’App'}).click();
+  await page.waitForFunction(()=>document.querySelector('article.card .muted:last-child')?.textContent?.includes('vendor_92021'));
+  if(detailCalls!==1)throw Error('Live details must only fetch upon explicit user action');
+  if((await page.locator('article.card').innerText()).includes('MUST_NOT_LEAK'))throw Error('Unsafe details leaked');
+  console.log('LIVE_APP_DETAIL_BROWSER_PASS: unknown live App detail loaded on demand, no write action');
   console.log('UNIVERSAL_DASHBOARD_E2E_PASS: 83 unknown Apps, 24/page, source/search, no unsafe HTML or unnecessary fetch');
   console.log('BRANDING_SCREENSHOTS_PASS: actual desktop and mobile HTML, 4 synthetic apps, zero production data');
  } finally { await browser.close(); }

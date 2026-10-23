@@ -29,4 +29,14 @@ print("PASS: official live adapter fails closed without Supervisor token")
 '
 status="$(curl --silent --output /dev/null --write-out '%{http_code}' -X POST --max-time 3 "http://127.0.0.1:$PORT/api/apps")"
 [[ "$status" == "404" ]] || { echo "FAIL: mutation request unexpectedly accepted $status"; exit 1; }
-echo "PASS: Supervisor live dashboard is GET-only, never permits mutation"
+detail_status="$(curl --silent --output /dev/null --write-out '%{http_code}' --max-time 3 "http://127.0.0.1:$PORT/api/apps/future_unknown_vendor/detail")"
+[[ "$detail_status" == "503" ]] || {
+  echo "FAIL: missing Supervisor token must deny live App details ($detail_status)"
+  exit 1
+}
+traversal_status="$(curl --path-as-is --silent --output /dev/null --write-out '%{http_code}' --max-time 3 "http://127.0.0.1:$PORT/api/apps/%2e%2e/detail")"
+[[ "$traversal_status" == "400" ]] || {
+  echo "FAIL: invalid App slug must be rejected ($traversal_status)"
+  exit 1
+}
+echo "PASS: Supervisor live dashboard and details are read-only and reject unauthorized access"

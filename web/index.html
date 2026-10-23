@@ -38,7 +38,7 @@ footer{border-top:1px solid #313f50;margin-top:2.5rem;padding-top:1rem;font-size
 <section aria-labelledby="readiness-title"><div class="sectionhead"><h2 id="readiness-title">État du développement</h2></div><p id="readiness" aria-live="polite">Chargement de l’état du prototype…</p><p id="core-ipc" aria-live="polite">Pont Python Home Assistant : vérification…</p></section>
 <section><div class="sectionhead"><h2>Sources</h2><span id="status" aria-live="polite">Chargement…</span></div><p id="proof">Authenticité des données : vérification en cours</p><div id="sources" aria-live="polite"></div></section>
 <section><div class="sectionhead"><h2>Applications <span id="count">—</span></h2><div class="catalog-controls"><label for="search">Rechercher <input id="search" type="search" maxlength="120" placeholder="Nom, source ou image"></label><label for="filter">Afficher <select id="filter"><option value="all" selected>Toutes les applications</option><option value="supervisor">Apps Supervisor</option><option value="docker">Conteneurs Docker</option></select></label></div></div><div class="cards" id="apps" aria-live="polite"></div><nav class="pager" aria-label="Pages du catalogue"><button id="previous-page" type="button">Précédente</button><span id="page-status" aria-live="polite">Page 1 / 1</span><button id="next-page" type="button">Suivante</button></nav></section>
-<footer>Prototype sans commandes de pilotage. Les Apps HAOS proviennent d'un instantané hors ligne, non d'une connexion directe au Supervisor. HACS et la migration complète ne sont pas encore disponibles.</footer>
+<footer>Prototype sans commandes de pilotage. L'inventaire Supervisor en direct n'est disponible que depuis l'App installée, avec autorisation Ingress. HACS et la migration complète ne sont pas encore disponibles.</footer>
 <script>
 const select=q=>document.querySelector(q);
 const node=(tag,value,cls)=>{const n=document.createElement(tag);if(value!==undefined)n.textContent=value;if(cls)n.className=cls;return n};
@@ -73,6 +73,29 @@ function renderApps(){
   const type=node("p",String(app.app_type||"application")+" · "+String(app.classification||"unknown"));
   const version=app.version?node("p","Version : "+app.version):node("p","Image : "+(app.image||"—"));
   card.append(state,heading,host,type,version);
+  if(app.backend==="supervisor"&&app.live===true&&typeof app.slug==="string"){
+   const button=node("button","Détails de l’App");
+   button.type="button";
+   const detail=node("div",undefined,"muted");detail.hidden=true;
+   button.addEventListener("click",async()=>{
+    if(!detail.hidden){detail.hidden=true;return;}
+    detail.hidden=false;detail.textContent="Chargement des détails…";button.disabled=true;
+    try{
+     const response=await fetch("api/apps/"+encodeURIComponent(app.slug)+"/detail",{cache:"no-store"});
+     if(!response.ok)throw Error("Supervisor unavailable");
+     const data=await response.json();
+     if(data.read_only!==true||!data.app||data.app.slug!==app.slug||data.app.activation_authorized!==false)throw Error("Untrusted detail");
+     detail.replaceChildren();
+     for(const [caption,key] of [["Dépôt","repository"],["Version installée","version"],["Dernière version","latest_version"],["État","state"],["Ingress","ingress"],["Disponible","available"],["Mise à jour","update_available"]]){
+      const value=data.app[key];if(value===null||value===undefined)continue;
+      detail.append(node("p",caption+" : "+(typeof value==="boolean"?(value?"Oui":"Non"):String(value))));
+     }
+     if(!detail.childNodes.length)detail.textContent="Aucun détail disponible.";
+    }catch(e){detail.textContent="Détails indisponibles ou accès Supervisor refusé.";}
+    finally{button.disabled=false;}
+   });
+   card.append(button,detail);
+  }
   if(app.update_available===true)card.append(node("p","Mise à jour disponible (information uniquement)","update"));
   select("#apps").append(card);
  }
