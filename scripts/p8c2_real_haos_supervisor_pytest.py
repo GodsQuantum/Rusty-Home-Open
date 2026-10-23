@@ -18,6 +18,7 @@ def test_hars_real_product_app_install_boot(shell, shell_json):
     from time import sleep as _sleep
     _sys.path.insert(0, str(_Path(_os.environ["GITHUB_WORKSPACE"]) / "scripts"))
     from p8j_supervisor_store_recovery import ensure_supervisor_local_app_version as _ensure_store
+    from p8c2_serial_invocation import parse_systemd_invocation as _systemd_invocation
 
     app = "local_rusty_home"
     directory = "/mnt/data/supervisor/apps/local/rusty_home"
@@ -147,18 +148,15 @@ def test_hars_real_product_app_install_boot(shell, shell_json):
         # must preserve its security boundaries and be discoverable afterwards.
         # Only the disposable official HAOS guest, never a household Supervisor.
         supervisor_unit = "haos-supervisor.service"
-        initial_invocation = "".join(shell.run_check(
+        initial_invocation = _systemd_invocation("".join(shell.run_check(
             "systemctl show -p InvocationID --value " + supervisor_unit,
             timeout=30,
-        )).strip()
-        assert len(initial_invocation) == 32 and all(
-            c in "0123456789abcdef" for c in initial_invocation.lower()
-        ), "Cannot attest original Supervisor systemd invocation"
+        )))
         shell.run_check("systemctl restart haos-supervisor.service", timeout=150)
-        next_invocation = "".join(shell.run_check(
+        next_invocation = _systemd_invocation("".join(shell.run_check(
             "systemctl show -p InvocationID --value " + supervisor_unit,
             timeout=30,
-        )).strip()
+        )))
         assert next_invocation and next_invocation != initial_invocation, (
             "Supervisor restart was not independently evidenced by systemd"
         )
