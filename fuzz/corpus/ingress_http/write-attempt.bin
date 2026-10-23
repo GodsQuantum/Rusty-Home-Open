@@ -1,0 +1,4 @@
+POST /api/apps HTTP/1.1
+Host: ha.invalid
+X-Remote-User-Id: fake
+

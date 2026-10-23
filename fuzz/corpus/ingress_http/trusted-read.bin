@@ -1,0 +1,6 @@
+GET /api/apps HTTP/1.1
+Host: ha.invalid:8123
+X-Remote-User-Id: synthetic_user_17
+Origin: https://ha.invalid:8123
+Sec-Fetch-Site: same-origin
+

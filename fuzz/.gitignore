@@ -8,3 +8,11 @@
 !/corpus/core_user_snapshot/valid-admin-user.json
 !/corpus/core_user_snapshot/disabled-user.json
 !/corpus/core_user_snapshot/duplicate-keys.json
+
+/corpus/ingress_http/*
+!/corpus/ingress_http/trusted-read.bin
+!/corpus/ingress_http/missing-identity.bin
+!/corpus/ingress_http/duplicate-identity.bin
+!/corpus/ingress_http/cross-origin.bin
+!/corpus/ingress_http/write-attempt.bin
+!/corpus/ingress_http/body-smuggling.bin
