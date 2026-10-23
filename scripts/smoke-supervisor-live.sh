@@ -54,4 +54,15 @@ bad_uuid="$(curl --silent --output /dev/null --write-out '%{http_code}' --max-ti
 job_post="$(curl --silent --output /dev/null --write-out '%{http_code}' -X POST --max-time 3 "http://127.0.0.1:$PORT/api/jobs/$job")"
 [[ "$job_post" == "404" ]] || { echo "FAIL: unexpected job mutation route ($job_post)"; exit 1; }
 echo "PASS: official job progress denies missing auth, unsafe UUID and mutation verbs"
+
+changelog_status="$(curl --silent --output /dev/null --write-out '%{http_code}' --max-time 3 "http://127.0.0.1:$PORT/api/apps/future_unknown_vendor/changelog")"
+[[ "$changelog_status" == "503" ]] || {
+  echo "FAIL: unauthenticated App changelog must return 503 ($changelog_status)"
+  exit 1
+}
+changelog_traversal="$(curl --path-as-is --silent --output /dev/null --write-out '%{http_code}' --max-time 3 "http://127.0.0.1:$PORT/api/apps/%2e%2e/changelog")"
+[[ "$changelog_traversal" == "400" ]] || {
+  echo "FAIL: invalid App changelog slug must return 400 ($changelog_traversal)"
+  exit 1
+}
 echo "PASS: Supervisor Store, live dashboard and App details reject unauthorized access"
