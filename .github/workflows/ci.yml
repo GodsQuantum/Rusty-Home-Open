@@ -33,6 +33,7 @@ jobs:
       - name: Active Core account, trusted ingress and durable one-shot consent preview
         run: |
           python3 scripts/test_core_corroborated_preview_contract.py
+          python3 scripts/test_core_corroborated_consent_contract.py
           cargo test --locked -p hars-supervisor-apps --features core-corroborated-preview-lab --lib core_corroborated_permit_lab
           cargo clippy --locked -p hars-supervisor-apps --all-targets --features core-corroborated-preview-lab -- -D warnings
       - name: Durable lab session bounds, atomic revocation and replay protection

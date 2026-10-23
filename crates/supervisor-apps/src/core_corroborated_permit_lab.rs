@@ -10,6 +10,7 @@ use crate::{
     managed_apps::PreparedRequest,
     persistent_session_lab::DurableFixtureSessions,
     rbac_lab::{Policy, Role},
+    session_lab::OpaqueToken,
 };
 use std::{io, net::TcpStream};
 
@@ -45,18 +46,11 @@ pub fn grant_corroborated_disposable_preview(
     journal: &mut FileAuditJournal,
     now: u64,
 ) -> Result<Option<AuditedPermit>, CorroborationError> {
-    let claim = ingress_user_claim_from_stream(accepted_tcp, ingress_headers)
-        .map_err(CorroborationError::UntrustedIngress)?;
-    // Fetch current Core user state over authenticated, internal Supervisor
-    // WebSocket only. A browser cannot submit a Core account status as JSON.
-    let status = match fetch_official_core_users_readonly(now).map_err(CorroborationError::Core)? {
-        CoreLiveResult::PermissionDenied => return Ok(None),
-        CoreLiveResult::Users(snapshot) => snapshot
-            .status(&claim, now)
-            .map_err(CorroborationError::InvalidCoreSnapshot)?,
+    let Some(claim) = corroborated_active_admin(accepted_tcp, ingress_headers, now)? else {
+        return Ok(None);
     };
     grant_checked_fixture_status(
-        status,
+        CoreAccountStatus::ActiveAdmin,
         &claim,
         policy,
         sessions,
@@ -66,6 +60,73 @@ pub fn grant_corroborated_disposable_preview(
         journal,
         now,
     )
+}
+
+/// A fresh authenticated Core account check is required both when a
+/// confirmation is issued and when that confirmation is redeemed.
+fn corroborated_active_admin(
+    accepted_tcp: &TcpStream,
+    ingress_headers: &[(&str, &str)],
+    now: u64,
+) -> Result<Option<IngressUserClaim>, CorroborationError> {
+    let claim = ingress_user_claim_from_stream(accepted_tcp, ingress_headers)
+        .map_err(CorroborationError::UntrustedIngress)?;
+    let status = match fetch_official_core_users_readonly(now).map_err(CorroborationError::Core)? {
+        CoreLiveResult::PermissionDenied => return Ok(None),
+        CoreLiveResult::Users(snapshot) => snapshot
+            .status(&claim, now)
+            .map_err(CorroborationError::InvalidCoreSnapshot)?,
+    };
+    Ok((status == CoreAccountStatus::ActiveAdmin).then_some(claim))
+}
+
+/// Laboratory only: authorization of a request-bound one-time confirmation
+/// requires the *same* current live admin and active private session.
+#[allow(clippy::too_many_arguments)]
+pub fn issue_corroborated_disposable_confirmation(
+    accepted_tcp: &TcpStream,
+    ingress_headers: &[(&str, &str)],
+    policy: &Policy,
+    sessions: &mut DurableFixtureSessions,
+    session_token: &str,
+    request: &PreparedRequest,
+    now: u64,
+) -> Result<Option<OpaqueToken>, CorroborationError> {
+    let Some(claim) = corroborated_active_admin(accepted_tcp, ingress_headers, now)? else {
+        return Ok(None);
+    };
+    issue_checked_fixture_confirmation(
+        CoreAccountStatus::ActiveAdmin,
+        &claim,
+        policy,
+        sessions,
+        session_token,
+        request,
+        now,
+    )
+}
+
+fn issue_checked_fixture_confirmation(
+    status: CoreAccountStatus,
+    claim: &IngressUserClaim,
+    policy: &Policy,
+    sessions: &mut DurableFixtureSessions,
+    token: &str,
+    request: &PreparedRequest,
+    now: u64,
+) -> Result<Option<OpaqueToken>, CorroborationError> {
+    if status != CoreAccountStatus::ActiveAdmin {
+        return Ok(None);
+    }
+    let Some(actor) = sessions.current_fixture_actor(token, now)? else {
+        return Ok(None);
+    };
+    if actor.subject() != claim.as_str() || actor.role() != Role::Administrator {
+        return Ok(None);
+    }
+    sessions
+        .issue_confirmation(policy, token, request, now)
+        .map_err(Into::into)
 }
 
 /// Purely internal test seam: never accept Core status from an HTTP request.
@@ -335,6 +396,184 @@ mod tests {
             .contains(mine.as_str())
         );
     }
+    #[test]
+    fn core_status_checked_both_before_issuing_and_before_consuming_one_use_consent() {
+        let dir = tempfile::tempdir().unwrap();
+        fs::set_permissions(dir.path(), fs::Permissions::from_mode(0o700)).unwrap();
+        let mut sessions = DurableFixtureSessions::open(&dir.path().join("sessions.redb")).unwrap();
+        let mut audit = FileAuditJournal::open(&dir.path().join("audit.jsonl")).unwrap();
+        let app = AppSlug::parse("unknown_vendor_909").unwrap();
+        let req = prepare(&app, Operation::Install).unwrap();
+        let mut policy = Policy::default();
+        policy.grant("ownerabc", &app, &[Action::Install]);
+        let session = sessions
+            .issue_fixture(
+                Actor::new("ownerabc", Role::Administrator).unwrap(),
+                100,
+                180,
+                90,
+            )
+            .unwrap();
+        for role in [CoreAccountStatus::Denied, CoreAccountStatus::ActiveNonAdmin] {
+            assert!(
+                issue_checked_fixture_confirmation(
+                    role,
+                    &claim("ownerabc"),
+                    &policy,
+                    &mut sessions,
+                    session.as_str(),
+                    &req,
+                    100
+                )
+                .unwrap()
+                .is_none()
+            );
+        }
+        assert!(
+            issue_checked_fixture_confirmation(
+                CoreAccountStatus::ActiveAdmin,
+                &claim("otheradmin"),
+                &policy,
+                &mut sessions,
+                session.as_str(),
+                &req,
+                100
+            )
+            .unwrap()
+            .is_none()
+        );
+        let challenge = issue_checked_fixture_confirmation(
+            CoreAccountStatus::ActiveAdmin,
+            &claim("ownerabc"),
+            &policy,
+            &mut sessions,
+            session.as_str(),
+            &req,
+            100,
+        )
+        .unwrap()
+        .unwrap();
+        // Revoked after issuance, before consumption: never grant.
+        assert!(
+            grant_checked_fixture_status(
+                CoreAccountStatus::Denied,
+                &claim("ownerabc"),
+                &policy,
+                &mut sessions,
+                session.as_str(),
+                &req,
+                Some(challenge.as_str()),
+                &mut audit,
+                101
+            )
+            .unwrap()
+            .is_none()
+        );
+        assert!(
+            grant_checked_fixture_status(
+                CoreAccountStatus::ActiveAdmin,
+                &claim("ownerabc"),
+                &policy,
+                &mut sessions,
+                session.as_str(),
+                &req,
+                Some(challenge.as_str()),
+                &mut audit,
+                101
+            )
+            .unwrap()
+            .is_some()
+        );
+        assert!(
+            grant_checked_fixture_status(
+                CoreAccountStatus::ActiveAdmin,
+                &claim("ownerabc"),
+                &policy,
+                &mut sessions,
+                session.as_str(),
+                &req,
+                Some(challenge.as_str()),
+                &mut audit,
+                101
+            )
+            .unwrap()
+            .is_none()
+        );
+    }
+    #[test]
+    fn confirmation_issuance_refuses_wrong_operation_and_expired_fixture() {
+        let dir = tempfile::tempdir().unwrap();
+        fs::set_permissions(dir.path(), fs::Permissions::from_mode(0o700)).unwrap();
+        let mut sessions = DurableFixtureSessions::open(&dir.path().join("sessions.redb")).unwrap();
+        let app = AppSlug::parse("third_party_random").unwrap();
+        let other = AppSlug::parse("ungranted_vendor").unwrap();
+        let stop = prepare(&app, Operation::Stop).unwrap();
+        let start = prepare(&app, Operation::Start).unwrap();
+        let wrong = prepare(&other, Operation::Stop).unwrap();
+        let mut policy = Policy::default();
+        policy.grant("ownerabc", &app, &[Action::Start, Action::Stop]);
+        let session = sessions
+            .issue_fixture(
+                Actor::new("ownerabc", Role::Administrator).unwrap(),
+                100,
+                120,
+                80,
+            )
+            .unwrap();
+        assert!(
+            issue_checked_fixture_confirmation(
+                CoreAccountStatus::ActiveAdmin,
+                &claim("ownerabc"),
+                &policy,
+                &mut sessions,
+                session.as_str(),
+                &start,
+                100
+            )
+            .unwrap()
+            .is_none()
+        );
+        assert!(
+            issue_checked_fixture_confirmation(
+                CoreAccountStatus::ActiveAdmin,
+                &claim("ownerabc"),
+                &policy,
+                &mut sessions,
+                session.as_str(),
+                &wrong,
+                100
+            )
+            .unwrap()
+            .is_none()
+        );
+        assert!(
+            issue_checked_fixture_confirmation(
+                CoreAccountStatus::ActiveAdmin,
+                &claim("ownerabc"),
+                &policy,
+                &mut sessions,
+                session.as_str(),
+                &stop,
+                100
+            )
+            .unwrap()
+            .is_some()
+        );
+        assert!(
+            issue_checked_fixture_confirmation(
+                CoreAccountStatus::ActiveAdmin,
+                &claim("ownerabc"),
+                &policy,
+                &mut sessions,
+                session.as_str(),
+                &stop,
+                181
+            )
+            .unwrap()
+            .is_none()
+        );
+    }
+
     #[test]
     fn missing_real_supervisor_peer_never_trusts_forwarded_user_headers() {
         assert!(
