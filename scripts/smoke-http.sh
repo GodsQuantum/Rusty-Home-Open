@@ -17,6 +17,9 @@ curl -fsS --max-time 3 http://127.0.0.1:18790/api/sources | python3 -c 'import j
 curl -fsS --max-time 3 http://127.0.0.1:18790/api/readiness | python3 -c 'import json,sys; r=json.load(sys.stdin); assert r["read_only"] and not r["production_ready"] and not r["deployment_authorized"]; assert r["release_gates_total"]==15 and r["release_gates_blocked"]==15 and "haos_apps_total" not in r and "haos_apps_not_production_qualified" not in r; print("PASS: /api/readiness blocks production with release gates and no fixed App count")'
 code="$(curl -s -o /dev/null -w '%{http_code}' --max-time 3 http://127.0.0.1:18790/api/python-core)"
 [[ "$code" == 404 ]] || { echo "FAIL: missing Python sidecar should return HTTP 404"; exit 1; }
+job_code="$(curl -s -o /dev/null -w '%{http_code}' --max-time 3 http://127.0.0.1:18790/api/jobs/0123456789abcdef0123456789abcdef)"
+[[ "$job_code" == 404 ]] || { echo "FAIL: snapshot source must not impersonate live Supervisor job ($job_code)"; exit 1; }
+echo "PASS: offline snapshot cannot serve Supervisor jobs"
 echo "PASS: no fake Python Core connection reported without configuration"
 curl -fsS --max-time 3 http://127.0.0.1:18790/ | python3 -c 'import sys; html=sys.stdin.read(); assert "<title>Rusty Home" in html and "<h1>Rusty Home</h1>" in html and "Domotique native Rust" in html and "<html" in html.lower()' # consume full response, avoid grep -q/Curl SIGPIPE
 echo "PASS: localized HTML dashboard"

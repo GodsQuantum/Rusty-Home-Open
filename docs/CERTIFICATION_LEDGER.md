@@ -23,6 +23,18 @@ authorizes a hardware radio handoff or real migration.
 
 ## Product development evidence (NOT production certification)
 
+- **2026-10-23, read-only Supervisor Job progress ([PR #45](https://github.com/GodsQuantum/Rusty-Home-Open/pull/45), independent CI pending):**
+  Code commit `99f524b0ffc1285d9a631f08bef5a45ad9f09cbc`.
+  native Rust route and French dashboard poll official V1/V2 job endpoints
+  by strictly validated UUID; output contains only state, progress, ID and
+  error count, never raw stage, error messages or child jobs.
+  Four control-plane adversarial tests and one authenticated TCP loopback
+  integration test pass locally; full workspace/Clippy and independent CI
+  must be recorded against the final PR SHA before merge.
+  No user RBAC, trusted operation receipt or actual App mutation is implied.
+  [Scope and limits](LIVE_SUPERVISOR_JOB_PROGRESS.md).
+
+
 - **2026-10-23, live installed-App telemetry (product feature, PR pending):**
   native Rust V1/V2 Supervisor stats client, current installed-inventory
   gating, numeric-only redacted API and dashboard resource panel for
