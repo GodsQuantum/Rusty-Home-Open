@@ -1,0 +1,3 @@
+GET /api/store HTTP/1.1
+Host: ha.invalid
+

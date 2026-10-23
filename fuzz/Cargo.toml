@@ -20,3 +20,10 @@ bench = false
 
 # Keep fuzz-only dependencies and compiler flags out of production Cargo.lock.
 [workspace]
+
+[[bin]]
+name = "ingress_http"
+path = "fuzz_targets/ingress_http.rs"
+test = false
+doc = false
+bench = false

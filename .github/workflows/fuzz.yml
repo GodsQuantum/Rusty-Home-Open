@@ -1,4 +1,4 @@
-name: Rusty Home - instrumented Core auth fuzz smoke
+name: Rusty Home - instrumented Core and ingress security fuzz
 
 on:
   schedule:
@@ -9,6 +9,7 @@ on:
       - "fuzz/**"
       - ".github/workflows/fuzz.yml"
       - "crates/supervisor-apps/src/core_user_snapshot_lab.rs"
+      - "crates/control-plane/src/ingress.rs"
       - "scripts/test_p15_fuzz_workflow_contract.py"
 
 permissions:
@@ -20,7 +21,7 @@ concurrency:
 
 jobs:
   fuzz-core-user:
-    name: Core user JSON parser (libFuzzer / AddressSanitizer)
+    name: Core auth and ingress security (libFuzzer / AddressSanitizer)
     runs-on: ubuntu-24.04
     timeout-minutes: 25
     steps:
@@ -36,16 +37,20 @@ jobs:
         run: |
           python3 scripts/test_p15_fuzz_workflow_contract.py
           test -f fuzz/corpus/core_user_snapshot/valid-admin-user.json
+          test -f fuzz/corpus/ingress_http/trusted-read.bin
           test -f fuzz/Cargo.lock
       - name: Execute real sanitizer-instrumented libFuzzer smoke
         working-directory: fuzz
         run: |
           cargo +nightly-2026-10-15 fuzz run core_user_snapshot -- -max_total_time=45 -timeout=8 -rss_limit_mb=2048
+          cargo +nightly-2026-10-15 fuzz run ingress_http -- -max_total_time=45 -timeout=8 -rss_limit_mb=2048
       - name: Attach crash artifacts only if instrumented run failed
         if: failure()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2 verified GitHub tag
         with:
-          name: core-user-fuzzer-failure
-          path: fuzz/artifacts/core_user_snapshot/
+          name: core-ingress-fuzzer-failure
+          path: |
+            fuzz/artifacts/core_user_snapshot/
+            fuzz/artifacts/ingress_http/
           retention-days: 7
           if-no-files-found: ignore
