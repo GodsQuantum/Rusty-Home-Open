@@ -20,8 +20,16 @@ made about distribution rights.
 
 An independent CI job regenerates the artifact at the exact Cargo.lock state,
 compares it byte-for-byte, and validates it using the official SPDX
-spdx-tools 0.8.3 reader. No signed SBOM has been issued, no independent legal
-review performed, and no production gate was certified from this output.
+spdx-tools 0.8.3 reader. On successful pushes to main only, a separate
+GitHub OIDC job signs an SBOM attestation whose subject is **only Cargo.lock**
+and whose SBOM predicate is this repository's locked source dependency graph.
+The action is pinned to its exact immutable release commit, and the
+attestation must pass independent GitHub CLI Sigstore verification bound
+to this repository's workflow and main branch. PR test code never receives
+OIDC/attestation write permissions. This is not a release binary SBOM or
+proof of legal compliance, and no production gate is certified by it.
+If GitHub OIDC signing or verification fails, the source attestation is
+not treated as issued.
 
 The missing source LICENSE files for six external crate archives are separately
 pinned to their upstream license texts under the P11 license provenance
