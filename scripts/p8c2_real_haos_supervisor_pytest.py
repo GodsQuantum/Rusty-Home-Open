@@ -80,6 +80,69 @@ def test_hars_real_product_app_install_boot(shell, shell_json):
             timeout=20,
         )
         assert "".join(status).strip() == "403", "Untrusted direct ingress accepted"
+
+        # Validate an actual Supervisor-driven App restart, not merely a
+        # second status read or a synthetic process health endpoint.
+        before_start = "".join(shell.run_check(
+            "docker inspect -f '{{.State.StartedAt}}' app_local_rusty_home",
+            timeout=30,
+        )).strip()
+        assert before_start and before_start != "<no value>", "Cannot attest initial container start"
+        restarted = shell_json(
+            "ha apps restart " + app + " --no-progress --raw-json",
+            timeout=180,
+        )
+        assert restarted.get("result") == "ok", "Supervisor failed actual product App restart"
+        after_start = None
+        for _ in range(20):
+            current = shell_json(
+                "ha apps info " + app + " --no-progress --raw-json",
+                timeout=45,
+            )
+            if current.get("result") == "ok":
+                info = current.get("data") or {}
+                if info.get("state") == "started":
+                    times = shell.run_check(
+                        "docker inspect -f '{{.State.StartedAt}}' app_local_rusty_home",
+                        timeout=30,
+                    )
+                    after_start = "".join(times).strip()
+                    if after_start and after_start != before_start:
+                        break
+            _sleep(2)
+        assert after_start and after_start != before_start, (
+            "Supervisor returned success but the actual container did not restart"
+        )
+        after = shell_json(
+            "ha apps info " + app + " --no-progress --raw-json",
+            timeout=45,
+        ).get("data") or {}
+        assert after.get("state") == "started", "Product failed to recover after restart"
+        assert after.get("protected") is True, "Restart discarded protected mode"
+        assert after.get("hassio_role") == "manager", "Restart changed Supervisor role"
+        after_uid = "".join(shell.run_check(
+            "docker inspect -f '{{.Config.User}}' app_local_rusty_home",
+            timeout=30,
+        )).strip()
+        assert after_uid == "1000:1000", "Restart discarded non-root identity"
+        current_ips = "".join(shell.run_check(
+            "docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}} {{end}}' "
+            "app_local_rusty_home",
+            timeout=30,
+        )).strip().split()
+        assert current_ips, "Product App network missing after actual restart"
+        for route in ("health", "api/apps", "api/store", "api/readiness"):
+            denial = shell.run_check(
+                "curl --silent --output /dev/null --write-out '%{http_code}' "
+                "--connect-timeout 3 --max-time 8 "
+                "-H 'X-Remote-User-Id: claimed_admin' http://"
+                + current_ips[0] + ":8099/" + route,
+                timeout=20,
+            )
+            assert "".join(denial).strip() == "403", (
+                "Restart bypassed ingress authorization at " + route
+            )
+        print("REAL_RUSTY_HOME_RESTART_HAOS_PASS: real container restarted, nonroot, protected, forged ingress denied")
         print("REAL_RUSTY_HOME_PRODUCT_HAOS_PASS: installed, started, nonroot, manager, ingress deny")
     finally:
         if installed:
