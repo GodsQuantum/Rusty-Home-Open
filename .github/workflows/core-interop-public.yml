@@ -13,7 +13,7 @@ concurrency:
   cancel-in-progress: true
 jobs:
   official-core-to-rust:
-    name: Genuine Core 2026.10.1 to isolated Rust HTTP bridge
+    name: Genuine Core 2026.10.2 to isolated Rust HTTP bridge
     runs-on: ubuntu-24.04
     timeout-minutes: 25
     steps:
@@ -25,6 +25,10 @@ jobs:
         run: python3 scripts/test_public_redaction.py
       - name: Real Core 1232 state objects, UDS capability and fail-closed HTTP 503
         run: bash scripts/test_core_control_plane_e2e.sh
+      - name: Genuine Core 2026.10.2 config-entry flow setup unload remove lifecycle
+        run: |
+          python3 scripts/test_p6c_config_entry_lifecycle_contract.py
+          bash scripts/run_config_entry_lifecycle_core.sh
       - name: Verify no test container leaked
         if: always()
         run: |

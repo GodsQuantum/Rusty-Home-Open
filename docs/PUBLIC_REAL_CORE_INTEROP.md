@@ -1,7 +1,7 @@
 # Public independent tests with genuine Home Assistant Core
 
 This workflow runs on free standard GitHub-hosted `ubuntu-24.04`
-runners. It downloads an immutable official Home Assistant Core 2026.10.1
+runners. It downloads an immutable official Home Assistant Core 2026.10.2
 container image at its pinned sha256 digest. It then executes **real Python
 integration code** inside Core against synthetic fixtures, not a mocked
 Core import API.
@@ -32,3 +32,5 @@ not live device-driver validation and not a household migration.
 
 All 15 mandatory production gates remain blocked, with no production
 signoff or cutover authority.
+
+- P6c genuine isolated Home Assistant Core 2026.10.2 config-entry lifecycle:\n  fixture config flow, create, setup, unload and remove, with independent\n  report verification. This is a single synthetic integration, not 29/29.\n

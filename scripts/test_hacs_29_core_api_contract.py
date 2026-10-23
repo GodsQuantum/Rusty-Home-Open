@@ -43,7 +43,7 @@ class PinnedOfficialCore(unittest.TestCase):
         script=(ROOT/"scripts/run_hacs_core_api_audit.sh").read_text()
         self.assertIn("GITHUB_ACTIONS",script)
         for required in ("--network none","--read-only","--cap-drop ALL","--user 1000:1000",
-                         "sha256:130241f28d01fa80dfa3b44f7d89781c188d8642ecab9024f079f19f9f82baa0"):
+                         "sha256:33afb0659d786213264c2211f8d91c5fe87461c56eba6a3a546eb05fc71e89f4"):
             self.assertIn(required,script)
 
 if __name__=="__main__":unittest.main()

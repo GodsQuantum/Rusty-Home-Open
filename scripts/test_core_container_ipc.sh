@@ -5,7 +5,7 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 [[ "$(id -u)" != "0" && ( "$(hostname)" == "dev-build" || "${GITHUB_ACTIONS:-}" == "true" ) ]] || exit 2
 cd "$ROOT"
-IMAGE="ghcr.io/home-assistant/home-assistant@sha256:130241f28d01fa80dfa3b44f7d89781c188d8642ecab9024f079f19f9f82baa0"
+IMAGE="ghcr.io/home-assistant/home-assistant@sha256:33afb0659d786213264c2211f8d91c5fe87461c56eba6a3a546eb05fc71e89f4"
 cargo build --locked --quiet -p hars-python-bridge
 mkdir -p runtime
 DIR="$(mktemp -d "$ROOT/runtime/ha-core-ipc-XXXXXX")"

@@ -3,7 +3,7 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT"
 [[ "$(id -u)" != "0" && ( "${CODESPACES:-}" == "true" || "${GITHUB_ACTIONS:-}" == "true" ) ]] || { echo "GitHub isolated lab only" >&2; exit 2; }
-IMAGE="ghcr.io/home-assistant/home-assistant@sha256:130241f28d01fa80dfa3b44f7d89781c188d8642ecab9024f079f19f9f82baa0"
+IMAGE="ghcr.io/home-assistant/home-assistant@sha256:33afb0659d786213264c2211f8d91c5fe87461c56eba6a3a546eb05fc71e89f4"
 ZIP_SHA="ec47b0114a5bf447ef1b7fa15cfa80829619f6785ece33ee4b5957ef906f7865"
 mkdir -p runtime references
 # The exact upstream tag is manifest v1.3.0 whereas its v1.9.0 RELEASE ZIP

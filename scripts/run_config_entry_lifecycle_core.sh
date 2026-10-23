@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Genuine Home Assistant Core 2026.10.1 synthetic config-entry lifecycle proof.
+# Genuine Home Assistant Core 2026.10.2 synthetic config-entry lifecycle proof.
 # Codespaces / GitHub Actions only; no production hosts, files or devices.
 set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -8,7 +8,7 @@ cd "$ROOT"
   echo "Only unprivileged GitHub Codespaces / isolated GitHub Actions" >&2
   exit 2
 }
-IMAGE='ghcr.io/home-assistant/home-assistant@sha256:130241f28d01fa80dfa3b44f7d89781c188d8642ecab9024f079f19f9f82baa0'
+IMAGE='ghcr.io/home-assistant/home-assistant@sha256:33afb0659d786213264c2211f8d91c5fe87461c56eba6a3a546eb05fc71e89f4'
 if ! docker image inspect "$IMAGE" >/dev/null 2>&1; then
     docker pull "$IMAGE" >/dev/null
 fi

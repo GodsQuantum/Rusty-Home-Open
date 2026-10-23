@@ -39,7 +39,7 @@ YAML
 docker network create --internal --driver bridge "$NET" >/dev/null
 NET_CREATED=true
 [[ "$(docker network inspect -f '{{.Internal}}' "$NET")" == true ]]
-IMAGE="ghcr.io/home-assistant/home-assistant@sha256:130241f28d01fa80dfa3b44f7d89781c188d8642ecab9024f079f19f9f82baa0"
+IMAGE="ghcr.io/home-assistant/home-assistant@sha256:33afb0659d786213264c2211f8d91c5fe87461c56eba6a3a546eb05fc71e89f4"
 if ! docker image inspect "$IMAGE" >/dev/null 2>&1; then docker pull "$IMAGE" >/dev/null; fi
 if ! docker run --rm --network "$NET" --user "$(id -u):$(id -g)" --read-only   --cap-drop ALL --security-opt no-new-privileges --pids-limit 256   --memory 2400m --cpus 2 --tmpfs /tmp:rw,nosuid,nodev,size=128m   --tmpfs /run:rw,nosuid,nodev,size=64m   --env PYTHONDONTWRITEBYTECODE=1 --env TZ=Europe/Paris --env P6K_DOCKER_INTERNAL=verified   --mount "type=bind,src=$TMP/config,dst=/config"   --mount "type=bind,src=$ROOT/scripts/test_p6k_blueprint_real_core.py,dst=/p6k-blueprint.py,readonly"   --entrypoint python3 "$IMAGE" /p6k-blueprint.py > "$TMP/run.log" 2>&1; then
   echo "P6K genuine Blueprint Core lifecycle failed" >&2
