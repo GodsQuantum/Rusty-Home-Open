@@ -19,7 +19,11 @@ ni sauvegarde, ni estimation de réussite, ni mécanisme de rollback.
 Le seul résultat peut être un **candidat à examen** sur la base d'un
 état cohérent. Le retour JSON porte systématiquement read_only=true
 et activation_authorized=false : ce module ne déclenche et
-n'autorise **aucune écriture**. Il n'ouvre pas non plus de route HTTP.
+n'autorise **aucune écriture**. Le contrôleur natif expose uniquement
+GET /api/store/apps/{slug}/operations, accessible sous Ingress
+authentifié et limité aux données publiques des trois vues officielles.
+Le tableau de bord affiche sept états de précontrôle sur demande, sans
+bouton déclenchant une opération. Les requêtes non GET ne sont pas admises.
 
 Avant une intégration en production, il reste à brancher une requête
 officielle en temps réel, la session administrateur native, les droits
