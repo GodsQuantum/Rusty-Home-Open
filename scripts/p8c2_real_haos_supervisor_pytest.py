@@ -290,6 +290,20 @@ def test_hars_manager_role_app(shell, shell_json):
     from pathlib import Path as _Path
     _sys.path.insert(0,str(_Path(_os.environ["GITHUB_WORKSPACE"])/"scripts"))
     from p8j_supervisor_store_recovery import ensure_supervisor_local_app_version as _ensure_store
+    # Diagnose ENOSPC before any further local App installations/backups.
+    # Free space comes ONLY from this disposable HAOS QEMU guest.
+    for mount, minimum_kib in (("/mnt/data", 8 * 1024 * 1024),
+                               ("/tmp", 64 * 1024)):
+        rows = shell.run_check("df -Pk " + mount, timeout=30)
+        fields = rows[-1].split()
+        assert len(fields) >= 5 and fields[3].isdigit(), (
+            "No trustworthy guest filesystem capacity for " + mount
+        )
+        free_kib = int(fields[3])
+        print("DISPOSABLE_HAOS_FREE_KIB", mount, free_kib)
+        assert free_kib >= minimum_kib, (
+            "Disposable HAOS guest insufficient free storage: " + mount
+        )
     app="local_hars_rust_probe"
     directory="/mnt/data/supervisor/apps/local/hars_rust_probe"
     shell.run_check("mkdir -p "+directory+"/audit_layer")
