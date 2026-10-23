@@ -29,7 +29,7 @@ jobs:
       - name: Ensure source contains only synthetic sample inventory
         run: python3 scripts/test_public_redaction.py
       - name: Upload screenshot (real HTML, no real household)
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: rusty-home-isolated-synthetic-dashboard
           path: |

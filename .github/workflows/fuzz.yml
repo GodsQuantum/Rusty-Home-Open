@@ -43,7 +43,7 @@ jobs:
           cargo +nightly-2026-10-15 fuzz run core_user_snapshot -- -max_total_time=45 -timeout=8 -rss_limit_mb=2048
       - name: Attach crash artifacts only if instrumented run failed
         if: failure()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2 verified GitHub tag
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v4.6.2 verified GitHub tag
         with:
           name: core-user-fuzzer-failure
           path: fuzz/artifacts/core_user_snapshot/
