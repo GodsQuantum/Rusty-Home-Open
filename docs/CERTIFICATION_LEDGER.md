@@ -30,9 +30,11 @@ authorizes a hardware radio handoff or real migration.
   `8d1654b11fbcd8d19b099bf96a3b4bc43b7e617e`.
   TDD initially failed for missing methods/routes, then all Rust workspace
   all-target tests, strict Clippy and dashboard JavaScript syntax passed in
-  isolated DEV. Independent GitHub CI on the final PR SHA must be checked
-  before merge; these tests do NOT prove real HAOS App compatibility or
-  authorization for App lifecycle writes. See
+  isolated DEV. Independent GitHub CI, including disposable HAOS KVM,
+  succeeded on refreshed head `fb25ae2eda428a8b71df94a7a136c74cef8e596a`
+  ([HAOS run](https://github.com/GodsQuantum/Rusty-Home-Open/actions/runs/39972631127));
+  merged as `10bb01b2e57e81f0c2276c8342125da1baf54d46`.
+  These tests do NOT prove App lifecycle write authorization. See
   [Store detail scope](STORE_LIVE_DETAILS.md) and
   [PR #37](https://github.com/GodsQuantum/Rusty-Home-Open/pull/37).
 
