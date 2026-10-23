@@ -57,7 +57,9 @@ print("GENERIC_SUPERVISOR_CATALOG_CLI_PASS: 1317 arbitrary Apps / 13 providers, 
 html=(ROOT/"web/index.html").read_text()
 server=(ROOT/"crates/control-plane/src/main.rs").read_text()
 assert '<option value="all" selected>' in html
-assert 'a.backend===select("#filter").value' in html
+assert 'backend==="all"||a.backend===backend' in html
+assert "const PAGE_SIZE=24;" in html
+assert "function renderApps()" in html
 assert 'Apps reconnues' not in html
 assert 'fn app_kind(' not in server
 assert '"app_type": "generic_container"' in server
