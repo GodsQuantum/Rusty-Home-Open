@@ -1,0 +1,40 @@
+name: Rusty Home experimental Supervisor App image
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/product-supervisor-app.yml"
+      - "packaging/product-app/**"
+      - "scripts/test_product_app_container.sh"
+      - "crates/control-plane/**"
+      - "crates/supervisor-apps/**"
+      - "Cargo.lock"
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/product-supervisor-app.yml"
+      - "packaging/product-app/**"
+      - "scripts/test_product_app_container.sh"
+      - "crates/control-plane/**"
+      - "crates/supervisor-apps/**"
+      - "Cargo.lock"
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  real-product-supervisor-container:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy
+          targets: x86_64-unknown-linux-musl
+      - name: Install musl link toolchain
+        run: sudo apt-get update -qq && sudo apt-get install -y musl-tools
+      - name: Build and run the real nonroot scratch App with fake token and forged identity
+        run: bash scripts/test_product_app_container.sh
+      - name: Product incomplete; no production deployment enabled
+        run: python3 scripts/check_release_gate.py --expect-blocked

@@ -1,0 +1,26 @@
+name: "Rusty Home (Experimental)"
+slug: rusty_home
+version: "0.1.0-alpha.1"
+description: "Experimental universal Home Assistant App inventory and read-only management dashboard"
+url: "https://github.com/GodsQuantum/Rusty-Home-Open"
+arch: ["amd64"]
+homeassistant: "2026.10.0"
+stage: experimental
+startup: application
+boot: manual
+init: false
+ingress: true
+ingress_port: 8099
+panel_icon: "mdi:home-automation"
+panel_title: "Rusty Home"
+panel_admin: true
+hassio_api: true
+hassio_role: manager
+homeassistant_api: false
+host_network: false
+protected: true
+docker_api: false
+full_access: false
+apparmor: true
+options: {}
+schema: false
