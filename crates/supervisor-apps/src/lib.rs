@@ -11,6 +11,8 @@ pub mod rbac_lab;
 #[cfg(feature = "managed-apps-preview")]
 pub mod session_lab;
 
+#[cfg(feature = "core-corroborated-preview-lab")]
+pub mod core_corroborated_permit_lab;
 #[cfg(feature = "core-user-live-readonly")]
 pub mod core_user_live_lab;
 #[cfg(feature = "core-user-rbac-lab")]

@@ -8,7 +8,7 @@ use crate::{
     rbac_lab::{Acknowledgement, Actor, DecisionCode, Policy},
     session_lab::{OpaqueToken, digest_secret, fresh_token},
 };
-use redb::{Database, ReadableTable, ReadableTableMetadata, TableDefinition};
+use redb::{Database, ReadableDatabase, ReadableTable, ReadableTableMetadata, TableDefinition};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use std::{
@@ -175,6 +175,26 @@ impl DurableFixtureSessions {
         }
         tx.commit().map_err(error)?;
         Ok(token)
+    }
+
+    /// Read-only bound actor lookup; durable grant rechecks revocation later.
+    pub fn current_fixture_actor(&self, token: &str, now: u64) -> io::Result<Option<Actor>> {
+        let Some(key) = hashed(token) else {
+            return Ok(None);
+        };
+        let tx = self.db.begin_read().map_err(error)?;
+        let table = tx.open_table(SESSIONS).map_err(error)?;
+        let Some(raw) = table.get(key.as_str()).map_err(error)? else {
+            return Ok(None);
+        };
+        let session: SessionRow = serde_json::from_str(raw.value()).map_err(error)?;
+        if now < session.last_seen
+            || now >= session.expires
+            || now - session.last_seen >= session.idle
+        {
+            return Ok(None);
+        }
+        Ok(Some(session.actor))
     }
 
     pub fn revoke(&mut self, token: &str) -> io::Result<bool> {
