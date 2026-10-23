@@ -18,8 +18,10 @@ persistent-session-lab = ["managed-apps-preview", "dep:redb"]
 ingress-identity-lab = []
 # Information-only Core user status; fixture WS result, no trusted IdP.
 core-user-snapshot-lab = ["ingress-identity-lab"]
-# QEMU-only Core WS reader; one fixed internal endpoint, no mutations.
-core-user-live-lab = ["core-user-snapshot-lab", "dep:tungstenite"]
+# Fixed-target Core WS reader; read-only, never grants lifecycle writes.
+core-user-live-readonly = ["core-user-snapshot-lab", "dep:tungstenite"]
+# QEMU-only probe remains gated independently for existing laboratory tests.
+core-user-live-lab = ["core-user-live-readonly"]
 # Preview-only join of trusted ingress claim, fresh Core user state and
 # per-App policy. No network, no HTTP endpoint, no write transport.
 core-user-rbac-lab = ["core-user-snapshot-lab", "managed-apps-preview"]

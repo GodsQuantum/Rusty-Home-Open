@@ -23,6 +23,22 @@ authorizes a hardware radio handoff or real migration.
 
 ## Product development evidence (NOT production certification)
 
+- **2026-10-23, independent read-only Core session verification (new PR,
+  independent CI pending):** Rust backend now binds an accepted official
+  Supervisor Ingress TCP identity to a fresh authenticated Core WebSocket
+  `config/auth/list` response through a fixed internal Supervisor endpoint.
+  `GET /api/session/core` reports only active human admin/member status and
+  always returns `actions_authorized=false`. Unknown, disabled, system
+  accounts and Core outages fail closed. The dashboard distinguishes
+  Supervisor group claims from Core-confirmed status. TDD initially failed
+  with E0425/E0433, then new adversarial HTTP/role/revocation/transport
+  tests passed; Rust workspace all-features, strict Clippy, rustfmt, JS
+  syntax and public-fixture checks passed locally in isolated DEV.
+  Browser/HAOS independent evidence is **pending**; real Core permissions
+  may deny user enumeration. No write permit, production auth certification
+  or release gate is inferred. [Scope](CORE_VERIFIED_INGRESS_SESSION.md).
+
+
 - **2026-10-23, read-only Supervisor Job progress ([PR #45](https://github.com/GodsQuantum/Rusty-Home-Open/pull/45), MERGED):**
   Exact independently validated head `d781cec80f234334903cf5739b0e93f2fd97bcd5`,
   squash merge `126fc9c2d26c24160b6be06b1a5be0d66848c748`.
