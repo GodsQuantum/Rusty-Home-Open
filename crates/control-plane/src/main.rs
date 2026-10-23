@@ -209,6 +209,78 @@ fn live_detail_slug(line: &str) -> Option<Result<&str, &'static str>> {
     })
 }
 
+/// Only official authenticated installed App schema, not configured values.
+fn live_config_slug(line: &str) -> Option<Result<&str, &'static str>> {
+    let rest = line.strip_prefix("GET /api/apps/")?;
+    let slug = rest
+        .strip_suffix("/config-schema HTTP/1.1")
+        .or_else(|| rest.strip_suffix("/config-schema HTTP/1.0"))?;
+    Some(if valid_slug(slug) {
+        Ok(slug)
+    } else {
+        Err("invalid app slug")
+    })
+}
+
+/// The server never returns configured secrets, even to a valid Ingress user.
+/// Confirm exactly one live Supervisor and current installed inventory first.
+fn live_config_response(adapters: &[Adapter], slug: &str) -> (&'static str, String) {
+    if !valid_slug(slug) {
+        return (
+            "400 Bad Request",
+            json!({"error":"invalid app slug","read_only":true}).to_string(),
+        );
+    }
+    let mut versions = adapters.iter().filter_map(|a| match a.kind {
+        AdapterKind::SupervisorLive(v) => Some(v),
+        _ => None,
+    });
+    let Some(version) = versions.next() else {
+        return (
+            "404 Not Found",
+            json!({"error":"live Supervisor unavailable","read_only":true}).to_string(),
+        );
+    };
+    if versions.next().is_some() {
+        return (
+            "503 Service Unavailable",
+            json!({"error":"ambiguous Supervisor source","read_only":true}).to_string(),
+        );
+    }
+    let result = AppSupervisorClient::from_environment().and_then(|client| {
+        let inventory = client.fetch_installed(version)?;
+        if !inventory.read_only || inventory.api_version != version {
+            return Err(
+                hars_supervisor_apps::official_transport::TransportError::InvalidRuntimeInventory,
+            );
+        }
+        let matches = inventory.apps.iter().filter(|x| x.slug == slug).count();
+        if matches == 0 {
+            return Ok(None);
+        }
+        if matches != 1 {
+            return Err(
+                hars_supervisor_apps::official_transport::TransportError::InvalidRuntimeInventory,
+            );
+        }
+        client.fetch_app_config_schema(version, slug).map(Some)
+    });
+    match result {
+        Ok(Some(schema)) => (
+            "200 OK",
+            json!({"read_only":true,"configuration":schema}).to_string(),
+        ),
+        Ok(None) => (
+            "404 Not Found",
+            json!({"error":"app not installed","read_only":true}).to_string(),
+        ),
+        Err(_) => (
+            "503 Service Unavailable",
+            json!({"error":"Supervisor App schema unavailable","read_only":true}).to_string(),
+        ),
+    }
+}
+
 /// App release notes are never taken from a snapshot or a user-selected URL.
 fn live_changelog_slug(line: &str) -> Option<Result<&str, &'static str>> {
     let rest = line.strip_prefix("GET /api/apps/")?;
@@ -1349,6 +1421,14 @@ fn handle(
                 json!({"error":"invalid Supervisor job id","read_only":true}).to_string(),
             ),
         }
+    } else if let Some(slug) = live_config_slug(&line) {
+        match slug {
+            Ok(slug) => live_config_response(adapters, slug),
+            Err(_) => (
+                "400 Bad Request",
+                json!({"error":"invalid app slug","read_only":true}).to_string(),
+            ),
+        }
     } else if let Some(slug) = live_changelog_slug(&line) {
         match slug {
             Ok(slug) => live_changelog_response(adapters, slug),
@@ -2125,6 +2205,40 @@ mod tests {
             "400 Bad Request"
         );
         assert!(include_str!("../../../web/index.html").contains("/documentation"));
+    }
+
+    #[test]
+    fn config_schema_is_get_only_for_arbitrary_vendor_and_never_uses_fixtures() {
+        for http in ["HTTP/1.0", "HTTP/1.1"] {
+            let route = format!("GET /api/apps/future_vendor_271/config-schema {http}");
+            assert_eq!(live_config_slug(&route), Some(Ok("future_vendor_271")));
+        }
+        for bad in ["../x", "a%2fb", "x?secret=1", "a b"] {
+            let route = format!("GET /api/apps/{bad}/config-schema HTTP/1.1");
+            assert!(matches!(live_config_slug(&route), Some(Err(_))));
+        }
+        assert_eq!(
+            live_config_slug("POST /api/apps/x/config-schema HTTP/1.1"),
+            None
+        );
+        let lab = Adapter {
+            host: "lab".into(),
+            kind: AdapterKind::SupervisorSnapshot("fake".into()),
+        };
+        assert_eq!(
+            live_config_response(&[lab], "future_vendor_271").0,
+            "404 Not Found"
+        );
+        let live = Adapter {
+            host: "one".into(),
+            kind: AdapterKind::SupervisorLive(ApiVersion::V1),
+        };
+        assert_eq!(
+            live_config_response(&[live.clone(), live], "future_vendor_271").0,
+            "503 Service Unavailable"
+        );
+        assert_eq!(live_config_response(&[], "../bad").0, "400 Bad Request");
+        assert!(include_str!("../../../web/index.html").contains("config-schema"));
     }
 
     #[test]

@@ -377,6 +377,47 @@ function renderApps(){
     finally{button.disabled=false;}
    });
    card.append(button,detail);
+   const schemaButton=node("button","Champs de configuration");
+   schemaButton.type="button";
+   const schemaPanel=node("div",undefined,"muted app-config-schema");
+   schemaPanel.hidden=true;
+   schemaButton.addEventListener("click",async()=>{
+    if(!schemaPanel.hidden){schemaPanel.hidden=true;return;}
+    schemaPanel.hidden=false;
+    schemaPanel.textContent="Lecture du schéma officiel sans valeurs configurées…";
+    schemaButton.disabled=true;
+    try{
+     const response=await fetch("api/apps/"+encodeURIComponent(app.slug)+"/config-schema",{cache:"no-store"});
+     if(!response.ok)throw Error("Supervisor unavailable");
+     const data=await response.json(),info=data.configuration;
+     if(data.read_only!==true||!info||info.slug!==app.slug
+        ||info.read_only!==true||info.activation_authorized!==false
+        ||info.values_included!==false||typeof info.configuration_supported!=="boolean"
+        ||!Array.isArray(info.fields)||info.fields.length>128)throw Error("Invalid schema");
+     const validKinds=new Set(["text","secret","integer","number","boolean","list","group","custom"]);
+     const lines=[];
+     const seen=new Set();
+     for(const field of info.fields){
+      if(!field||typeof field.name!=="string"||field.name.length>64
+         ||!/^[A-Za-z0-9_-]+$/.test(field.name)||seen.has(field.name)
+         ||!validKinds.has(field.kind)||typeof field.required!=="boolean"
+         ||typeof field.sensitive!=="boolean")throw Error("Untrusted configuration");
+      seen.add(field.name);
+      lines.push([field.name,field.kind,field.required,field.sensitive]);
+     }
+     if(!info.configuration_supported&&lines.length)throw Error("Inconsistent schema");
+     schemaPanel.replaceChildren(node("p","Structure du formulaire uniquement · aucune valeur ni modification possible."));
+     if(!info.configuration_supported) schemaPanel.append(node("p","Formulaire non fourni par cette App."));
+     else if(!lines.length) schemaPanel.append(node("p","Aucun champ déclaré."));
+     else for(const [name,kind,required,sensitive] of lines){
+      schemaPanel.append(node("p",name+" · "+kind+(required?" · obligatoire":" · facultatif")
+        +(sensitive?" · sensible (valeur masquée)":"")));
+     }
+    }catch(e){
+     schemaPanel.textContent="Schéma indisponible ; aucune configuration affichée.";
+    }finally{schemaButton.disabled=false;}
+   });
+   card.append(schemaButton,schemaPanel);
    const statsButton=node("button","Ressources en direct");
    statsButton.type="button";
    const stats=node("p",undefined,"muted app-stats");stats.hidden=true;
