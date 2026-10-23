@@ -195,6 +195,53 @@ function renderStore(){
    finally{detailButton.disabled=false;}
   });
   card.append(detailButton,detail);
+  const privilegesButton=node("button","Sécurité et privilèges");
+  privilegesButton.type="button";
+  const privilegePanel=node("div",undefined,"muted store-privileges");privilegePanel.hidden=true;
+  privilegesButton.addEventListener("click",async()=>{
+   if(!privilegePanel.hidden){privilegePanel.hidden=true;return;}
+   privilegePanel.hidden=false;privilegePanel.textContent="Lecture des privilèges officiels…";
+   privilegesButton.disabled=true;
+   try{
+    const response=await fetch("api/store/apps/"+encodeURIComponent(app.slug)+"/privileges",{cache:"no-store"});
+    if(!response.ok)throw Error("Supervisor privileges unavailable");
+    const data=await response.json(),p=data.privileges;
+    const allowed=new Set(["auth_api","docker_api","full_access","hassio_api",
+       "homeassistant_api","host_network","host_pid","ingress","protected"]);
+    if(data.read_only!==true||!p||p.slug!==app.slug||p.read_only!==true
+       ||p.activation_authorized!==false||!["elevated","unknown","inspect"].includes(p.review)
+       ||(p.security_rating!==null&&p.security_rating!==undefined
+           &&(!Number.isInteger(p.security_rating)||p.security_rating<1||p.security_rating>8))
+       ||!Array.isArray(p.granted)||!Array.isArray(p.unknown)
+       ||(p.apparmor!==null&&typeof p.apparmor!=="string")
+       ||(p.role!==null&&typeof p.role!=="string")
+       ||p.granted.length+p.unknown.length>9
+       ||p.granted.some(x=>!allowed.has(x))
+       ||p.unknown.some(x=>!allowed.has(x)))throw Error("Invalid privilege evidence");
+    const combined=[...p.granted,...p.unknown];
+    if(new Set(combined).size!==combined.length)throw Error("Duplicate privilege evidence");
+    const level={
+      elevated:"Privilèges élevés déclarés — examen indispensable",
+      unknown:"Preuves incomplètes — sécurité inconnue",
+      inspect:"Champs consultés — installation non autorisée"
+    };
+    privilegePanel.replaceChildren(node("p",level[p.review]));
+    if(p.security_rating!==null&&p.security_rating!==undefined)
+      privilegePanel.append(node("p","Note de sécurité Supervisor : "+p.security_rating+"/8"));
+    privilegePanel.append(node("p","Accès déclarés : "+
+       (p.granted.length?p.granted.join(", "):"Aucun déclaré dans les champs reçus")));
+    if(p.unknown.length)privilegePanel.append(node("p",
+       "Champs non fournis : "+p.unknown.join(", ")));
+    if(p.role!==null&&p.role!==undefined)
+      privilegePanel.append(node("p","Rôle Supervisor : "+p.role));
+    if(p.apparmor!==null&&p.apparmor!==undefined)
+      privilegePanel.append(node("p","AppArmor : "+p.apparmor));
+    privilegePanel.append(node("p","Information uniquement ; aucune installation ni autorisation."));
+   }catch(e){
+    privilegePanel.textContent="Privilèges non vérifiables ; aucune conclusion de sécurité possible.";
+   }finally{privilegesButton.disabled=false;}
+  });
+  card.append(privilegesButton,privilegePanel);
   const documentationButton=node("button","Documentation officielle");
   documentationButton.type="button";
   const docs=node("pre",undefined,"muted store-documentation");

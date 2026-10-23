@@ -644,6 +644,74 @@ fn supervisor_store_response(adapters: &[Adapter]) -> (&'static str, String) {
     }
 }
 
+/// Pre-install permission review: official Store's security fields only.
+fn store_privileges_slug(line: &str) -> Option<Result<&str, &'static str>> {
+    let rest = line.strip_prefix("GET /api/store/apps/")?;
+    let slug = rest
+        .strip_suffix("/privileges HTTP/1.1")
+        .or_else(|| rest.strip_suffix("/privileges HTTP/1.0"))?;
+    Some(if valid_slug(slug) {
+        Ok(slug)
+    } else {
+        Err("invalid store app slug")
+    })
+}
+fn store_privileges_response(adapters: &[Adapter], slug: &str) -> (&'static str, String) {
+    if !valid_slug(slug) {
+        return (
+            "400 Bad Request",
+            json!({"read_only":true,"error":"invalid App slug"}).to_string(),
+        );
+    }
+    let mut versions = adapters.iter().filter_map(|a| match a.kind {
+        AdapterKind::SupervisorLive(v) => Some(v),
+        _ => None,
+    });
+    let Some(version) = versions.next() else {
+        return (
+            "404 Not Found",
+            json!({"read_only":true,"error":"Supervisor unavailable"}).to_string(),
+        );
+    };
+    if versions.next().is_some() {
+        return (
+            "503 Service Unavailable",
+            json!({"read_only":true,"error":"ambiguous Supervisor source"}).to_string(),
+        );
+    }
+    let result = AppSupervisorClient::from_environment().and_then(|client| {
+        let catalog = client.fetch_store(version)?;
+        if !catalog.official_supervisor_owner
+            || catalog.activation_authorized
+            || catalog.api_version != version
+        {
+            return Err(hars_supervisor_apps::official_transport::TransportError::InvalidStore);
+        }
+        let count = catalog.apps.iter().filter(|x| x.slug == slug).count();
+        if count == 0 {
+            return Ok(None);
+        }
+        if count != 1 {
+            return Err(hars_supervisor_apps::official_transport::TransportError::InvalidStore);
+        }
+        client.fetch_store_privileges(version, slug).map(Some)
+    });
+    match result {
+        Ok(Some(privileges)) => (
+            "200 OK",
+            json!({"read_only":true,"privileges":privileges}).to_string(),
+        ),
+        Ok(None) => (
+            "404 Not Found",
+            json!({"read_only":true,"error":"App not in current Store"}).to_string(),
+        ),
+        Err(_) => (
+            "503 Service Unavailable",
+            json!({"read_only":true,"error":"Store security information unavailable"}).to_string(),
+        ),
+    }
+}
+
 /// Official Store DOCS.md for any recognized App, GET only, never user URLs.
 fn store_documentation_slug(line: &str) -> Option<Result<&str, &'static str>> {
     let rest = line.strip_prefix("GET /api/store/apps/")?;
@@ -1475,6 +1543,14 @@ fn handle(
             Err(_) => (
                 "400 Bad Request",
                 json!({"error":"invalid store app slug","read_only":true}).to_string(),
+            ),
+        }
+    } else if let Some(slug) = store_privileges_slug(&line) {
+        match slug {
+            Ok(slug) => store_privileges_response(adapters, slug),
+            Err(_) => (
+                "400 Bad Request",
+                json!({"read_only":true,"error":"invalid App slug"}).to_string(),
             ),
         }
     } else if let Some(slug) = store_documentation_slug(&line) {
@@ -2334,6 +2410,46 @@ mod tests {
         let html = include_str!("../../../web/index.html");
         assert!(html.contains("Ressources en direct"));
         assert!(html.contains("/stats"));
+    }
+
+    #[test]
+    fn arbitrary_vendor_security_metadata_requires_official_store_and_get_only() {
+        for http in ["HTTP/1.0", "HTTP/1.1"] {
+            let line = format!("GET /api/store/apps/unfamiliar_vendor_27/privileges {http}");
+            assert_eq!(
+                store_privileges_slug(&line),
+                Some(Ok("unfamiliar_vendor_27"))
+            );
+        }
+        for bad in ["../unsafe", "x%2fsecret", "x?other", "a/b", ""] {
+            let line = format!("GET /api/store/apps/{bad}/privileges HTTP/1.1");
+            assert!(matches!(store_privileges_slug(&line), Some(Err(_))));
+        }
+        assert_eq!(
+            store_privileges_slug("POST /api/store/apps/x/privileges HTTP/1.1"),
+            None
+        );
+        let lab = Adapter {
+            host: "offline".into(),
+            kind: AdapterKind::SupervisorSnapshot("fake".into()),
+        };
+        assert_eq!(
+            store_privileges_response(&[lab], "unknown_vendor").0,
+            "404 Not Found"
+        );
+        let live = Adapter {
+            host: "live".into(),
+            kind: AdapterKind::SupervisorLive(ApiVersion::V1),
+        };
+        assert_eq!(
+            store_privileges_response(&[live.clone(), live], "unknown_vendor").0,
+            "503 Service Unavailable"
+        );
+        assert_eq!(
+            store_privileges_response(&[], "../bad").0,
+            "400 Bad Request"
+        );
+        assert!(include_str!("../../../web/index.html").contains("/privileges"));
     }
 
     #[test]

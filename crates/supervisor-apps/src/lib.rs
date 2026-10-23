@@ -28,6 +28,7 @@ pub mod official_store;
 pub mod official_transport;
 pub mod operation_preflight;
 pub mod store_availability;
+pub mod store_privileges;
 use serde::de::{self, MapAccess, SeqAccess, Visitor};
 use serde::{Deserialize, Deserializer, Serialize};
 use serde_json::{Map, Number, Value};
