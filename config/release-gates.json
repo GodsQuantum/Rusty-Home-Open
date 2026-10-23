@@ -5,9 +5,9 @@
   "required_gates": [
     {
       "id": "authenticated_host_transport",
-      "status": "blocked",
+      "status": "lab_partial",
       "blocked_reason": [
-        "Synthetic public alpha: independent end-to-end production qualification incomplete."
+        "Official isolated Supervisor Ingress rejects forged peer/header requests; native Rust product App runs nonroot (GitHub runs 40004128675 and 40002933713). Still missing authorized write sessions, per-operation revocation and production-host penetration tests."
       ],
       "certification_artifact": null
     },
@@ -15,7 +15,7 @@
       "id": "ha_core_hacs_29_runtime",
       "status": "lab_partial",
       "blocked_reason": [
-        "Synthetic public alpha: independent end-to-end production qualification incomplete."
+        "Official Core 2026.10.2 and selected real HACS integrations passed isolated CI (runs 40004128648 and 40004128595); complete 29/29 integration lifecycles, migrations, hardware-dependent behaviors and long recovery are not validated."
       ],
       "certification_artifact": null
     },
@@ -23,7 +23,7 @@
       "id": "hacs_github_oauth",
       "status": "lab_partial",
       "blocked_reason": [
-        "Synthetic public alpha: independent end-to-end production qualification incomplete."
+        "Pinned integrations load in genuine isolated Core; live interactive GitHub OAuth login, token renewal, revocation, multiuser isolation and outage recovery are not certified."
       ],
       "certification_artifact": null
     },
@@ -31,15 +31,15 @@
       "id": "apps_9_lifecycle",
       "status": "blocked",
       "blocked_reason": [
-        "Synthetic public alpha: independent end-to-end production qualification incomplete."
+        "Nine-App migration fixtures remain synthetic; nine representative real Supervisor Apps still require full install, start, update, stop and rollback with persistent data checks."
       ],
       "certification_artifact": null
     },
     {
       "id": "supervisor_apps_restore",
-      "status": "blocked",
+      "status": "lab_partial",
       "blocked_reason": [
-        "Synthetic public alpha: independent end-to-end production qualification incomplete."
+        "Genuine HAOS 18.3 KVM Supervisor App lifecycle and disposable third-party backup/restore checks passed (run 40002933713). Still missing representative persistent-data restore across arbitrary installed Apps and independent rollback proof."
       ],
       "certification_artifact": null
     },
@@ -47,7 +47,7 @@
       "id": "haos_backup_restore",
       "status": "lab_partial",
       "blocked_reason": [
-        "Synthetic public alpha: independent end-to-end production qualification incomplete."
+        "Disposable genuine HAOS 18.3 KVM has demonstrated a bounded backup/restore path, but encrypted archives, application data, real user-equivalent state and independent full-system disaster recovery remain unverified."
       ],
       "certification_artifact": null
     },
@@ -55,7 +55,7 @@
       "id": "rollback_verified",
       "status": "blocked",
       "blocked_reason": [
-        "Synthetic public alpha: independent end-to-end production qualification incomplete."
+        "No witnessed full host rollback preserving Core states, App databases, networking, radios and credentials following a deliberately failed migration."
       ],
       "certification_artifact": null
     },
@@ -63,7 +63,7 @@
       "id": "single_radio_owner",
       "status": "blocked",
       "blocked_reason": [
-        "Synthetic public alpha: independent end-to-end production qualification incomplete."
+        "A synthetic cross-process Linux radio lock and SIGKILL fencing exist, but real Zigbee/Thread/Matter radio transfers and simultaneous-controller fault isolation are untested."
       ],
       "certification_artifact": null
     },
@@ -71,7 +71,7 @@
       "id": "ha_ws_reconnection",
       "status": "lab_partial",
       "blocked_reason": [
-        "Synthetic public alpha: independent end-to-end production qualification incomplete."
+        "Real isolated Core and bounded WebSocket tests exist; multi-day reconnect, authentication renewal, packet loss, back-pressure and stale state convergence have not been certified."
       ],
       "certification_artifact": null
     },
@@ -79,7 +79,7 @@
       "id": "production_ui_auth",
       "status": "blocked",
       "blocked_reason": [
-        "Synthetic public alpha: independent end-to-end production qualification incomplete."
+        "Native Supervisor Ingress authenticates read-only sessions in isolated HAOS, but end-to-end per-user write RBAC, CSRF protection, one-time approvals and revocation across sessions are disabled or unproved."
       ],
       "certification_artifact": null
     },
@@ -87,7 +87,7 @@
       "id": "native_drivers_services",
       "status": "blocked",
       "blocked_reason": [
-        "Synthetic public alpha: independent end-to-end production qualification incomplete."
+        "No complete real-device coverage: Linux host drivers, physical radios, USB passthrough, cloud providers and native service parity with Home Assistant remain unqualified."
       ],
       "certification_artifact": null
     },
@@ -95,15 +95,15 @@
       "id": "performance_full_stack",
       "status": "blocked",
       "blocked_reason": [
-        "Synthetic public alpha: independent end-to-end production qualification incomplete."
+        "Native Rust microbenchmarks and isolated Core scale are not whole-home representative. Real 24h+ soak, peak workloads, memory, crash recovery and hardware resource regression remain."
       ],
       "certification_artifact": null
     },
     {
       "id": "packaging_updates",
-      "status": "blocked",
+      "status": "lab_partial",
       "blocked_reason": [
-        "Synthetic public alpha: independent end-to-end production qualification incomplete."
+        "Real disposable .deb install, upgrade, downgrade, purge and offline signed APT tamper rejection passed on main (run 40004128778). Still missing release signing infrastructure, published packages, service migration and rollback on an existing installation."
       ],
       "certification_artifact": null
     },
@@ -111,15 +111,15 @@
       "id": "third_party_licenses",
       "status": "lab_partial",
       "blocked_reason": [
-        "Synthetic public alpha: independent end-to-end production qualification incomplete."
+        "Cargo metadata and source checks are partial: six dependency source-license exceptions and independent attribution/NOTICE/source obligations plus signed SBOM need final review."
       ],
       "certification_artifact": null
     },
     {
       "id": "security_stress_fuzz",
-      "status": "blocked",
+      "status": "lab_partial",
       "blocked_reason": [
-        "Synthetic public alpha: independent end-to-end production qualification incomplete."
+        "Three production Rust parser targets passed pinned AddressSanitizer/libFuzzer smoke in isolated GitHub CI (run 39997355066). Still missing attack-surface coverage, penetration testing, multi-hour soak and remediation verification."
       ],
       "certification_artifact": null
     }
