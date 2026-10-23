@@ -70,6 +70,6 @@ class Guard(unittest.TestCase):
                         portion.index('shell_json, "stop", slug, shell=shell'))
         self.assertIn('stopped_info.get("state") == "stopped"',portion)
         assert_portion=(HERE/"check_p8d_junit.py").read_text()
-        self.assertIn("16/16 expected cases",assert_portion)
+        self.assertIn("17/17 expected cases",assert_portion)
 
 if __name__=="__main__":unittest.main()

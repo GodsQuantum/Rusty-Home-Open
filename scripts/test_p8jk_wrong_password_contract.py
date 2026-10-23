@@ -68,7 +68,7 @@ class WrongPasswordRealHaos(unittest.TestCase):
         self.assertIn("::test_hars_protected_full_restore_wrong_password_rejected_qemu",workflow)
         guard=(ROOT/"scripts/check_p8d_junit.py").read_text()
         self.assertIn('"test_hars_protected_full_restore_wrong_password_rejected_qemu"',guard)
-        self.assertIn("16/16 expected cases",guard)
+        self.assertIn("17/17 expected cases",guard)
         self.assertIn('("skipped", "failure", "error")',guard)
 
     def test_release_gates_still_fail_closed(self):

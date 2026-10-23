@@ -16,6 +16,7 @@ EXPECTED = frozenset({
     "test_hars_real_supervisor_store",
     "test_hars_rust_supervisor_direct",
     "test_hars_manager_role_app",
+    "test_hars_real_product_app_install_boot",
     "test_app_install",
     "test_create_backup",
     "test_app_uninstall",
@@ -35,11 +36,11 @@ def verify_junit(path: Path) -> str:
     cases = root.findall(".//testcase")
     names = [c.attrib.get("name", "") for c in cases]
     if len(cases) != len(EXPECTED) or set(names) != EXPECTED:
-        raise ValueError("JUnit expected exactly sixteen unique Home Assistant lifecycle tests")
+        raise ValueError("JUnit expected exactly seventeen unique Home Assistant lifecycle tests")
     for case in cases:
         if any(case.find(tag) is not None for tag in ("skipped", "failure", "error")):
             raise ValueError("JUnit contains skipped, failed or errored tests")
-    return "PASS JUnit gate: 16/16 expected cases executed; 0 skipped, 0 failures, 0 errors"
+    return "PASS JUnit gate: 17/17 expected cases executed; 0 skipped, 0 failures, 0 errors"
 
 if __name__ == "__main__":
     try:

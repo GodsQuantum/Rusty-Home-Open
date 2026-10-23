@@ -16,6 +16,7 @@ EXPECTED = (
     "test_hars_real_supervisor_store",
     "test_hars_rust_supervisor_direct",
     "test_hars_manager_role_app",
+    "test_hars_real_product_app_install_boot",
     "test_app_install",
     "test_create_backup",
     "test_app_uninstall",
@@ -45,10 +46,10 @@ def run_validation(names=EXPECTED, skip=None, fail=None, error=None):
                               text=True, capture_output=True, timeout=5)
 
 class RealHaosJUnitGuardTests(unittest.TestCase):
-    def test_all_sixteen_real_lifecycle_tests_must_pass(self):
+    def test_all_seventeen_real_lifecycle_tests_must_pass(self):
         result = run_validation()
         self.assertEqual(result.returncode, 0, result.stderr)
-        self.assertIn("16/16", result.stdout)
+        self.assertIn("17/17", result.stdout)
 
     def test_pytest_skipped_dependency_is_not_success(self):
         result = run_validation(skip="test_restore_backup")

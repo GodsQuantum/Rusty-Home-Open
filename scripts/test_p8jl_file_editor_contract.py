@@ -45,7 +45,7 @@ class FileEditorOfficialLifecycle(unittest.TestCase):
         )
         junit=(ROOT/"scripts/check_p8d_junit.py").read_text()
         self.assertIn('"test_hars_real_official_file_editor_app_lifecycle_qemu"',junit)
-        self.assertIn("16/16 expected cases",junit)
+        self.assertIn("17/17 expected cases",junit)
         self.assertIn('("skipped", "failure", "error")',junit)
     def test_real_user_nine_app_data_not_falsely_claimed(self):
         doc=(ROOT/"docs/P8JL_REAL_OFFICIAL_FILE_EDITOR_APP_2026-10-22.md").read_text()

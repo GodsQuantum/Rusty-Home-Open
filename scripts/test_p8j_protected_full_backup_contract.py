@@ -37,7 +37,7 @@ class ProtectedFullBackup(unittest.TestCase):
         self.assertIn("::test_hars_protected_full_backup_restore_qemu",wf)
         junit=(ROOT/"scripts/check_p8d_junit.py").read_text()
         self.assertIn('"test_hars_protected_full_backup_restore_qemu"',junit)
-        self.assertIn("16/16 expected cases",junit)
+        self.assertIn("17/17 expected cases",junit)
         self.assertIn('("skipped", "failure", "error")',junit)
     def test_fixture_scope_and_encrypted_metadata_only_no_real_user_password(self):
         source=(ROOT/"scripts/p8c2_real_haos_supervisor_pytest.py").read_text()

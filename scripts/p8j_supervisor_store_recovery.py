@@ -8,13 +8,14 @@ import re
 from time import sleep as _sleep
 
 _SLUG = re.compile(r"local_[a-z0-9_]{1,63}\Z")
-_VERSION = re.compile(r"[0-9]+\.[0-9]+\.[0-9]+\Z")
+_VERSION = re.compile(r"[0-9]+\.[0-9]+\.[0-9]+(?:-[0-9A-Za-z]+(?:\.[0-9A-Za-z]+)*)?\Z")
 
 def ensure_supervisor_local_app_version(shell_json, slug, expected_version,
                                          *, sleeper=_sleep, max_reloads=2):
     if not isinstance(slug, str) or not _SLUG.fullmatch(slug):
         raise ValueError("invalid disposable local App identifier")
-    if not isinstance(expected_version,str) or not _VERSION.fullmatch(expected_version):
+    if (not isinstance(expected_version,str) or len(expected_version)>64
+            or not _VERSION.fullmatch(expected_version)):
         raise ValueError("invalid expected App version")
     if max_reloads not in (1,2):
         raise ValueError("unexpected reload budget")

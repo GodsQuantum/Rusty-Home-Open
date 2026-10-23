@@ -31,7 +31,7 @@ class FullRestoreContract(unittest.TestCase):
         self.assertIn("::test_hars_full_restore_archive_qemu",wf)
         j=(ROOT/"scripts/check_p8d_junit.py").read_text()
         self.assertIn('"test_hars_full_restore_archive_qemu"',j)
-        self.assertIn("16/16 expected cases",j)
+        self.assertIn("17/17 expected cases",j)
         self.assertIn('("skipped", "failure", "error")',j)
 if __name__=="__main__":
     unittest.main()

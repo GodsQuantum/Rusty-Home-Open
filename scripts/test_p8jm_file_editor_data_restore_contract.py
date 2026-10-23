@@ -45,7 +45,7 @@ class RealFileEditorPartialRestore(unittest.TestCase):
         self.assertIn("::test_hars_real_official_file_editor_partial_restore_bytes_qemu",flow)
         guard=(ROOT/"scripts/check_p8d_junit.py").read_text()
         self.assertIn('"test_hars_real_official_file_editor_partial_restore_bytes_qemu"',guard)
-        self.assertIn("16/16 expected cases",guard)
+        self.assertIn("17/17 expected cases",guard)
         self.assertIn('("skipped", "failure", "error")',guard)
     def test_only_synthetic_data_not_global_certification(self):
         doc=(ROOT/"docs/P8JM_REAL_FILE_EDITOR_DATA_RESTORE_2026-10-22.md").read_text()

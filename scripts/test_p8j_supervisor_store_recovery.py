@@ -59,14 +59,15 @@ class TestStoreReadiness(unittest.TestCase):
             return reply("0.1.0",slug="local_other")
         with self.assertRaises(RuntimeError):
             mod.ensure_supervisor_local_app_version(fake,SLUG,"0.1.0",sleeper=lambda n:None)
-    def test_all_four_real_qemu_store_sites_require_exact_version(self):
+    def test_all_five_real_qemu_store_sites_require_exact_version(self):
         script=(P/"p8c2_real_haos_supervisor_pytest.py").read_text()
-        self.assertEqual(script.count("_ensure_store(shell_json,"),4)
+        self.assertEqual(script.count("_ensure_store(shell_json,"),5)
         for wanted in ('_ensure_store(shell_json,app,"0.1.0"',
                        '_ensure_store(shell_json,core_app,"0.1.0"',
                        '_ensure_store(shell_json,version_app,"1.0.0"',
                        '_ensure_store(shell_json,version_app,"1.0.1"'):
             self.assertIn(wanted,script)
+        self.assertIn('_ensure_store(shell_json, app, "0.1.0-alpha.1"',script)
         self.assertNotIn('"ha store reload --no-progress --raw-json"',script)
     def test_real_haos_ci_autoruns_on_relevant_pr_without_write_token(self):
         workflow=(P.parent/".github/workflows/p8c2-haos-qemu.yml").read_text()
@@ -77,6 +78,22 @@ class TestStoreReadiness(unittest.TestCase):
         self.assertNotIn("pull_request_target",workflow.split("permissions:")[0].replace(
             "# GitHub token is read-only; never use pull_request_target for test execution.",""))
         self.assertIn("-snapshot -accel kvm",workflow)
+    def test_prerelease_versions_only_allow_bounded_safe_semver(self):
+        target="local_rusty_home"
+        def fake(cmd,timeout):
+            return reply("0.1.0-alpha.1",target)
+        found=mod.ensure_supervisor_local_app_version(
+            fake,target,"0.1.0-alpha.1",sleeper=lambda n:None)
+        self.assertEqual(found["version_latest"],"0.1.0-alpha.1")
+        def forbidden(*args,**kwargs):
+            raise AssertionError("no shell invocation expected")
+        for unsafe in ["0.1.0-alpha/../../bad", "0.1.0-foo;ls",
+                       "0.1.0-"+"a"*70, "0.1.0-alpha\nanything",
+                       "0.1.0-alpha_unsafe"]:
+            with self.assertRaises(ValueError):
+                mod.ensure_supervisor_local_app_version(
+                    forbidden,target,unsafe,sleeper=lambda n:None)
+
     def test_invalid_identifiers_cannot_be_used_to_build_shell_commands(self):
         def should_not_call(*args,**kwargs):
             raise AssertionError("no shell invocation expected")
