@@ -81,7 +81,7 @@ async function load(){
  allApps=[];pageIndex=0;renderApps();
  select("#status").textContent="Chargement…";select("#apps").replaceChildren();select("#sources").replaceChildren();
  try{
-  const readyResponse=await fetch("/api/readiness",{cache:"no-store"});
+  const readyResponse=await fetch("api/readiness",{cache:"no-store"});
   if(readyResponse.ok){
    const ready=await readyResponse.json();
    select("#readiness").textContent=ready.production_ready
@@ -89,7 +89,7 @@ async function load(){
     :"Prototype fonctionnel en développement · commandes réelles non autorisées";
   }else{select("#readiness").textContent="État du développement non vérifiable";}
   try{
-   const coreResponse=await fetch("/api/python-core",{cache:"no-store"});
+   const coreResponse=await fetch("api/python-core",{cache:"no-store"});
    if(coreResponse.ok){
     const core=await coreResponse.json();
     if(!core.read_only||core.contains_entity_values!==false)throw Error("non conforme");
@@ -98,7 +98,7 @@ async function load(){
     select("#core-ipc").textContent="Pont Python Home Assistant : non configuré";
    }else{select("#core-ipc").textContent="Pont Python Home Assistant : indisponible";}
   }catch(e){select("#core-ipc").textContent="Pont Python Home Assistant : non vérifiable";}
-  const response=await fetch("/api/apps",{cache:"no-store"});
+  const response=await fetch("api/apps",{cache:"no-store"});
   if(!response.ok)throw Error("HTTP "+response.status);
   const data=await response.json();if(data.read_only!==true)throw Error("mode inattendu");
   const sources=Array.isArray(data.sources)?data.sources:[],apps=Array.isArray(data.apps)?data.apps:[];
