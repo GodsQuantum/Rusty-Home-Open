@@ -147,6 +147,30 @@
       "scope": "Pinned AddressSanitizer fuzz smoke for genuine Core, ingress and Store parsers",
       "url": "https://github.com/GodsQuantum/Rusty-Home-Open/actions/runs/39997355066",
       "merged_pr": 47
+    },
+    {
+      "id": "fuzz_four_native_security_surfaces",
+      "release_gate": "security_stress_fuzz",
+      "status": "verified_lab_only",
+      "run_id": 40026397117,
+      "head_sha": "8bdf210bf9e0ba3c001cc5fa62e3b792a84b6dbb",
+      "workflow": "Rusty Home - instrumented Core, ingress and Supervisor Store fuzz",
+      "job": "Core auth, ingress and Store security (libFuzzer / AddressSanitizer)",
+      "scope": "Four sanitizer-instrumented 45-second Rust libFuzzer smoke targets, including seven App lifecycle preflights",
+      "url": "https://github.com/GodsQuantum/Rusty-Home-Open/actions/runs/40026397117",
+      "merged_pr": 58
+    },
+    {
+      "id": "github_oidc_cargo_source_sbom",
+      "release_gate": "third_party_licenses",
+      "status": "verified_lab_only",
+      "run_id": 40027460088,
+      "head_sha": "f3c81b5424856d7aaa95a20ff216ea82d80d3bcb",
+      "workflow": "Deterministic SPDX 2.3 Cargo source dependency SBOM",
+      "job": "GitHub OIDC SBOM attestation of Cargo.lock source graph",
+      "scope": "Source-only Cargo.lock SPDX attestation, independently Sigstore-verified with pinned main signer, not a release binary",
+      "url": "https://github.com/GodsQuantum/Rusty-Home-Open/actions/runs/40027460088",
+      "merged_pr": 59
     }
   ]
 }
