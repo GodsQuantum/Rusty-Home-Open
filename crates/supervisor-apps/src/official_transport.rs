@@ -165,6 +165,20 @@ impl LocalSupervisorClient {
         crate::changelog::parse_changelog(&body, slug).map_err(|_| TransportError::InvalidChangelog)
     }
 
+    /// Only bounded option *schema* fields. Stored option values and secrets
+    /// are never propagated out of the strict typed parser.
+    pub fn fetch_app_config_schema(
+        &self,
+        version: ApiVersion,
+        slug: &str,
+    ) -> Result<crate::app_config_schema::AppConfigSchema, TransportError> {
+        let path = crate::app_config_schema::config_path(version, slug)
+            .map_err(|_| TransportError::InvalidAppSlug)?;
+        let body = get_json(self.target, &self.token, &path)?;
+        crate::app_config_schema::parse_config_schema(&body, slug)
+            .map_err(|_| TransportError::InvalidAppInfo)
+    }
+
     /// Authenticated, read-only details of an arbitrary installed App.
     /// Sensitive options and device addresses are dropped by the typed parser.
     pub fn fetch_app_detail(
@@ -354,6 +368,26 @@ impl AppSupervisorClient {
             .ok_or(TransportError::UnsupportedHost)?;
         let body = get_text(target, &self.token, &path)?;
         crate::changelog::parse_changelog(&body, slug).map_err(|_| TransportError::InvalidChangelog)
+    }
+
+    /// Read-only option-schema names/types from the official internal Supervisor.
+    /// Never return options or option defaults, including resolved !secret values.
+    pub fn fetch_app_config_schema(
+        &self,
+        version: ApiVersion,
+        slug: &str,
+    ) -> Result<crate::app_config_schema::AppConfigSchema, TransportError> {
+        use std::net::{IpAddr, ToSocketAddrs};
+        let path = crate::app_config_schema::config_path(version, slug)
+            .map_err(|_| TransportError::InvalidAppSlug)?;
+        let target = (self.service_name(), 80)
+            .to_socket_addrs()
+            .map_err(|_| TransportError::Io)?
+            .find(|addr| matches!(addr.ip(), IpAddr::V4(ip) if ip.is_private()))
+            .ok_or(TransportError::UnsupportedHost)?;
+        let body = get_json(target, &self.token, &path)?;
+        crate::app_config_schema::parse_config_schema(&body, slug)
+            .map_err(|_| TransportError::InvalidAppInfo)
     }
 
     /// GET only, against the same internal Supervisor service used for the Store.
