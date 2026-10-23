@@ -48,6 +48,20 @@ Next: trusted Core-verified user RBAC, durable operation receipts,
 idempotent lifecycle writes and restart reconciliation.
 
 
+## Live Supervisor Store repository filter (product increment, 2026-10-23)
+
+The dashboard now reads the repository inventory supplied by the authenticated
+official Supervisor Store catalogue, builds the selector dynamically and
+combines exact repository ownership with text search and paging. No vendor
+allowlist, hardcoded App count, or new privileged endpoint is involved.
+Malformed, duplicate or oversized repository metadata clears the Store UI
+rather than retaining a stale selection. Browser tests use fictional vendors;
+no production authorization is inferred.
+
+Next: trusted Core user RBAC, durable App-operation receipts with verified
+Supervisor job identity, then explicitly authorized lifecycle operations
+and crash-safe reconciliation. See [scope](STORE_DYNAMIC_REPOSITORY_FILTER.md).
+
 ## Live Supervisor job progress (23 October 2026)
 
 The native Rust read-only `/api/jobs/{uuid}` API and dashboard poll the

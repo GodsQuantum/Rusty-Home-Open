@@ -22,6 +22,10 @@ jobs:
           google-chrome --version
           mkdir -p runtime/brandshot
           npm --prefix runtime/brandshot install --no-audit --no-fund playwright@1.57.0
+      - name: Validate dynamic Supervisor Store repository selection
+        run: |
+          python3 scripts/test_store_repository_filter_contract.py
+          node scripts/test_dynamic_store_repository_filter.mjs
       - name: Render real web frontend with fictional Apps
         env:
           RUSTY_HOME_CHROME_CHANNEL: chrome
