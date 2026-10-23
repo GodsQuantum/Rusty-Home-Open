@@ -105,7 +105,7 @@ authorizes a hardware radio handoff or real migration.
 
 ## Scoped laboratory checks with pinned GitHub evidence
 
-**13 independently observed successful GitHub Actions jobs** are recorded in
+**15 independently observed successful GitHub Actions jobs** are recorded in
 [the machine-readable evidence index](../config/lab-evidence.json),
 including exact run URLs and commit SHAs. This certifies only the stated
 **isolated laboratory test results**, never production operation, user data
@@ -126,6 +126,8 @@ or full Home Assistant parity.
 | `official_haos_kvm` | `supervisor_apps_restore` | [run 40002933713](https://github.com/GodsQuantum/Rusty-Home-Open/actions/runs/40002933713) |
 | `browser_chromium` | `production_ui_auth` | [run 40002934403](https://github.com/GodsQuantum/Rusty-Home-Open/actions/runs/40002934403) |
 | `security_fuzzer` | `security_stress_fuzz` | [run 39997355066](https://github.com/GodsQuantum/Rusty-Home-Open/actions/runs/39997355066) |
+| `fuzz_four_native_security_surfaces` | `security_stress_fuzz` | [run 40026397117](https://github.com/GodsQuantum/Rusty-Home-Open/actions/runs/40026397117) |
+| `github_oidc_cargo_source_sbom` | `third_party_licenses` | [run 40027460088](https://github.com/GodsQuantum/Rusty-Home-Open/actions/runs/40027460088) |
 
 The evidence index passes local schema and tampering tests. Each run and
 successful named job was independently checked against GitHub on 23 October 2026;
@@ -150,8 +152,8 @@ and the 15 mandatory release gates are separate.
 | `native_drivers_services` | `blocked` | Prove real device driver, service and system integration parity |
 | `performance_full_stack` | `blocked` | Representative whole-stack scale, fault tolerance, resources and soak |
 | `packaging_updates` | `lab_partial` | Production-signed distributions, installed real upgrades and rollback |
-| `third_party_licenses` | `lab_partial` | Complete attribution, notices, source-license trace and signed SBOM |
-| `security_stress_fuzz` | `lab_partial` | Complete attack-surface fuzz, penetration tests and long security soak |
+| `third_party_licenses` | `lab_partial` | Independent binary-release BOM, attribution, asset/firmware notices and redistribution review |
+| `security_stress_fuzz` | `lab_partial` | Full attack-surface coverage, independent penetration test and prolonged security soak |
 
 ## Effort estimates — not a certification score
 

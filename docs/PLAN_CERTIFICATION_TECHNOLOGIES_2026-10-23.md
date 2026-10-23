@@ -25,7 +25,7 @@ approbation de mise en production distincte.
 | native_drivers_services | P1 | Real USB/serial/BT/radios/services and firmware interoperability matrix on HAOS, Docker and VM |
 | performance_full_stack | P0 | Representative complete 24h-72h soak, resource budgets, failures, stable state and measurable speed vs baseline |
 | packaging_updates | P0 | Production-signed Linux artifacts and Home Assistant images upgrade and rollback against preexisting installations without data loss |
-| third_party_licenses | P0 | SPDX SBOM signed, all third-party licenses and source/NOTICE obligations reviewed with six unresolved sources resolved |
+| third_party_licenses | P0 | Signed source SPDX validated; independently review shipped-binary SBOM, third-party source and asset notices, firmware and redistribution obligations |
 | security_stress_fuzz | P0 | Full attack-surface long-run fuzz, unauthorized HTTP tests, privilege escalation review, pen test and audited remediation |
 
 ## Prochains jalons exécutables

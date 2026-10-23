@@ -8,6 +8,7 @@ on:
   workflow_dispatch:
 permissions:
   contents: read
+  actions: read
 jobs:
   native-rust-and-security-labs:
     runs-on: ubuntu-24.04
@@ -88,9 +89,13 @@ jobs:
         run: |
           python3 scripts/test_release_gate_attestation.py
       - name: Verify pinned lab evidence is scoped and not a production signoff
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           python3 scripts/verify_lab_evidence.py
           python3 scripts/test_lab_evidence_truth.py
           python3 scripts/test_release_gate_evidence_truth.py
+          python3 scripts/test_online_evidence_truth.py
+          python3 scripts/verify_lab_evidence_online.py
       - name: Assert no deployment authorization
         run: python3 scripts/check_release_gate.py --expect-blocked
