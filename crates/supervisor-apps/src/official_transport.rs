@@ -984,6 +984,78 @@ impl AppSupervisorClient {
     }
 }
 
+/// Strict QEMU-only POST receipt. Raw Supervisor data is NEVER returned:
+/// it may contain access tokens, App options, private paths or user details.
+/// Non-backup operations are only "submitted" unless separately confirmed.
+#[cfg(feature = "managed-apps-preview")]
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum PreviewReceipt {
+    Accepted {
+        app: String,
+        action: crate::managed_apps::Action,
+        /// Only a successful authenticated postcondition check may set true.
+        completion_verified: bool,
+    },
+    BackupCreated {
+        /// Supervisor-generated, syntactically validated backup identifier.
+        slug: String,
+        completion_verified: bool,
+    },
+}
+
+#[cfg(feature = "managed-apps-preview")]
+impl PreviewReceipt {
+    pub fn backup_slug(&self) -> Option<&str> {
+        match self {
+            Self::BackupCreated { slug, .. } => Some(slug),
+            _ => None,
+        }
+    }
+    pub fn completion_verified(&self) -> bool {
+        match self {
+            Self::Accepted {
+                completion_verified,
+                ..
+            }
+            | Self::BackupCreated {
+                completion_verified,
+                ..
+            } => *completion_verified,
+        }
+    }
+}
+
+/// Convert an authenticated Supervisor submission response to a finite,
+/// non-secret receipt. Unknown vendor-supplied fields are always discarded.
+#[cfg(feature = "managed-apps-preview")]
+fn preview_submission_receipt(
+    data: &serde_json::Value,
+    request: &crate::managed_apps::PreparedRequest,
+    update_postcondition_verified: bool,
+) -> Result<PreviewReceipt, TransportError> {
+    use crate::managed_apps::{Action, BackupSlug};
+    match request.action() {
+        Action::Backup => {
+            let slug = data
+                .get("slug")
+                .and_then(serde_json::Value::as_str)
+                .ok_or(TransportError::BadResponse)?;
+            let slug = BackupSlug::parse(slug).map_err(|_| TransportError::BadResponse)?;
+            Ok(PreviewReceipt::BackupCreated {
+                slug: slug.as_str().to_owned(),
+                // Successful creation response alone is not a verified,
+                // recoverable archive or successful restore.
+                completion_verified: false,
+            })
+        }
+        action => Ok(PreviewReceipt::Accepted {
+            app: request.target().to_owned(),
+            action,
+            completion_verified: action == Action::Update && update_postcondition_verified,
+        }),
+    }
+}
+
 // IMPORTANT: This PREVIEW transport is *compiled out by default* and it is
 // NOT an end-user authorization implementation. It can only run in the
 // explicit disposable QEMU test App, and requires external approval too.
@@ -995,7 +1067,7 @@ impl AppSupervisorClient {
     pub fn preview_execute(
         &self,
         permit: crate::audit_lab::AuditedPermit,
-    ) -> Result<serde_json::Value, TransportError> {
+    ) -> Result<PreviewReceipt, TransportError> {
         use std::net::{IpAddr, ToSocketAddrs};
         if std::env::var("HARS_P8H_QEMU_ONLY").ok().as_deref() != Some("1") {
             return Err(TransportError::ManagedPreviewDisabled);
@@ -1059,15 +1131,137 @@ impl AppSupervisorClient {
         if parsed.get("result").and_then(serde_json::Value::as_str) != Some("ok") {
             return Err(TransportError::BadResponse);
         }
-        if let Some(plan) = update_plan {
+        let updated = if let Some(plan) = update_plan {
             let updated = self.fetch_installed_app_info(request.target())?;
             verify_update_postflight(&updated, request.target(), &plan)?;
+            true
+        } else {
+            false
+        };
+        // Never copy the arbitrary Supervisor payload across the API boundary.
+        preview_submission_receipt(
+            parsed.get("data").unwrap_or(&serde_json::Value::Null),
+            request,
+            updated,
+        )
+    }
+}
+
+#[cfg(all(test, feature = "managed-apps-preview"))]
+mod typed_submission_receipt_tests {
+    use super::*;
+    use crate::managed_apps::{Action, AppSlug, Operation, prepare};
+
+    fn req(op: Operation) -> crate::managed_apps::PreparedRequest {
+        prepare(&AppSlug::parse("unlisted_vendor_877").unwrap(), op).unwrap()
+    }
+
+    #[test]
+    fn all_generic_mutations_discard_supervisor_secrets_and_do_not_claim_completed() {
+        let incoming = serde_json::json!({
+            "options": {"password": "LEAK_ONLY_IN_UPSTREAM_PAYLOAD"},
+            "access_token": "VERY_SENSITIVE_TOKEN",
+            "path": "/mnt/private/customer",
+            "version": "9.0.0",
+            "slug": "attacker_selected_other_app"
+        });
+        for (operation, action) in [
+            (Operation::Install, Action::Install),
+            (Operation::Start, Action::Start),
+            (Operation::Stop, Action::Stop),
+            (Operation::Restart, Action::Restart),
+        ] {
+            let request = req(operation);
+            let receipt = preview_submission_receipt(&incoming, &request, false).unwrap();
+            assert_eq!(
+                receipt,
+                PreviewReceipt::Accepted {
+                    app: "unlisted_vendor_877".into(),
+                    action,
+                    completion_verified: false
+                }
+            );
+            let debug = format!("{receipt:?}");
+            for forbidden in [
+                "LEAK_ONLY_IN_UPSTREAM_PAYLOAD",
+                "VERY_SENSITIVE_TOKEN",
+                "/mnt/private/customer",
+                "attacker_selected_other_app",
+            ] {
+                assert!(!debug.contains(forbidden), "{forbidden}");
+            }
+            assert_eq!(receipt.backup_slug(), None);
+            assert!(!receipt.completion_verified());
         }
-        // The response can contain secrets/options. Never print or log it.
-        Ok(parsed
-            .get("data")
-            .cloned()
-            .unwrap_or(serde_json::Value::Null))
+    }
+
+    #[test]
+    fn backup_receipt_requires_valid_supervisor_generated_slug_and_cannot_claim_restore() {
+        let request = req(Operation::BackupPartial);
+        for slug in [
+            "../unsafe",
+            "test/backup",
+            "deadBEEF",
+            "",
+            "1234567",
+            "very-secret-ABC",
+            "deadbeef\nX-Token:secret",
+        ] {
+            assert_eq!(
+                preview_submission_receipt(
+                    &serde_json::json!({"slug":slug,"password":"SECRET"}),
+                    &request,
+                    false
+                ),
+                Err(TransportError::BadResponse)
+            );
+        }
+        assert_eq!(
+            preview_submission_receipt(
+                &serde_json::json!({"data":{"slug":"deadbeef"}}),
+                &request,
+                false
+            ),
+            Err(TransportError::BadResponse)
+        );
+        let receipt = preview_submission_receipt(
+            &serde_json::json!({
+                "slug":"ab01fe92","credentials":{"access_token":"PRIVATE_TOKEN"}
+            }),
+            &request,
+            false,
+        )
+        .unwrap();
+        assert_eq!(receipt.backup_slug(), Some("ab01fe92"));
+        assert!(!receipt.completion_verified());
+        assert!(!format!("{receipt:?}").contains("PRIVATE_TOKEN"));
+    }
+
+    #[test]
+    fn only_verified_update_postcondition_sets_completed() {
+        let r = req(Operation::UpdateWithBackup);
+        let unverified =
+            preview_submission_receipt(&serde_json::json!({"password":"PRIVATE"}), &r, false)
+                .unwrap();
+        let verified =
+            preview_submission_receipt(&serde_json::json!({"password":"PRIVATE"}), &r, true)
+                .unwrap();
+        assert!(!unverified.completion_verified());
+        assert!(verified.completion_verified());
+        assert_eq!(
+            verified,
+            PreviewReceipt::Accepted {
+                app: "unlisted_vendor_877".into(),
+                action: Action::Update,
+                completion_verified: true
+            }
+        );
+        assert!(!format!("{verified:?}").contains("PRIVATE"));
+        assert!(
+            !preview_submission_receipt(&serde_json::Value::Null, &req(Operation::Stop), true)
+                .unwrap()
+                .completion_verified()
+        );
     }
 }
 
