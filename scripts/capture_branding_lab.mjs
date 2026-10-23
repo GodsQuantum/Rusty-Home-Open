@@ -192,6 +192,59 @@ try {
   if(!text.includes('Aucune opération n’est autorisée')||!text.includes('Restaurer'))
    throw Error('UI must show seven read-only operations and no write permit');
 
+  // Browser contract: official job discovery is admin-only, read-only,
+  // dynamic and never renders private Supervisor job metadata.
+  const discoveredId='0123456789abcdef0123456789abcdef';
+  await page.unroute('**/api/session');
+  await page.route('**/api/session',route=>route.fulfill({
+   status:200,contentType:'application/json',body:JSON.stringify({
+    authenticated:true,administrator:true,authority:'supervisor_ingress',
+    actions_authorized:false,read_only:true
+   })
+  }));
+  await page.locator('#refresh').click();
+  await page.waitForFunction(()=>document.querySelector('#load-jobs')?.disabled===false);
+  let discoveryCalls=0,jobDetailCalls=0;
+  await page.route('**/api/jobs',async route=>{
+   discoveryCalls++;
+   if(route.request().method()!=='GET')throw Error('Discovery must be GET-only');
+   await route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({
+    read_only:true,truncated:false,jobs:[{
+     id:discoveredId,progress:42,state:'running',error_count:0,read_only:true,
+     extra:'NEVER_RENDER_PRIVATE_JOB_EXTRA'
+    }]
+   })});
+  });
+  await page.route('**/api/jobs/'+discoveredId,async route=>{
+   jobDetailCalls++;
+   await route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({
+    read_only:true,job:{id:discoveredId,progress:100,state:'succeeded',
+     error_count:0,read_only:true}
+   })});
+  });
+  await page.locator('#load-jobs').click();
+  await page.waitForFunction(()=>document.querySelector('#job-list')?.textContent?.includes(discoveredId));
+  if(discoveryCalls!==1)throw Error('Official job index should fetch once on demand');
+  if((await page.locator('body').innerText()).includes('NEVER_RENDER_PRIVATE_JOB_EXTRA'))
+   throw Error('Private job field leaked');
+  await page.locator('#job-list button').first().click();
+  await page.waitForFunction(()=>document.querySelector('#job-status')?.textContent?.includes('Terminé'));
+  if(jobDetailCalls!==1||(await page.locator('#job-id').inputValue())!==discoveredId)
+   throw Error('Discovered job was not linked to the existing official tracker');
+  await page.unroute('**/api/session');
+  await page.route('**/api/session',route=>route.fulfill({
+   status:200,contentType:'application/json',body:JSON.stringify({
+    authenticated:true,administrator:false,authority:'supervisor_ingress',
+    actions_authorized:false,read_only:true
+   })
+  }));
+  await page.locator('#refresh').click();
+  await page.waitForFunction(()=>document.querySelector('#session-status')?.textContent?.includes('droits administrateur absents'));
+  if(!(await page.locator('#load-jobs').isDisabled())||
+     (await page.locator('#job-list button').count())!==0)
+   throw Error('Non-admin browser retained access to discovered jobs');
+  console.log('SUPERVISOR_JOBS_BROWSER_PASS: dynamic admin-only GET index, selection, redaction and revocation');
+
   console.log('SUPERVISOR_STORE_BROWSER_PASS: 125 arbitrary Apps, 24/page, search and safe rendering');
   console.log('LIVE_APP_DETAIL_BROWSER_PASS: unknown live App detail loaded on demand, no write action');
   console.log('LIVE_APP_STATS_BROWSER_PASS: on-demand read-only CPU/RAM and secret-field isolation');

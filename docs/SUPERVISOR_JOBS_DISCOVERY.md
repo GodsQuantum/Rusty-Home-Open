@@ -37,6 +37,9 @@ requiring a user to paste an opaque UUID.
 - Independent HAOS 18.3 KVM GitHub Actions must run the compiled Rust guest
   client against the genuine Supervisor /jobs/info, asserting a redacted
   response; this is not substituted with a local mock.
+- The real dashboard Playwright contract tests admin-only discovery, job selection,
+  secret-field non-rendering and loss of access after a non-admin session refresh.
+  These are browser fixtures, not real production authentication.
 - Workspace, Clippy, frontend syntax and independent PR CI must be recorded
   with the final SHA; no CI success is implied by this document.
 
