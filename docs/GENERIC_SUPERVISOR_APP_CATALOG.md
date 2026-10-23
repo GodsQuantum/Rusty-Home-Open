@@ -60,3 +60,7 @@ Supervisor entries by default**, with source filters. It no longer guesses
 App kinds from a fixed list of product/brand names, or hides unknown
 containers under a "recognized" filter. The backend reports generic
 platform-specific classifications, not per-user known-App categories.
+
+The experimental frontend no longer presents the nine synthetic App
+fixtures as a product-wide readiness score. Fixture counts are for test
+coverage only; readiness remains distinct from app compatibility.

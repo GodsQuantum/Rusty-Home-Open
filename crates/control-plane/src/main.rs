@@ -265,13 +265,9 @@ fn report(adapters: &[Adapter], verified: Option<&attestation::Verified>) -> Val
 fn readiness_report() -> Value {
     let gates: Value = serde_json::from_str(include_str!("../../../config/release-gates.json"))
         .expect("invalid release policy shipped with app");
-    let migration: Value =
-        serde_json::from_str(include_str!("../../../config/app-migration-policy.json"))
-            .expect("invalid app policy shipped with app");
     let gates_list = gates["required_gates"]
         .as_array()
         .expect("release-gates rows");
-    let apps_list = migration["apps"].as_array().expect("apps migration rows");
     json!({
         "mode":"LAB",
         "read_only":true,
@@ -279,8 +275,6 @@ fn readiness_report() -> Value {
         "production_ready":false,
         "release_gates_total":gates_list.len(),
         "release_gates_blocked":gates_list.iter().filter(|g|g["status"]!="certified").count(),
-        "haos_apps_total":apps_list.len(),
-        "haos_apps_not_production_qualified":apps_list.iter().filter(|a|a["qualification"]!="production_qualified").count(),
         "note":"Status is a static project policy; no production configuration is read or changed"
     })
 }
@@ -797,8 +791,8 @@ mod tests {
         assert_eq!(status["production_ready"], false);
         assert_eq!(status["deployment_authorized"], false);
         assert_eq!(status["release_gates_total"], 15);
-        assert_eq!(status["haos_apps_total"], 9);
-        assert_eq!(status["haos_apps_not_production_qualified"], 9);
+        assert!(status.get("haos_apps_total").is_none());
+        assert!(status.get("haos_apps_not_production_qualified").is_none());
         assert_eq!(status["release_gates_blocked"], 15);
         let serialized = status.to_string();
         assert!(!serialized.contains("access_token"));

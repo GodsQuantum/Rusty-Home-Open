@@ -35,7 +35,7 @@ footer{border-top:1px solid #313f50;margin-top:2.5rem;padding-top:1rem;font-size
 </svg><span class="pill">Prototype — lecture seule</span><h1>Rusty Home</h1><p>Domotique native Rust — état, automatisations et extensions en développement. Vue Apps Docker/HAOS : module expérimental.</p></div>
 <button id="refresh" type="button">Actualiser</button>
 </header>
-<section aria-labelledby="readiness-title"><div class="sectionhead"><h2 id="readiness-title">Certification et migration</h2></div><p id="readiness" aria-live="polite">Vérification des critères de production…</p><p id="core-ipc" aria-live="polite">Pont Python Home Assistant : vérification…</p></section>
+<section aria-labelledby="readiness-title"><div class="sectionhead"><h2 id="readiness-title">État du développement</h2></div><p id="readiness" aria-live="polite">Chargement de l’état du prototype…</p><p id="core-ipc" aria-live="polite">Pont Python Home Assistant : vérification…</p></section>
 <section><div class="sectionhead"><h2>Sources</h2><span id="status" aria-live="polite">Chargement…</span></div><p id="proof">Authenticité des données : vérification en cours</p><div id="sources" aria-live="polite"></div></section>
 <section><div class="sectionhead"><h2>Applications <span id="count">—</span></h2><label for="filter">Afficher <select id="filter"><option value="all" selected>Toutes les applications</option><option value="supervisor">Apps Supervisor</option><option value="docker">Conteneurs Docker</option></select></label></div><div class="cards" id="apps" aria-live="polite"></div></section>
 <footer>Prototype sans commandes de pilotage. Les Apps HAOS proviennent d'un instantané hors ligne, non d'une connexion directe au Supervisor. HACS et la migration complète ne sont pas encore disponibles.</footer>
@@ -49,9 +49,9 @@ async function load(){
   if(readyResponse.ok){
    const ready=await readyResponse.json();
    select("#readiness").textContent=ready.production_ready
-    ?"Certification de production à confirmer indépendamment"
-    :"Laboratoire — "+ready.release_gates_blocked+" / "+ready.release_gates_total+" critères ouverts · "+ready.haos_apps_not_production_qualified+" / "+ready.haos_apps_total+" Apps à qualifier";
-  }else{select("#readiness").textContent="Certification non vérifiable";}
+    ?"État de production à vérifier indépendamment"
+    :"Prototype fonctionnel en développement · commandes réelles non autorisées";
+  }else{select("#readiness").textContent="État du développement non vérifiable";}
   try{
    const coreResponse=await fetch("/api/python-core",{cache:"no-store"});
    if(coreResponse.ok){

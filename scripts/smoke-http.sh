@@ -14,7 +14,7 @@ done
 curl -fsS --max-time 3 http://127.0.0.1:18790/health | python3 -c 'import json,sys; x=json.load(sys.stdin); assert x["status"]=="ok" and x["read_only"]'
 curl -fsS --max-time 3 http://127.0.0.1:18790/api/apps | python3 -c 'import json,sys; x=json.load(sys.stdin); assert len(x["apps"])==13 and len(x["sources"])==2 and x["read_only"]; print("PASS: read-only multi-host /api/apps")'
 curl -fsS --max-time 3 http://127.0.0.1:18790/api/sources | python3 -c 'import json,sys; x=json.load(sys.stdin); assert len(x["sources"])==2 and x["sources"][1]["live"]==False; print("PASS: /api/sources identifies offline snapshot")'
-curl -fsS --max-time 3 http://127.0.0.1:18790/api/readiness | python3 -c 'import json,sys; r=json.load(sys.stdin); assert r["read_only"] and not r["production_ready"] and not r["deployment_authorized"]; assert r["release_gates_total"]==15 and r["release_gates_blocked"]==15 and r["haos_apps_total"]==9 and r["haos_apps_not_production_qualified"]==9; print("PASS: /api/readiness blocks production with 15 gates and 9 Apps")'
+curl -fsS --max-time 3 http://127.0.0.1:18790/api/readiness | python3 -c 'import json,sys; r=json.load(sys.stdin); assert r["read_only"] and not r["production_ready"] and not r["deployment_authorized"]; assert r["release_gates_total"]==15 and r["release_gates_blocked"]==15 and "haos_apps_total" not in r and "haos_apps_not_production_qualified" not in r; print("PASS: /api/readiness blocks production with release gates and no fixed App count")'
 code="$(curl -s -o /dev/null -w '%{http_code}' --max-time 3 http://127.0.0.1:18790/api/python-core)"
 [[ "$code" == 404 ]] || { echo "FAIL: missing Python sidecar should return HTTP 404"; exit 1; }
 echo "PASS: no fake Python Core connection reported without configuration"
