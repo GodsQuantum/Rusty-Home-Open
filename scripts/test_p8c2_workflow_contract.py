@@ -42,6 +42,10 @@ assert "guest_supervisor_lab_lifecycle" in config
 assert (ROOT / "scripts/test_p8g_mutation_contract.py").is_file()
 
 assert "test_hars_real_product_app_install_boot" in code
+assert '"ha apps restart " + app' in code, "actual product must survive real Supervisor restart"
+assert 'docker inspect -f \'{{.State.StartedAt}}\' app_local_rusty_home' in code, "restart must verify a new container start"
+assert 'REAL_RUSTY_HOME_RESTART_HAOS_PASS' in code, "restart success evidence must be explicit"
+
 assert "test_hars_real_product_app_install_boot" in config
 assert "cargo build --release --locked -p ha-rust-bridge" in config
 assert "packaging/product-app/**" in config
