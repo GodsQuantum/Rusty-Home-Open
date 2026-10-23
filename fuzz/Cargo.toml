@@ -27,3 +27,10 @@ path = "fuzz_targets/ingress_http.rs"
 test = false
 doc = false
 bench = false
+
+[[bin]]
+name = "supervisor_store"
+path = "fuzz_targets/supervisor_store.rs"
+test = false
+doc = false
+bench = false

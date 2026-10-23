@@ -1,0 +1,1 @@
+{"addons":[{"slug":"A","repository":"core","name":"One","available":true,"installed":true,"update_available":false},{"slug":"a","repository":"core","name":"Two","available":true,"installed":false,"update_available":false}],"repositories":[{"slug":"core","name":"Official"}]}
