@@ -1,5 +1,7 @@
 name: Official Home Assistant Core interoperability labs
 on:
+  schedule:
+    - cron: "17 2 * * 1"
   pull_request:
   push:
     branches: [main]
