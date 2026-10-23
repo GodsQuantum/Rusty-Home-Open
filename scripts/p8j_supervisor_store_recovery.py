@@ -10,6 +10,13 @@ from time import sleep as _sleep
 _SLUG = re.compile(r"local_[a-z0-9_]{1,63}\Z")
 _VERSION = re.compile(r"[0-9]+\.[0-9]+\.[0-9]+(?:-[0-9A-Za-z]+(?:\.[0-9A-Za-z]+)*)?\Z")
 
+# Genuine disposable HAOS often propagates a new local repository asynchronously.
+# Waiting for a single Store reload's success is never enough: require the
+# exact version from the official GET within a fixed, finite 24-second window.
+# Repeating POST reloads before this convergence could itself prolong discovery.
+POST_RELOAD_POLLS = 12
+POLL_SECONDS = 2
+
 def ensure_supervisor_local_app_version(shell_json, slug, expected_version,
                                          *, sleeper=_sleep, max_reloads=2):
     if not isinstance(slug, str) or not _SLUG.fullmatch(slug):
@@ -44,12 +51,12 @@ def ensure_supervisor_local_app_version(shell_json, slug, expected_version,
             shell_json("ha store reload --no-progress --raw-json",timeout=120)
         except Exception:
             pass
-        for poll in range(3):
+        for poll in range(POST_RELOAD_POLLS):
             snapshot=observed()
             if snapshot is not None:
                 return snapshot
-            if poll<2:
-                sleeper(2)
+            if poll+1<POST_RELOAD_POLLS:
+                sleeper(POLL_SECONDS)
     raise RuntimeError(
         "Disposable Supervisor App catalogue failed expected version verification "
         "after bounded reloads (no activation attempted)"

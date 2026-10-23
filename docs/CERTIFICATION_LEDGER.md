@@ -226,3 +226,17 @@ The only machine authority for production release gates is
 - Independent CI on the exact new PR head remains to be checked before merge.
   This does **not** verify independent Core RBAC or enable App writes. All
   production gates remain blocked/lab_partial.
+
+## Product correction: fail-closed Supervisor job reconciliation (2026-10-23)
+
+- A completed Supervisor job and an App state snapshot are **not** sufficient
+  evidence if either is marked non-read-only, the job progress is malformed,
+  or the installed-App inventory ambiguously duplicates a slug.
+- Native Rust reconciliation now refuses such forged/inconsistent evidence,
+  including a successful job carrying an error count. This applies to arbitrary
+  vendor slugs and both Supervisor API versions through the shared reconciler.
+- Regression test `untrusted_job_or_inventory_never_confirms_completion`
+  reproduced a false `Confirmed` before the correction.
+- This is a read-only product correction, **not** durable actor-bound receipts,
+  authorization for App mutations, or end-to-end production certification.
+  Independent CI evidence belongs to the matching PR and Issue #12.
