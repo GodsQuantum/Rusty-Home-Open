@@ -22,3 +22,10 @@ The live Supervisor App operation observer now reads the official job and instal
 inventory APIs together, with fail-closed postcondition reconciliation. It is
 read-only and does not provide trusted operation receipts, user RBAC, lifecycle
 mutations or durable restart recovery. See [scope and limitations](LIVE_SUPERVISOR_OPERATION_OBSERVATION.md).
+
+## Live uninstalled Store App details
+
+The universal Store dashboard now has a native, authenticated, read-only
+details path for any catalog-listed App, including uninstalled Apps. See
+[scope, limits and next increment](STORE_LIVE_DETAILS.md). This is product
+code, not an end-to-end production certification.

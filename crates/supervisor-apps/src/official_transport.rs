@@ -1,6 +1,6 @@
 //! Explicit, read-only and locally scoped transport for official Supervisor.
 //! This does NOT install Apps or connect to a real HAOS Supervisor by itself.
-use crate::app_detail::{AppDetail, detail_path, parse_app_detail};
+use crate::app_detail::{AppDetail, detail_path, parse_app_detail, store_detail_path};
 use crate::installed_inventory::{RunningInventory, parse_running_inventory};
 use crate::official_store::{ApiVersion, Catalog, parse_store_response};
 use std::{
@@ -139,6 +139,18 @@ impl LocalSupervisorClient {
         parse_app_detail(&body, slug).map_err(|_| TransportError::InvalidAppInfo)
     }
 
+    /// Read Store details for any App, including those not installed yet.
+    /// The path is the official Store endpoint, never the installed-App endpoint.
+    pub fn fetch_store_app_detail(
+        &self,
+        version: ApiVersion,
+        slug: &str,
+    ) -> Result<AppDetail, TransportError> {
+        let path = store_detail_path(version, slug).map_err(|_| TransportError::InvalidAppSlug)?;
+        let body = get_json(self.target, &self.token, &path)?;
+        parse_app_detail(&body, slug).map_err(|_| TransportError::InvalidAppInfo)
+    }
+
     /// GET only; a V2 request is opt-in because official Supervisor V2 uses a
     /// development feature flag. No upgrade/downgrade fallback or redirect.
     pub fn fetch_store(&self, version: ApiVersion) -> Result<Catalog, TransportError> {
@@ -262,6 +274,23 @@ impl AppSupervisorClient {
             .to_socket_addrs()
             .map_err(|_| TransportError::Io)?
             .find(|addr| matches!(addr.ip(),IpAddr::V4(ip) if ip.is_private()))
+            .ok_or(TransportError::UnsupportedHost)?;
+        let body = get_json(target, &self.token, &path)?;
+        parse_app_detail(&body, slug).map_err(|_| TransportError::InvalidAppInfo)
+    }
+
+    /// Authenticated Store detail for any compatible App, installed or not.
+    pub fn fetch_store_app_detail(
+        &self,
+        version: ApiVersion,
+        slug: &str,
+    ) -> Result<AppDetail, TransportError> {
+        use std::net::{IpAddr, ToSocketAddrs};
+        let path = store_detail_path(version, slug).map_err(|_| TransportError::InvalidAppSlug)?;
+        let target = (self.service_name(), 80)
+            .to_socket_addrs()
+            .map_err(|_| TransportError::Io)?
+            .find(|addr| matches!(addr.ip(), IpAddr::V4(ip) if ip.is_private()))
             .ok_or(TransportError::UnsupportedHost)?;
         let body = get_json(target, &self.token, &path)?;
         parse_app_detail(&body, slug).map_err(|_| TransportError::InvalidAppInfo)
