@@ -9,6 +9,11 @@ updates:
       time: "08:00"
       timezone: Europe/Paris
     open-pull-requests-limit: 3
+    ignore:
+      # Major API changes require a dedicated migration PR and explicit review.
+      - dependency-name: "*"
+        update-types:
+          - "version-update:semver-major"
     groups:
       rust-nonbreaking:
         update-types:
@@ -24,6 +29,11 @@ updates:
       time: "08:15"
       timezone: Europe/Paris
     open-pull-requests-limit: 2
+    ignore:
+      # Prevent unattended major action upgrades from breaking CI contracts.
+      - dependency-name: "*"
+        update-types:
+          - "version-update:semver-major"
     groups:
       actions-nonbreaking:
         update-types:
