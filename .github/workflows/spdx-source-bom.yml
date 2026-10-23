@@ -36,3 +36,37 @@ jobs:
           "$RUNNER_TEMP/spdx-validator/bin/pyspdxtools" -i audits/CARGO_SOURCE_SPDX_2026-10-23.json
       - name: Refuse production certification based on source SBOM
         run: python3 scripts/check_release_gate.py --expect-blocked
+
+  attest-main-source-lock:
+    name: GitHub OIDC SBOM attestation of Cargo.lock source graph
+    # No pull request may request OIDC signing permissions.
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: [source-spdx]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    permissions:
+      contents: read
+      id-token: write
+      attestations: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - name: Re-check source-only scope and blocked product release
+        run: |
+          python3 scripts/generate_source_spdx.py
+          python3 scripts/test_spdx_attestation_contract.py
+          python3 scripts/check_release_gate.py --expect-blocked
+      - name: Sign Cargo.lock subject using GitHub OIDC identity (source SBOM only)
+        id: signed
+        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4.2.2
+        with:
+          subject-path: Cargo.lock
+          sbom-path: audits/CARGO_SOURCE_SPDX_2026-10-23.json
+      - name: Independently verify signed source-SBOM bundle and exact main signer
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BUNDLE_PATH: ${{ steps.signed.outputs.bundle-path }}
+        run: |
+          test -s "$BUNDLE_PATH"
+          gh attestation verify Cargo.lock             --bundle "$BUNDLE_PATH"             --repo "$GITHUB_REPOSITORY"             --predicate-type "https://spdx.dev/Document/v2.3"             --source-ref refs/heads/main             --signer-workflow "$GITHUB_REPOSITORY/.github/workflows/spdx-source-bom.yml"
