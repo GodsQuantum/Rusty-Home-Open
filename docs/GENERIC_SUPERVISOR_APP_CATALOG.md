@@ -64,3 +64,30 @@ platform-specific classifications, not per-user known-App categories.
 The experimental frontend no longer presents the nine synthetic App
 fixtures as a product-wide readiness score. Fixture counts are for test
 coverage only; readiness remains distinct from app compatibility.
+
+
+## Arbitrary App detail retrieval (product increment)
+
+Supervisor 2026.10.3 defines the official read-only endpoints
+`GET /addons/{slug}/info` (V1) and
+`GET /v2/apps/{slug}/info` (V2). Rusty Home now exposes
+`LocalSupervisorClient::fetch_app_detail` and
+`AppSupervisorClient::fetch_app_detail` over existing authenticated,
+bounded, read-only Supervisor connections. Any valid App slug can be
+queried; no provider names, App brands or installation inventories
+are compiled into the client.
+
+Returned `AppDetail` contains a typed, bounded set of safe metadata:
+slug, name, repository, current/latest version, state, availability,
+update status, system-managed state and ingress capability. It never
+copies raw options, schemas, API credentials, host addresses or
+device paths from Supervisor's confidential response. Invalid slugs,
+a mismatched response, repeated JSON keys or 401/403 fail closed.
+
+Verified in actual authenticated loopback TCP tests with unknown App
+slugs under both V1 and V2, including an unauthorized request.
+Real HAOS production credentials and data were not touched.
+
+**Not yet implemented:** production user RBAC, arbitrary App installation,
+start/stop/update actions with job tracking, configuration mutation,
+complete recovery or a connected end-user frontend for App detail.
