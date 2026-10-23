@@ -13,6 +13,8 @@ pub mod session_lab;
 
 #[cfg(feature = "core-user-live-lab")]
 pub mod core_user_live_lab;
+#[cfg(feature = "core-user-rbac-lab")]
+pub mod core_user_rbac_lab;
 #[cfg(feature = "core-user-snapshot-lab")]
 pub mod core_user_snapshot_lab;
 #[cfg(feature = "ingress-identity-lab")]

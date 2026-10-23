@@ -24,6 +24,11 @@ jobs:
           cargo fmt --all -- --check
           cargo test --locked --all
           cargo clippy --locked --workspace --all-targets -- -D warnings
+      - name: Preview-only Core plus Ingress RBAC, no privileged transport
+        run: |
+          python3 scripts/test_p8i_core_user_rbac_contract.py
+          cargo test --locked -p hars-supervisor-apps --features core-user-rbac-lab --lib
+          cargo clippy --locked -p hars-supervisor-apps --all-targets --features core-user-rbac-lab -- -D warnings
       - name: Universal official Supervisor App catalog paging/search (1317 unknown Apps)
         run: python3 scripts/test_generic_supervisor_catalog_cli.py
       - name: Test the isolated 9-App migration policy

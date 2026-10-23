@@ -33,5 +33,11 @@ class CoreLiveContract(unittest.TestCase):
         self.assertIn("docker exec app_local_hars_core_ws_probe /hars-core-users --probe",qemu)
         self.assertIn("P8I_REAL_CORE_WS_AUTHENTICATED_READ_ONLY_PROBE_PASS",qemu)
         self.assertIn("P8I_REAL_CORE_WS_USERS_READ",qemu)
-        self.assertIn("P8I_REAL_CORE_WS_LIST_DENIED",qemu)
+        # An upstream permission denial is a valid NEGATIVE test only:
+        # it must never count as successful proof of role resolution.
+        self.assertIn('any("P8I_REAL_CORE_WS_USERS_READ" in item for item in proof)',qemu)
+        self.assertIn('"P8I_REAL_CORE_WS_LIST_DENIED" not in',qemu)
+        self.assertIn('"P8I_REAL_CORE_WS_LIST_DENIED"',qemu)
+        self.assertIn("P8I_REAL_CORE_WS_PERMISSION_DENIED",qemu)
+
 if __name__=="__main__":unittest.main()

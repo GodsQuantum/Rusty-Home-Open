@@ -20,6 +20,9 @@ ingress-identity-lab = []
 core-user-snapshot-lab = ["ingress-identity-lab"]
 # QEMU-only Core WS reader; one fixed internal endpoint, no mutations.
 core-user-live-lab = ["core-user-snapshot-lab", "dep:tungstenite"]
+# Preview-only join of trusted ingress claim, fresh Core user state and
+# per-App policy. No network, no HTTP endpoint, no write transport.
+core-user-rbac-lab = ["core-user-snapshot-lab", "managed-apps-preview"]
 
 [dependencies]
 serde = { version = "1", features = ["derive"] }
