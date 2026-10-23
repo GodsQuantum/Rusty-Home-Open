@@ -491,11 +491,15 @@ def test_hars_manager_role_app(shell, shell_json):
                 "docker exec app_local_hars_core_ws_probe /hars-core-users --probe",
                 timeout=60,
             )
-            assert any(
-                "P8I_REAL_CORE_WS_USERS_READ" in item
-                or "P8I_REAL_CORE_WS_LIST_DENIED" in item
-                for item in proof
-            ), "Real Supervisor->Core WebSocket auth was not proven"
+            # WebSocket authentication alone is NOT proof of a usable
+            # authorization oracle. Current Core must actually return the
+            # user inventory, not a denied config/auth/list command.
+            assert any("P8I_REAL_CORE_WS_USERS_READ" in item for item in proof), (
+                "Real Core WS did not provide authorized user inventory"
+            )
+            assert all(
+                "P8I_REAL_CORE_WS_LIST_DENIED" not in item for item in proof
+            ), "P8I_REAL_CORE_WS_PERMISSION_DENIED: no RBAC authority"
             print("P8I_REAL_CORE_WS_AUTHENTICATED_READ_ONLY_PROBE_PASS")
         finally:
             try:
