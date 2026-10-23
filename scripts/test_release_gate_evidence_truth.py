@@ -23,7 +23,7 @@ class GateReality(unittest.TestCase):
         self.assertEqual(sum(x["status"]=="blocked" for x in self.rows),6)
         self.assertTrue(all(x["certification_artifact"] is None for x in self.rows))
     def test_real_evidence_never_waives_production_acceptance(self):
-        self.assertEqual(len(self.claims),13)
+        self.assertEqual(len(self.claims),15)
         known={x["id"]:x for x in self.rows}
         self.assertEqual(set(known),{x["id"] for x in self.rows})
         self.assertTrue(all(x["blocked_reason"] and len(x["blocked_reason"][0])>80
@@ -34,11 +34,15 @@ class GateReality(unittest.TestCase):
                      "supervisor_apps_restore"}:
             self.assertEqual(known[gate]["status"],"lab_partial")
             self.assertTrue(any(x["release_gate"]==gate for x in self.claims),gate)
-        self.assertIn("six dependency",known["third_party_licenses"]["blocked_reason"][0])
+        self.assertIn("Six external",known["third_party_licenses"]["blocked_reason"][0])
+        self.assertIn("Sigstore-attested",known["third_party_licenses"]["blocked_reason"][0])
+        claims={x["id"]:x for x in self.claims}
+        self.assertEqual(claims["fuzz_four_native_security_surfaces"]["run_id"],40026397117)
+        self.assertEqual(claims["github_oidc_cargo_source_sbom"]["run_id"],40027460088)
     def test_ledger_lists_no_unearned_certifications(self):
         text=(ROOT/"docs/CERTIFICATION_LEDGER.md").read_text()
         self.assertIn("0 / 15",text)
         self.assertIn("Nine gates",text)
-        self.assertIn("13 independently observed",text)
+        self.assertIn("15 independently observed",text)
         self.assertIn("NOT_PRODUCTION_READY",text)
 if __name__=="__main__":unittest.main()

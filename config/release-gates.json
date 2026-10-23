@@ -111,7 +111,7 @@
       "id": "third_party_licenses",
       "status": "lab_partial",
       "blocked_reason": [
-        "Cargo metadata and source checks are partial: six dependency source-license exceptions and independent attribution/NOTICE/source obligations plus signed SBOM need final review."
+        "Six external crates without bundled license files now have version-matched upstream source texts; the full Cargo.lock source SPDX is reproducible and Sigstore-attested (run 40027460088). Still missing independently reviewed binary-release BOM, all source/asset/firmware copyright notices, redistribution obligations and formal legal approval."
       ],
       "certification_artifact": null
     },
@@ -119,7 +119,7 @@
       "id": "security_stress_fuzz",
       "status": "lab_partial",
       "blocked_reason": [
-        "Three production Rust parser targets passed pinned AddressSanitizer/libFuzzer smoke in isolated GitHub CI (run 39997355066). Still missing attack-surface coverage, penetration testing, multi-hour soak and remediation verification."
+        "Four genuine production Rust surfaces, including seven-action App preflight, passed sanitizer-instrumented pinned libFuzzer smoke (run 40026397117); not a complete security audit. Still missing independent penetration tests, cross-service attacker modeling, privilege-escalation review, broad fuzz coverage, prolonged stress and remediation retests."
       ],
       "certification_artifact": null
     }
