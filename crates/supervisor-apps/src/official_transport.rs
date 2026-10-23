@@ -52,6 +52,30 @@ pub enum TransportError {
     LabMutationDisabled,
 }
 
+/// Correlate an authenticated Supervisor job with separately observed App state.
+/// The Watch must be created from a trusted operation receipt: the job
+/// endpoint alone does not bind a job UUID to an App slug.
+fn observe_operation_with<FJ, FI>(
+    version: ApiVersion,
+    watch: &crate::operation_reconcile::Watch,
+    fetch_job: FJ,
+    fetch_inventory: FI,
+) -> Result<crate::operation_reconcile::Observation, TransportError>
+where
+    FJ: FnOnce(ApiVersion, &str) -> Result<crate::job_status::JobStatus, TransportError>,
+    FI: FnOnce(ApiVersion) -> Result<RunningInventory, TransportError>,
+{
+    use crate::job_status::State;
+    use crate::operation_reconcile::reconcile;
+    let job = fetch_job(version, watch.job_id())?;
+    if job.state != State::Succeeded {
+        return Ok(reconcile(watch, Some(&job), None));
+    }
+    // No fallback to cached, stale, empty or unauthenticated inventory.
+    let inventory = fetch_inventory(version)?;
+    Ok(reconcile(watch, Some(&job), Some(&inventory)))
+}
+
 /// Only loopback connections. Future HAOS deployment requires an independently
 /// authenticated, authorized and encrypted transport to its runtime agent.
 pub struct LocalSupervisorClient {
@@ -59,6 +83,21 @@ pub struct LocalSupervisorClient {
     token: SupervisorToken,
 }
 impl LocalSupervisorClient {
+    /// Read-only official job + postcondition observation; never mutates Apps.
+    /// Trusted user identity, operation receipt and polling are caller duties.
+    pub fn observe_operation(
+        &self,
+        version: ApiVersion,
+        watch: &crate::operation_reconcile::Watch,
+    ) -> Result<crate::operation_reconcile::Observation, TransportError> {
+        observe_operation_with(
+            version,
+            watch,
+            |v, id| self.fetch_job(v, id),
+            |v| self.fetch_installed(v),
+        )
+    }
+
     /// Installed Apps, never confused with the Store catalog.
     pub fn fetch_installed(&self, version: ApiVersion) -> Result<RunningInventory, TransportError> {
         let path = match version {
@@ -149,6 +188,21 @@ impl fmt::Debug for AppSupervisorClient {
     }
 }
 impl AppSupervisorClient {
+    /// Read-only official job + postcondition observation; never mutates Apps.
+    /// Trusted user identity, operation receipt and polling are caller duties.
+    pub fn observe_operation(
+        &self,
+        version: ApiVersion,
+        watch: &crate::operation_reconcile::Watch,
+    ) -> Result<crate::operation_reconcile::Observation, TransportError> {
+        observe_operation_with(
+            version,
+            watch,
+            |v, id| self.fetch_job(v, id),
+            |v| self.fetch_installed(v),
+        )
+    }
+
     pub fn new(token: SupervisorToken) -> Self {
         Self { token }
     }
