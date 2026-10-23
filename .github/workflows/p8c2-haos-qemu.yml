@@ -19,8 +19,10 @@ on:
 permissions:
   contents: read
 
+# Independent GitHub-hosted HAOS VMs must not block unrelated pull requests.
+# Retain per-ref admission but avoid unrelated PRs cancelling each other.
 concurrency:
-  group: hars-p8c2-real-haos
+  group: hars-p8c2-real-haos-${{ github.ref }}
   cancel-in-progress: false
 
 jobs:
