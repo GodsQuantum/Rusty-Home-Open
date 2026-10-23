@@ -3,6 +3,11 @@
 mod attestation;
 mod ingress;
 use hars_supervisor_apps::app_detail::valid_slug;
+use hars_supervisor_apps::core_user_live_lab::{
+    fetch_official_core_users_readonly, CoreLiveError, CoreLiveResult,
+};
+use hars_supervisor_apps::core_user_snapshot_lab::CoreAccountStatus;
+use hars_supervisor_apps::ingress_identity_lab::ingress_user_claim_from_stream;
 use hars_supervisor_apps::installed_inventory::RunningInventory;
 use hars_supervisor_apps::official_store::ApiVersion;
 use hars_supervisor_apps::official_transport::AppSupervisorClient;
@@ -16,7 +21,7 @@ use std::path::{Component, Path, PathBuf};
 use std::process::Command;
 use std::sync::{mpsc, Arc, Mutex};
 use std::thread;
-use std::time::{Duration, Instant};
+use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
 #[derive(Clone, Debug)]
 enum AdapterKind {
@@ -1157,6 +1162,88 @@ fn supervisor_session_response(
     )
 }
 
+/// Independent, read-only Core account verification. Supervisor group headers
+/// alone never authorize App operations. No user IDs, groups or tokens escape.
+fn core_verified_session_response(
+    mode: AccessMode,
+    account: Result<CoreAccountStatus, CoreLiveError>,
+) -> (&'static str, String) {
+    if mode != AccessMode::SupervisorIngress {
+        return (
+            "404 Not Found",
+            json!({"read_only":true,"error":"supervisor ingress required"}).to_string(),
+        );
+    }
+    match account {
+        Ok(CoreAccountStatus::ActiveAdmin) | Ok(CoreAccountStatus::ActiveNonAdmin) => {
+            let administrator = matches!(account, Ok(CoreAccountStatus::ActiveAdmin));
+            (
+                "200 OK",
+                json!({
+                    "authenticated":true,
+                    "administrator":administrator,
+                    "authority":"supervisor_ingress_plus_core_ws",
+                    "read_only":true,
+                    "actions_authorized":false
+                })
+                .to_string(),
+            )
+        }
+        Ok(CoreAccountStatus::Denied) => (
+            "403 Forbidden",
+            json!({"read_only":true,"error":"Core account not active"}).to_string(),
+        ),
+        Err(_) => (
+            "503 Service Unavailable",
+            json!({"read_only":true,"error":"Core verification unavailable"}).to_string(),
+        ),
+    }
+}
+
+/// Re-check the actual accepted TCP peer before binding the Ingress identity
+/// to a fresh, authenticated Core WS user inventory. Never trust client JSON.
+fn supervisor_core_session_response(
+    mode: AccessMode,
+    conn: &TcpStream,
+    ingress_id: Option<&str>,
+) -> (&'static str, String) {
+    if mode != AccessMode::SupervisorIngress {
+        return core_verified_session_response(mode, Err(CoreLiveError::Unauthorized));
+    }
+    let Some(ingress_id) = ingress_id else {
+        return (
+            "403 Forbidden",
+            json!({"read_only":true,"error":"verified Supervisor user required"}).to_string(),
+        );
+    };
+    let claim = match ingress_user_claim_from_stream(conn, &[("X-Remote-User-Id", ingress_id)]) {
+        Ok(claim) => claim,
+        Err(_) => {
+            return (
+                "403 Forbidden",
+                json!({"read_only":true,"error":"untrusted ingress identity"}).to_string(),
+            )
+        }
+    };
+    let now = match SystemTime::now().duration_since(UNIX_EPOCH) {
+        Ok(t) => t.as_secs(),
+        Err(_) => return core_verified_session_response(mode, Err(CoreLiveError::Protocol)),
+    };
+    let account = fetch_official_core_users_readonly(now).and_then(|response| match response {
+        CoreLiveResult::Users(users) => {
+            let current = SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .map_err(|_| CoreLiveError::Protocol)?
+                .as_secs();
+            users
+                .status(&claim, current)
+                .map_err(|_| CoreLiveError::Protocol)
+        }
+        CoreLiveResult::PermissionDenied => Err(CoreLiveError::CommandDenied),
+    });
+    core_verified_session_response(mode, account)
+}
+
 // Bounded, independent request handling: 8 workers, at most 32 pending.
 // No unbounded thread-per-connection allocation or blocking send in accept().
 const LAB_HTTP_WORKERS: usize = 8;
@@ -1267,7 +1354,6 @@ fn handle(
     // for the ingress session; this is only an informational read-only flag.
     // NEVER treat this or any header alone as an App write permit.
     let session_identity_present = claimed_user.is_some();
-    drop(claimed_user);
     if line == "GET / HTTP/1.1" || line == "GET / HTTP/1.0" {
         let _ = reply(
             &mut conn,
@@ -1300,6 +1386,8 @@ fn handle(
         ("200 OK", json!({"status":"ok","mode":"LAB","read_only":true,"version":env!("CARGO_PKG_VERSION")}).to_string())
     } else if line == "GET /api/session HTTP/1.1" || line == "GET /api/session HTTP/1.0" {
         supervisor_session_response(mode, session_identity_present, supervisor_admin)
+    } else if line == "GET /api/session/core HTTP/1.1" || line == "GET /api/session/core HTTP/1.0" {
+        supervisor_core_session_response(mode, &conn, claimed_user.as_deref())
     } else if line == "GET /api/apps HTTP/1.1" || line == "GET /api/apps HTTP/1.0" {
         ("200 OK", report(adapters, verified).to_string())
     } else if line == "GET /api/store HTTP/1.1" || line == "GET /api/store HTTP/1.0" {
@@ -1899,6 +1987,87 @@ mod tests {
         assert_eq!(rows.len(), 1);
         assert!(!rows[0].to_string().contains("NEVER_EXPOSE"));
         assert_eq!(rows[0]["app_type"], "supervisor_app");
+    }
+
+    #[test]
+    fn actual_loopback_http_cannot_read_core_verified_session() {
+        let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+        let addr = listener.local_addr().unwrap();
+        let worker = std::thread::spawn(move || {
+            let (conn, _) = listener.accept().unwrap();
+            handle(conn, &[], None, None, AccessMode::Loopback);
+        });
+        let mut client = TcpStream::connect(addr).unwrap();
+        client
+            .set_read_timeout(Some(Duration::from_secs(3)))
+            .unwrap();
+        client
+            .write_all(format!("GET /api/session/core HTTP/1.1\r\nHost: {addr}\r\n\r\n").as_bytes())
+            .unwrap();
+        let mut response = String::new();
+        client.read_to_string(&mut response).unwrap();
+        worker.join().unwrap();
+        assert!(response.starts_with("HTTP/1.1 404 Not Found"), "{response}");
+        assert!(!response.contains("administrator\":true"));
+        assert!(!response.contains("SUPERVISOR_TOKEN"));
+    }
+
+    #[test]
+    fn core_verified_session_reports_only_fresh_core_roles_without_write_grants() {
+        let (status, content) = core_verified_session_response(
+            AccessMode::SupervisorIngress,
+            Ok(CoreAccountStatus::ActiveAdmin),
+        );
+        assert_eq!(status, "200 OK");
+        let v: Value = serde_json::from_str(&content).unwrap();
+        assert_eq!(v["authenticated"], true);
+        assert_eq!(v["administrator"], true);
+        assert_eq!(v["authority"], "supervisor_ingress_plus_core_ws");
+        assert_eq!(v["actions_authorized"], false);
+        assert_eq!(v["read_only"], true);
+        for forbidden in ["user_id", "token", "group_ids", "password"] {
+            assert!(!content.contains(forbidden));
+        }
+        let (status, content) = core_verified_session_response(
+            AccessMode::SupervisorIngress,
+            Ok(CoreAccountStatus::ActiveNonAdmin),
+        );
+        assert_eq!(status, "200 OK");
+        assert_eq!(
+            serde_json::from_str::<Value>(&content).unwrap()["administrator"],
+            false
+        );
+    }
+
+    #[test]
+    fn core_verified_session_fails_closed_on_revocation_denial_and_local_calls() {
+        assert_eq!(
+            core_verified_session_response(
+                AccessMode::SupervisorIngress,
+                Ok(CoreAccountStatus::Denied)
+            )
+            .0,
+            "403 Forbidden"
+        );
+        for err in [
+            CoreLiveError::Unauthorized,
+            CoreLiveError::Protocol,
+            CoreLiveError::CommandDenied,
+            CoreLiveError::ConnectionFailed,
+        ] {
+            let (status, content) =
+                core_verified_session_response(AccessMode::SupervisorIngress, Err(err));
+            assert_eq!(status, "503 Service Unavailable");
+            assert!(!content.contains("administrator\":true"));
+        }
+        assert_eq!(
+            core_verified_session_response(
+                AccessMode::Loopback,
+                Ok(CoreAccountStatus::ActiveAdmin)
+            )
+            .0,
+            "404 Not Found"
+        );
     }
 
     #[test]

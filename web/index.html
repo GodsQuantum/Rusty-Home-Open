@@ -35,7 +35,7 @@ footer{border-top:1px solid #313f50;margin-top:2.5rem;padding-top:1rem;font-size
 </svg><span class="pill">Prototype — lecture seule</span><h1>Rusty Home</h1><p>Domotique native Rust — état, automatisations et extensions en développement. Vue Apps Docker/HAOS : module expérimental.</p></div>
 <button id="refresh" type="button">Actualiser</button>
 </header>
-<section aria-labelledby="readiness-title"><div class="sectionhead"><h2 id="readiness-title">État du développement</h2></div><p id="readiness" aria-live="polite">Chargement de l’état du prototype…</p><p id="core-ipc" aria-live="polite">Pont Python Home Assistant : vérification…</p><p id="session-status" aria-live="polite">Identité : non confirmée · lecture seule</p></section>
+<section aria-labelledby="readiness-title"><div class="sectionhead"><h2 id="readiness-title">État du développement</h2></div><p id="readiness" aria-live="polite">Chargement de l’état du prototype…</p><p id="core-ipc" aria-live="polite">Pont Python Home Assistant : vérification…</p><p id="session-status" aria-live="polite">Identité : non confirmée · lecture seule</p><p id="core-session-status" aria-live="polite">Droits Core : non vérifiés · lecture seule</p></section>
 <section><div class="sectionhead"><h2>Sources</h2><span id="status" aria-live="polite">Chargement…</span></div><p id="proof">Authenticité des données : vérification en cours</p><div id="sources" aria-live="polite"></div></section>
 <section><div class="sectionhead"><h2>Applications <span id="count">—</span></h2><div class="catalog-controls"><label for="search">Rechercher <input id="search" type="search" maxlength="120" placeholder="Nom, source ou image"></label><label for="filter">Afficher <select id="filter"><option value="all" selected>Toutes les applications</option><option value="supervisor">Apps Supervisor</option><option value="docker">Conteneurs Docker</option></select></label></div></div><div class="cards" id="apps" aria-live="polite"></div><nav class="pager" aria-label="Pages du catalogue"><button id="previous-page" type="button">Précédente</button><span id="page-status" aria-live="polite">Page 1 / 1</span><button id="next-page" type="button">Suivante</button></nav></section>
 <section id="store-catalog"><div class="sectionhead"><h2>Store Supervisor · Apps communautaires</h2><button id="load-store" type="button" disabled>Consulter le Store</button></div>
@@ -488,8 +488,25 @@ async function loadSession(){
   line.textContent="Identité non confirmée · lecture seule";
  }
 }
+async function loadCoreSession(){
+ const line=select("#core-session-status");
+ line.textContent="Droits Core : vérification indépendante…";
+ try{
+  const response=await fetch("api/session/core",{cache:"no-store"});
+  if(!response.ok)throw Error("Core unavailable");
+  const value=await response.json();
+  if(value.read_only!==true||value.authenticated!==true
+     ||value.authority!=="supervisor_ingress_plus_core_ws"
+     ||value.actions_authorized!==false||typeof value.administrator!=="boolean")
+     throw Error("Untrusted Core status");
+  line.textContent=value.administrator
+   ?"Compte administrateur actif confirmé par Core · aucune action autorisée"
+   :"Compte actif confirmé par Core · aucune action autorisée";
+ }catch(e){line.textContent="Droits Core non confirmés · aucune action autorisée";}
+}
 async function load(){
  void loadSession();
+ void loadCoreSession();
  allApps=[];pageIndex=0;renderApps();
  select("#status").textContent="Chargement…";select("#apps").replaceChildren();select("#sources").replaceChildren();
  try{
