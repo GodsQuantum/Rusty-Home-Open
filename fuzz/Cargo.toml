@@ -34,3 +34,10 @@ path = "fuzz_targets/supervisor_store.rs"
 test = false
 doc = false
 bench = false
+
+[[bin]]
+name = "lifecycle_preflight"
+path = "fuzz_targets/lifecycle_preflight.rs"
+test = false
+doc = false
+bench = false
