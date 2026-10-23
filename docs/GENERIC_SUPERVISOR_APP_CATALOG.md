@@ -149,3 +149,25 @@ The component is read-only reconciliation. User authentication, authorization,
 real Supervisor writes and durable recovery are separate unfinished product
 functions. The tests cover 903 previously unknown App identifiers and
 adversarial mismatched/failed/unavailable observations.
+
+## Live installed-App inventory in the dashboard (product feature)
+
+Inside an authorized Supervisor-managed App container, Rusty Home can
+read the actual installed-App inventory from the official Supervisor
+API rather than relying on a fixed JSON snapshot.
+
+Use the native control-plane with --supervisor-live --host home
+--serve 127.0.0.1:18790 (official V1), or --supervisor-live-v2 for
+the explicitly opted-in V2 API. The official SUPERVISOR_TOKEN is
+provided by Supervisor to the container, and the service hostname
+is fixed to supervisor:80. No caller-supplied URL is accepted.
+The dashboard stays loopback-only and read-only; responses are typed
+and secret-redacted, with no vendor allowlist.
+
+When the token or endpoint is unavailable, the source is marked
+degraded, never represented as a verified empty inventory.
+This does not yet submit privileged App lifecycle operations.
+Trusted user authentication and management UI remain incomplete.
+
+CI covers an actual loopback HTTP denial with no token, plus
+1,403 arbitrary unknown App fixtures in the Rust formatter test.

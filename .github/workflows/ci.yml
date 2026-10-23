@@ -32,6 +32,7 @@ jobs:
         run: |
           bash scripts/test-lab.sh
           bash scripts/smoke-http.sh
+          bash scripts/smoke-supervisor-live.sh
       - name: P19 real TCP slow-client worker admission
         run: |
           cargo build --locked -p ha-rust-bridge
