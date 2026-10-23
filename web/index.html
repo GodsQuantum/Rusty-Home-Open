@@ -10,7 +10,7 @@
 h1{font-size:1.9rem;letter-spacing:-.03em;margin:.5rem 0}h2{font-size:1.3rem}
 p{color:#aebccd}header p{margin:.3rem 0}.pill{display:inline-block;border-radius:3rem;background:#193e35;color:#7de4b1;padding:.35rem .65rem;text-transform:uppercase;letter-spacing:.05em;font-size:.72rem;font-weight:750}
 button{background:#156b80;border:0;color:white;border-radius:.55rem;padding:.7rem 1.1rem;font:inherit;font-weight:650;cursor:pointer}
-button:hover{background:#1b94ab}button:focus-visible{outline:3px solid #9dbffb;outline-offset:3px}
+button:hover{background:#1b94ab}button:disabled{opacity:.42;cursor:not-allowed}button:focus-visible{outline:3px solid #9dbffb;outline-offset:3px}
 #sources{display:flex;gap:.65rem;flex-wrap:wrap;margin:1.2rem 0}
 .source{background:#1c2937;border:1px solid #344459;border-radius:12px;padding:.8rem .95rem;min-width:210px;font-size:.9rem}
 .source strong{display:block;margin-bottom:.25rem}.muted{color:#9eafc2}.error{color:#e7b2a2}
@@ -20,7 +20,7 @@ button:hover{background:#1b94ab}button:focus-visible{outline:3px solid #9dbffb;o
 .state{font-size:.75rem;color:#f0bf90;float:right}.state.started,.state.running{color:#87e5b7}
 .label{font-size:.78rem;color:#a3bad1}.update{color:#edc57e}
 .sectionhead{display:flex;align-items:center;justify-content:space-between;gap:1rem;margin:1.3rem 0 1rem}
-#status{font-size:.9rem;color:#b7c4d4}
+.catalog-controls,.pager{display:flex;gap:.8rem;align-items:center;flex-wrap:wrap}.pager{margin-top:1.2rem;justify-content:center}.catalog-controls input,.catalog-controls select{font:inherit;color:#e8edf6;background:#1b2937;border:1px solid #50647a;border-radius:.45rem;padding:.45rem;max-width:100%}#status{font-size:.9rem;color:#b7c4d4}
 footer{border-top:1px solid #313f50;margin-top:2.5rem;padding-top:1rem;font-size:.87rem;color:#aab8cd}
 @media(max-width:600px){body{padding:1rem}header{align-items:flex-start}h1{font-size:1.55rem}}
 </style>
@@ -37,12 +37,48 @@ footer{border-top:1px solid #313f50;margin-top:2.5rem;padding-top:1rem;font-size
 </header>
 <section aria-labelledby="readiness-title"><div class="sectionhead"><h2 id="readiness-title">État du développement</h2></div><p id="readiness" aria-live="polite">Chargement de l’état du prototype…</p><p id="core-ipc" aria-live="polite">Pont Python Home Assistant : vérification…</p></section>
 <section><div class="sectionhead"><h2>Sources</h2><span id="status" aria-live="polite">Chargement…</span></div><p id="proof">Authenticité des données : vérification en cours</p><div id="sources" aria-live="polite"></div></section>
-<section><div class="sectionhead"><h2>Applications <span id="count">—</span></h2><label for="filter">Afficher <select id="filter"><option value="all" selected>Toutes les applications</option><option value="supervisor">Apps Supervisor</option><option value="docker">Conteneurs Docker</option></select></label></div><div class="cards" id="apps" aria-live="polite"></div></section>
+<section><div class="sectionhead"><h2>Applications <span id="count">—</span></h2><div class="catalog-controls"><label for="search">Rechercher <input id="search" type="search" maxlength="120" placeholder="Nom, source ou image"></label><label for="filter">Afficher <select id="filter"><option value="all" selected>Toutes les applications</option><option value="supervisor">Apps Supervisor</option><option value="docker">Conteneurs Docker</option></select></label></div></div><div class="cards" id="apps" aria-live="polite"></div><nav class="pager" aria-label="Pages du catalogue"><button id="previous-page" type="button">Précédente</button><span id="page-status" aria-live="polite">Page 1 / 1</span><button id="next-page" type="button">Suivante</button></nav></section>
 <footer>Prototype sans commandes de pilotage. Les Apps HAOS proviennent d'un instantané hors ligne, non d'une connexion directe au Supervisor. HACS et la migration complète ne sont pas encore disponibles.</footer>
 <script>
 const select=q=>document.querySelector(q);
 const node=(tag,value,cls)=>{const n=document.createElement(tag);if(value!==undefined)n.textContent=value;if(cls)n.className=cls;return n};
+const PAGE_SIZE=24;
+let allApps=[];
+let pageIndex=0;
+function renderApps(){
+ const backend=select("#filter").value;
+ const search=select("#search").value.trim().toLocaleLowerCase();
+ const visible=allApps.filter(a=>
+  (backend==="all"||a.backend===backend) &&
+  (!search||[a.display_name,a.host,a.app_type,a.image].some(x=>
+     String(x||"").toLocaleLowerCase().includes(search))));
+ const total=visible.length;
+ const pages=Math.max(1,Math.ceil(total/PAGE_SIZE));
+ pageIndex=Math.min(pageIndex,pages-1);
+ const slice=visible.slice(pageIndex*PAGE_SIZE,(pageIndex+1)*PAGE_SIZE);
+ select("#count").textContent=total===allApps.length?String(total):total+" / "+allApps.length;
+ select("#page-status").textContent="Page "+(pageIndex+1)+" / "+pages+" · "+total+" résultat(s)";
+ select("#previous-page").disabled=pageIndex===0;
+ select("#next-page").disabled=pageIndex+1>=pages;
+ select("#apps").replaceChildren();
+ if(!slice.length) {
+  select("#apps").append(node("p","Aucune application ne correspond aux filtres.","muted"));
+  return;
+ }
+ for(const app of slice){
+  const card=node("article",undefined,"card");
+  const state=node("span",app.state||"inconnu","state "+(app.state||""));
+  const heading=node("h3",app.display_name||"Application");
+  const host=node("div",String(app.host||"")+" / "+String(app.backend||""),"label");
+  const type=node("p",String(app.app_type||"application")+" · "+String(app.classification||"unknown"));
+  const version=app.version?node("p","Version : "+app.version):node("p","Image : "+(app.image||"—"));
+  card.append(state,heading,host,type,version);
+  if(app.update_available===true)card.append(node("p","Mise à jour disponible (information uniquement)","update"));
+  select("#apps").append(card);
+ }
+}
 async function load(){
+ allApps=[];pageIndex=0;renderApps();
  select("#status").textContent="Chargement…";select("#apps").replaceChildren();select("#sources").replaceChildren();
  try{
   const readyResponse=await fetch("/api/readiness",{cache:"no-store"});
@@ -70,8 +106,8 @@ async function load(){
   select("#proof").textContent=att.status==="verified"
     ?"Inventaire signé par sample lab host · valide jusqu’au "+new Date(att.expires_at*1000).toLocaleString("fr-FR")
     :"Inventaire non signé : mode laboratoire";
-  const visible=apps.filter(a=>select("#filter").value==="all"||a.backend===select("#filter").value);
-  select("#count").textContent=visible.length===apps.length?String(apps.length):visible.length+" / "+apps.length;
+  allApps=apps.slice().sort((a,b)=>String(a.display_name||"").localeCompare(String(b.display_name||""),"fr"));pageIndex=0;
+  renderApps();
   select("#status").textContent=data.degraded?"Certaines sources sont indisponibles":"Inventaire disponible";
   for(const src of sources){
    const card=node("div",undefined,"source");
@@ -80,20 +116,15 @@ async function load(){
     node("div",String(src.count)+" application(s)","muted"));
    select("#sources").append(card);
   }
-  for(const app of visible){
-   const card=node("article",undefined,"card");
-   const state=node("span",app.state||"inconnu","state "+app.state);
-   const heading=node("h3",app.display_name||"Application");
-   const host=node("div",app.host+" / "+app.backend,"label");
-   const type=node("p",app.app_type+" · "+app.classification);
-   const version=app.version?node("p","Version : "+app.version):node("p","Image : "+(app.image||"—"));
-   card.append(state,heading,host,type,version);
-   if(app.update_available===true)card.append(node("p","Mise à jour disponible (information uniquement)","update"));
-   select("#apps").append(card);
-  }
- }catch(e){select("#status").textContent="Impossible de charger l'inventaire";select("#proof").textContent="Authenticité ou fraîcheur non vérifiable";select("#count").textContent="—";}
+
+ }catch(e){allApps=[];pageIndex=0;renderApps();select("#status").textContent="Impossible de charger l'inventaire";select("#proof").textContent="Authenticité ou fraîcheur non vérifiable";select("#count").textContent="—";}
 }
-select("#refresh").addEventListener("click",load);select("#filter").addEventListener("change",load);load();
+select("#refresh").addEventListener("click",load);
+select("#filter").addEventListener("change",()=>{pageIndex=0;renderApps()});
+select("#search").addEventListener("input",()=>{pageIndex=0;renderApps()});
+select("#previous-page").addEventListener("click",()=>{if(pageIndex>0){pageIndex--;renderApps()}});
+select("#next-page").addEventListener("click",()=>{if((pageIndex+1)*PAGE_SIZE<allApps.length){pageIndex++;renderApps()}});
+load();
 </script>
 </body>
 </html>
