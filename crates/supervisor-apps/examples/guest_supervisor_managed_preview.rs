@@ -127,11 +127,9 @@ fn main() {
                 println!("P8J_REAL_INSTALL_AVAILABILITY_PREFLIGHT_PASS");
             }
             if action == "backup-partial" {
-                if let Some(slug) = data.get("slug").and_then(serde_json::Value::as_str)
-                    && let Ok(valid) = BackupSlug::parse(slug)
-                {
-                    // A random backup identifier in a disposable VM, not a secret.
-                    println!("P8H_BACKUP_SLUG={}", valid.as_str());
+                if let Some(slug) = data.backup_slug() {
+                    // Typed receipt from Supervisor: no options or credentials.
+                    println!("P8H_BACKUP_SLUG={slug}");
                     return;
                 }
                 eprintln!("P8H: response had no usable backup slug");
