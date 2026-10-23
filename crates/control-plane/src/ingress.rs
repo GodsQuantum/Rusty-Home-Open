@@ -2,6 +2,7 @@
 //! official Supervisor ingress proxy IP. Header values by themselves are
 //! untrusted: clients can spoof X-Remote-User-Id on any other connection.
 //! A verified identity is NOT permission to mutate Apps or authorize admin.
+use std::collections::HashSet;
 use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 
 pub const SUPERVISOR_INGRESS_PROXY: Ipv4Addr = Ipv4Addr::new(172, 30, 32, 2);
@@ -10,6 +11,9 @@ pub const SUPERVISOR_INGRESS_PROXY: Ipv4Addr = Ipv4Addr::new(172, 30, 32, 2);
 pub struct VerifiedIngress {
     pub route: String,
     pub user_id: String,
+    /// Authority claimed by the official Supervisor's freshly resolved
+    /// effective groups. Informational only: NEVER a permit for App writes.
+    pub is_admin: bool,
 }
 
 #[derive(Debug, PartialEq, Eq)]
@@ -51,6 +55,7 @@ pub fn verified_route(raw: &[u8], peer: SocketAddr) -> Result<VerifiedIngress, I
     let mut user = None;
     let mut origin = None;
     let mut fetch = None;
+    let mut groups = None;
     for (index, h) in lines.enumerate() {
         if index >= 64 || h.bytes().any(|b| !(32..=126).contains(&b)) {
             return Err(IngressError::InvalidHttp);
@@ -84,6 +89,10 @@ pub fn verified_route(raw: &[u8], peer: SocketAddr) -> Result<VerifiedIngress, I
             {
                 return Err(IngressError::InvalidHttp);
             }
+        } else if key.eq_ignore_ascii_case("x-remote-user-groups") {
+            if groups.replace(value).is_some() {
+                return Err(IngressError::DuplicateHeader);
+            }
         } else if key.eq_ignore_ascii_case("origin") {
             if origin.replace(value).is_some() {
                 return Err(IngressError::DuplicateHeader);
@@ -108,9 +117,35 @@ pub fn verified_route(raw: &[u8], peer: SocketAddr) -> Result<VerifiedIngress, I
     if fetch.is_some_and(|f| !matches!(f, "same-origin" | "none")) {
         return Err(IngressError::CrossSiteRequest);
     }
+    // Supervisor removes untrusted incoming user/group headers then sets
+    // the canonical effective groups, including system-admin for an owner.
+    // Never trust a group list from any other TCP peer; absent != admin.
+    let mut is_admin = false;
+    if let Some(raw) = groups {
+        if raw.is_empty() || raw.len() > 256 {
+            return Err(IngressError::InvalidHttp);
+        }
+        let mut seen = HashSet::new();
+        for (idx, group) in raw.split(',').enumerate() {
+            if idx >= 32
+                || group.is_empty()
+                || group.len() > 128
+                || !group
+                    .bytes()
+                    .all(|b| b.is_ascii_alphanumeric() || matches!(b, b'_' | b'-'))
+                || !seen.insert(group)
+            {
+                return Err(IngressError::InvalidHttp);
+            }
+            if group == "system-admin" {
+                is_admin = true;
+            }
+        }
+    }
     Ok(VerifiedIngress {
         route: line.to_owned(),
         user_id: user.to_owned(),
+        is_admin,
     })
 }
 
@@ -150,6 +185,45 @@ mod tests {
         }
         assert_eq!(get(forged, TRUST).unwrap().user_id, "admin");
     }
+    #[test]
+    fn only_exact_official_supervisor_admin_group_confers_readonly_admin_indicator() {
+        let req = "GET /api/session HTTP/1.1\r\nHost: ha.example\r\nX-Remote-User-Id: owner_42\r\nX-Remote-User-Groups: system-users,system-admin\r\n\r\n";
+        let verified = get(req, TRUST).unwrap();
+        assert_eq!(verified.user_id, "owner_42");
+        assert!(verified.is_admin);
+        let non_admin = req.replace("system-users,system-admin", "system-users");
+        assert!(!get(&non_admin, TRUST).unwrap().is_admin);
+        let absent = req.replace("X-Remote-User-Groups: system-users,system-admin\r\n", "");
+        assert!(!get(&absent, TRUST).unwrap().is_admin);
+        assert_eq!(
+            get(req, "172.30.32.3:43002"),
+            Err(IngressError::UntrustedPeer)
+        );
+    }
+    #[test]
+    fn group_spoofing_and_malformed_group_lists_fail_closed() {
+        let base = "GET /api/session HTTP/1.1\r\nHost: ha.example\r\nX-Remote-User-Id: test1\r\n";
+        for value in [
+            "system-admin,system-admin",
+            "system-admin,",
+            ",system-admin",
+            "system-admin, system-users",
+            "not/system-admin",
+            "system-admin;admin",
+            "system-admin,system-admin2,",
+        ] {
+            let input = format!("{base}X-Remote-User-Groups: {value}\r\n\r\n");
+            assert!(get(&input, TRUST).is_err(), "{value}");
+        }
+        let repeated = format!("{base}X-Remote-User-Groups: system-admin\r\nx-remote-user-groups: system-admin\r\n\r\n");
+        assert_eq!(get(&repeated, TRUST), Err(IngressError::DuplicateHeader));
+        let almost = format!("{base}X-Remote-User-Groups: not-system-admin\r\n\r\n");
+        assert!(!get(&almost, TRUST).unwrap().is_admin);
+        let oversized = "g".repeat(260);
+        let big = format!("{base}X-Remote-User-Groups: {oversized}\r\n\r\n");
+        assert_eq!(get(&big, TRUST), Err(IngressError::InvalidHttp));
+    }
+
     #[test]
     fn missing_identity_duplicate_headers_csrf_and_write_requests_fail_closed() {
         let missing = "GET /api/apps HTTP/1.1\r\nHost: ha.example\r\n\r\n";

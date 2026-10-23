@@ -12,7 +12,7 @@ for _ in {1..30}; do
   if curl --silent --output /dev/null --max-time 1 "http://127.0.0.1:$PORT/health"; then break; fi
   sleep .1
 done
-for route in / /health /api/apps /api/readiness; do
+for route in / /health /api/apps /api/session /api/readiness; do
   result="$(curl --silent --output /dev/null --write-out '%{http_code}' \
     -H "X-Remote-User-Id: system-admin" -H "Host: ha.example.test" \
     --max-time 4 "http://127.0.0.1:$PORT$route")"
