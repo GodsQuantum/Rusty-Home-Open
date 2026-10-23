@@ -1,0 +1,53 @@
+name: Rusty Home locked Rust dependency security audit
+
+on:
+  schedule:
+    - cron: "37 3 * * 2"
+  pull_request:
+    paths:
+      - "Cargo.toml"
+      - "Cargo.lock"
+      - "crates/**/Cargo.toml"
+      - "fuzz/Cargo.toml"
+      - "fuzz/Cargo.lock"
+      - ".github/workflows/rustsec-locked-audit.yml"
+      - "scripts/test_rustsec_audit_workflow_contract.py"
+  push:
+    branches: [main]
+    paths:
+      - "Cargo.toml"
+      - "Cargo.lock"
+      - "crates/**/Cargo.toml"
+      - "fuzz/Cargo.toml"
+      - "fuzz/Cargo.lock"
+      - ".github/workflows/rustsec-locked-audit.yml"
+      - "scripts/test_rustsec_audit_workflow_contract.py"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: rusty-home-rustsec-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  rustsec-two-lockfiles:
+    name: RustSec advisory audit of both locked Rust workspaces
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Confirm exact audit scope and unchanged release gates
+        run: |
+          python3 scripts/test_rustsec_audit_workflow_contract.py
+          python3 scripts/check_release_gate.py --expect-blocked
+      - name: Install pinned native RustSec auditor
+        run: cargo install cargo-audit --version 0.22.2 --locked
+      - name: Audit actual product and separate fuzzer Cargo.lock without exemptions
+        run: |
+          cargo audit --file Cargo.lock --deny warnings
+          cargo audit --file fuzz/Cargo.lock --deny warnings
