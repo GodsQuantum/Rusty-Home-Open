@@ -60,7 +60,7 @@ jobs:
         run: |
           python3 scripts/test_store_repository_filter_contract.py
           node scripts/test_dynamic_store_repository_filter.mjs
-      - name: Test the isolated 9-App migration policy
+      - name: Vendor-neutral migration preflight over variable App inventories
         run: python3 scripts/test_app_migration_policy.py
       - name: Synthetic inventory and loopback HTTP integration
         run: |
