@@ -6905,6 +6905,11 @@
     },
     {
       "spdxElementId": "SPDXRef-Package-9db156051f42a742206f2e83",
+      "relatedSpdxElement": "SPDXRef-Package-2807624c4ebb2b005a104eaa",
+      "relationshipType": "DEPENDS_ON"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-9db156051f42a742206f2e83",
       "relatedSpdxElement": "SPDXRef-Package-3db1fe4f8c5a27aa421840fd",
       "relationshipType": "DEPENDS_ON"
     },
@@ -6916,6 +6921,11 @@
     {
       "spdxElementId": "SPDXRef-Package-9db156051f42a742206f2e83",
       "relatedSpdxElement": "SPDXRef-Package-7cc6ffbe020701c0e87c75d2",
+      "relationshipType": "DEPENDS_ON"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-9db156051f42a742206f2e83",
+      "relatedSpdxElement": "SPDXRef-Package-909f83b4fdc8e14b9326db11",
       "relationshipType": "DEPENDS_ON"
     },
     {
