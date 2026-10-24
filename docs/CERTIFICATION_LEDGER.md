@@ -1,5 +1,7 @@
 # Rusty Home — independent public certification ledger
 
+**Anti-redondance :** consulter le [registre des tests réellement exécutés](CERTIFICATION_EVIDENCE_REGISTER.md) et le [journal du projet](WORK_LOG.md) avant de planifier d'autres essais. Les restaurations complètes, chiffrées et File Editor ont **déjà réussi** dans la même VM HAOS QEMU le 24 octobre 2026 (17/17) ; ceci ne certifie pas une restauration dans une seconde VM vierge.
+
 **Snapshot: 23 October 2026. Status: NOT_PRODUCTION_READY.**
 
 **0 / 15 mandatory production release gates certified.** Nine gates now have

@@ -1,0 +1,109 @@
+{
+  "schema_version": 1,
+  "updated_date": "2026-10-24",
+  "production_release": {
+    "state": "NOT_PRODUCTION_READY",
+    "certified_gates": 0,
+    "required_gates": 15
+  },
+  "verification": {
+    "run_url": "https://github.com/GodsQuantum/Rusty-Home-Open/actions/runs/40127707580",
+    "run_sha": "8dde4a49315ee009c1c45341d5730f17668ea8f3",
+    "conclusion": "success",
+    "junit_case_count": 17,
+    "all_junit_passed": true,
+    "environment": "genuine pinned HAOS 18.3 disposable KVM/QEMU guest, same VM across backup/restore tests",
+    "git_main_when_recorded": "2b100ce75ca205e1d7ef8aeb2fad16ba2d52244d"
+  },
+  "proven_cases": [
+    {
+      "id": "haos-full-backup",
+      "test": "test_hars_full_backup_archive_qemu",
+      "marker": "P8JH_REAL_FULL_HAOS_BACKUP_ARCHIVE_SHA256_PASS",
+      "claim": "Vraie sauvegarde HAOS complète, contenu du dossier share inclus, archive contrôlée SHA-256.",
+      "scope_limit": "Même VM HAOS isolée ; pas de restauration sur hôte neuf.",
+      "status": "verified_in_disposable_qemu",
+      "evidence_url": "https://github.com/GodsQuantum/Rusty-Home-Open/actions/runs/40127707580"
+    },
+    {
+      "id": "haos-full-restore-same-guest",
+      "test": "test_hars_full_restore_archive_qemu",
+      "marker": "P8JI_REAL_FULL_HAOS_RESTORE_CONTENT_AND_CORE_PASS",
+      "claim": "Après mutation des octets, vraie restauration complète ; octets share d'origine, Core et Supervisor validés.",
+      "scope_limit": "Restauration de la même VM QEMU, PAS d'une deuxième installation vierge.",
+      "status": "verified_in_disposable_qemu",
+      "evidence_url": "https://github.com/GodsQuantum/Rusty-Home-Open/actions/runs/40127707580"
+    },
+    {
+      "id": "haos-encrypted-full-backup-restore",
+      "test": "test_hars_protected_full_backup_restore_qemu",
+      "marker": "P8JJ_REAL_PROTECTED_FULL_RESTORE_EXACT_BYTES_AND_CORE_PASS",
+      "claim": "Sauvegarde complète protégée par mot de passe de test, mutation puis restauration des octets et santé Core.",
+      "scope_limit": "Ne valide pas les sauvegardes privées réelles ni toutes les applications tierces.",
+      "status": "verified_in_disposable_qemu",
+      "evidence_url": "https://github.com/GodsQuantum/Rusty-Home-Open/actions/runs/40127707580"
+    },
+    {
+      "id": "haos-wrong-password",
+      "test": "test_hars_protected_full_restore_wrong_password_rejected_qemu",
+      "marker": "P8JK_REAL_HAOS_WRONG_PASSWORD_REJECTED_NO_DATA_MUTATION_PASS",
+      "claim": "Mauvais mot de passe explicitement refusé ; octets share, archive et Core restent inchangés.",
+      "scope_limit": "Ne prouve pas la reprise après perte définitive du secret.",
+      "status": "verified_in_disposable_qemu",
+      "evidence_url": "https://github.com/GodsQuantum/Rusty-Home-Open/actions/runs/40127707580"
+    },
+    {
+      "id": "haos-real-file-editor-partial-data",
+      "test": "test_hars_real_official_file_editor_partial_restore_bytes_qemu",
+      "marker": "P8JM_REAL_OFFICIAL_FILE_EDITOR_DATA_BYTES_RESTORED_PASS",
+      "claim": "Vraie application File Editor, données modifiées puis restauration partielle avec contrôle SHA-256 exact.",
+      "scope_limit": "Un seul exemple réel, pas une qualification universelle des Apps.",
+      "status": "verified_in_disposable_qemu",
+      "evidence_url": "https://github.com/GodsQuantum/Rusty-Home-Open/actions/runs/40127707580"
+    },
+    {
+      "id": "haos-versioned-app-rollback",
+      "test": "test_hars_manager_role_app",
+      "marker": "P8JE_REAL_TWO_VERSION_ROLLBACK_PASS",
+      "claim": "App locale V1 vers V2, altération des données, SIGKILL du manager puis restauration V1 + SHA-256.",
+      "scope_limit": "Application jetable isolée ; pas de vraie migration complète inter-machines.",
+      "status": "verified_in_disposable_qemu",
+      "evidence_url": "https://github.com/GodsQuantum/Rusty-Home-Open/actions/runs/40127707580"
+    },
+    {
+      "id": "haos-sync-install-release",
+      "test": "test_hars_manager_role_app",
+      "marker": "P8O_REAL_HAOS_NATIVE_SYNC_APP_INSTALL_DURABLE_RELEASE_PASS",
+      "claim": "Installation synchrone native, GET d'inventaire indépendant, clôture durable de l'opération.",
+      "scope_limit": "Ne qualifie pas l'authentification navigateur de production.",
+      "status": "verified_in_disposable_qemu",
+      "evidence_url": "https://github.com/GodsQuantum/Rusty-Home-Open/actions/runs/40127707580"
+    },
+    {
+      "id": "haos-async-expired-job-fence",
+      "test": "test_hars_manager_role_app",
+      "marker": "P8N_GENUINE_HAOS_JOB_EVICTED_SAFE_FENCE_PASS",
+      "claim": "Après disparition d'un job asynchrone du Supervisor, le verrou de sécurité reste fermé.",
+      "scope_limit": "Ne prouve pas une clôture asynchrone positive.",
+      "status": "verified_in_disposable_qemu",
+      "evidence_url": "https://github.com/GodsQuantum/Rusty-Home-Open/actions/runs/40127707580"
+    }
+  ],
+  "not_yet_proven": [
+    {
+      "id": "full-restore-fresh-second-machine",
+      "status": "not_verified",
+      "reason": "Les restaurations complète, chiffrée et partielle confirmées travaillent dans la VM HAOS déjà démarrée ; aucune preuve de déploiement vers une DEUXIÈME VM fraîchement installée, indépendante et vide n'a été retrouvée. Rechercher d'abord de nouvelles preuves avant tout nouveau test."
+    },
+    {
+      "id": "generic-cross-vendor-data-migration",
+      "status": "not_verified",
+      "reason": "Les données exactes ont été restaurées pour File Editor et des fixtures locales ; aucune migration garantie de toutes les Apps et intégrations tierces."
+    },
+    {
+      "id": "production-full-device-restore",
+      "status": "not_verified",
+      "reason": "Aucun cutover sur matériel et aucun transfert de contrôleurs radio, comptes réels et données de foyer."
+    }
+  ]
+}

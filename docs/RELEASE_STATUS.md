@@ -11,3 +11,7 @@ mandatory production release gates remain blocked.
 ## Verified public certification scorecard
 
 See [the gate-by-gate independent certification ledger](CERTIFICATION_LEDGER.md). NOT_PRODUCTION_READY: 0 / 15 production gates certified.
+
+## Previous real restorations: do not repeat uncritically
+
+The [canonical evidence index](CERTIFICATION_EVIDENCE_REGISTER.md) and [development journal](WORK_LOG.md) document the already-successful 17/17 genuine HAOS QEMU tests, including full, encrypted and File Editor data restoration and a two-version rollback **inside the same disposable VM**. Restoring onto an independent fresh second VM is a distinct, not-yet-proven scenario. These genuine lab successes do not change **0/15 production gates**.
