@@ -123,3 +123,63 @@ fn invalid_existing_database_cannot_be_claimed() {
     fs::write(&path, b"corrupt-redb-data").unwrap();
     assert!(DurableDispatchFence::open(&path).is_err());
 }
+
+#[test]
+fn aborting_child_immediately_after_durable_commit_preserves_fence() {
+    let dir = private_dir();
+    let id_path = dir.path().join("operation.id");
+    let status = std::process::Command::new(std::env::current_exe().unwrap())
+        .args(["--exact", "crash_fixture_abort_after_commit", "--nocapture"])
+        .env("RUSTY_DISPATCH_CRASH_FIXTURE_DIR", dir.path())
+        .status()
+        .unwrap();
+    use std::os::unix::process::ExitStatusExt as _;
+    assert_eq!(
+        status.signal(),
+        Some(nix::libc::SIGKILL),
+        "child must be killed with SIGKILL after the commit"
+    );
+    let id = fs::read_to_string(&id_path).expect("fsynced operation ID from the child");
+    let mut reopened = DurableDispatchFence::open(&dir.path().join("crash.redb")).unwrap();
+    let row = reopened.get(id.trim()).unwrap().unwrap();
+    assert_eq!(row.app, "generic_future_vendor");
+    assert_eq!(row.state, DispatchState::Uncertain);
+    assert!(row.job_id.is_none());
+    assert!(
+        reopened
+            .arm(permitted(dir.path(), "generic_future_vendor"), 120)
+            .is_err()
+    );
+    assert!(
+        reopened
+            .arm(permitted(dir.path(), "other_unseen_vendor"), 120)
+            .is_ok()
+    );
+}
+
+#[test]
+fn crash_fixture_abort_after_commit() {
+    let Ok(directory) = std::env::var("RUSTY_DISPATCH_CRASH_FIXTURE_DIR") else {
+        return;
+    };
+    let directory = std::path::PathBuf::from(directory);
+    let mut fence = DurableDispatchFence::open(&directory.join("crash.redb")).unwrap();
+    let armed = fence
+        .arm(permitted(&directory, "generic_future_vendor"), 100)
+        .unwrap();
+    let id = armed.id().as_bytes();
+    let id_path = directory.join("operation.id");
+    let mut file = std::fs::OpenOptions::new()
+        .write(true)
+        .create_new(true)
+        .open(id_path)
+        .unwrap();
+    use std::io::Write as _;
+    file.write_all(id).unwrap();
+    file.sync_all().unwrap();
+    // Simulate abrupt process termination after the redb commit with no
+    // Rust destructor and without submitting any Supervisor POST.
+    // A real SIGKILL, not normal shutdown; no destructors may run.
+    unsafe { nix::libc::raise(nix::libc::SIGKILL) };
+    unreachable!("SIGKILL must terminate the child");
+}
