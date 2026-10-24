@@ -36,10 +36,20 @@ async def main():
         entry=entries[0]
         await hass.async_block_till_done()
         registry=er.async_get(hass)
+        created_ids=[]
         for tag in ("fictional-serial-a","fictional-serial-b"):
-            registry.async_get_or_create(
+            item=registry.async_get_or_create(
                 "sensor",DOMAIN,unique_id=tag,config_entry=entry,
                 suggested_object_id="synthetic_"+tag[-1])
+            created_ids.append(item.entity_id)
+        assert len(set(created_ids))==2
+        hass.states.async_set(created_ids[0],"21.5",{"unit_of_measurement":"°C"})
+        hass.states.async_set(created_ids[1],"on",{"synthetic":True})
+        snapshots=[hass.states.get(e).as_dict() for e in created_ids]
+        assert [row["state"] for row in snapshots]==["21.5","on"]
+        snapshot_path=Path("/config/core-states-snapshot.json")
+        snapshot_path.write_text(json.dumps(snapshots),encoding="utf-8")
+        snapshot_path.chmod(0o600)
         await hass.async_block_till_done()
         # Real Core schedules this registry's persistence after 10 seconds.
         # Let the public lifecycle flush itself; do not call a private Store

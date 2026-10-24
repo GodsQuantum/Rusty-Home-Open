@@ -47,6 +47,10 @@ SHA="$(echo "$STAGED" | python3 -c 'import json,sys;print(json.load(sys.stdin)["
 cargo build --locked --quiet -p hars-native-kernel
 "$ROOT/target/debug/hars-native-kernel" --lab-ha-registry-shadow-readonly "$TMP/rust-private" | python3 -c 'import json,sys;a=json.load(sys.stdin);assert a["staged_entities"]>=2 and a["native_devices"]==a["staged_entities"] and a["unknown_states"]==a["staged_entities"] and a["read_only"] and a["commands_denied"] and not a["production_ready"] and not a["real_core_runtime"]'
 echo P8R_REAL_CORE_REGISTRY_INSIDE_ACTUAL_MOLI_HUB_READONLY_PASS
+SNAPSHOT="$TMP/config/core-states-snapshot.json"
+test -s "$SNAPSHOT"
+"$ROOT/target/debug/hars-native-kernel" --lab-ha-core-state-snapshot-readonly "$TMP/rust-private" "$SNAPSHOT" | python3 -c 'import json,sys;a=json.load(sys.stdin);assert a["staged_entities"]>=2 and a["native_devices"]==a["staged_entities"] and a["known_states"]==2 and a["unknown_states"]==a["staged_entities"]-2 and a["read_only"] and a["commands_denied"] and not a["production_ready"]'
+echo P8S_REAL_CORE_STATES_OBSERVED_IN_NATIVE_MOLI_READONLY_PASS
 "$RUST" --lab-readonly "$TMP/rust-private" rollback "$SHA" | python3 -c 'import json,sys;assert json.load(sys.stdin)["restored"] is None'
 "$RUST" --lab-readonly "$TMP/rust-private" status | python3 -c 'import json,sys;assert json.load(sys.stdin)["active"] is None'
 echo P8Q_REAL_CORE_ENTITY_REGISTRY_TO_RUST_PERSIST_ROLLBACK_PASS

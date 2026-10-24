@@ -1,5 +1,15 @@
 # Rusty Home — journal de développement et de certification
 
+## 2026-10-25 — P8s, instantané des états Core dans vrai Moli OS
+
+- **Déjà acquis, pas répété :** #89 Core→identités Rust + rollback; #90 Core→Moli Hub read-only; sauvegardes HAOS précédentes.
+- **Nouvelle tranche :** Core 2026.10.2 écrit réellement deux objets State.as_dict() et Rust consomme l'instantané avec contrôle des identités Core. Le driver Moli ne publie que les états observés, ignore unknown/unavailable, refuse états hors registre et commandes.
+- **Sécurité :** fichier privé O_NOFOLLOW et borné; parser strict sans clés en double; tous les points Moli restent non inscriptibles.
+- **Preuve réelle :** P8S_REAL_CORE_STATES_OBSERVED_IN_NATIVE_MOLI_READONLY_PASS doit réussir en CI au SHA exact avant toute attestation de l'essai end-to-end.
+- **Limites :** aucun abonnement WS continu, aucune automatisation, aucune commande d'appareil, aucune clé privée. Release NOT_PRODUCTION_READY 0/15.
+- **Doc :** docs/HA_CORE_STATES_TO_MOLI_SNAPSHOT_2026-10-25.md.
+
+
 ## 2026-10-25 — P8r, entités Core mappées dans le vrai Hub Moli/Rust
 
 - **Pré-existants :** PR #89 export de vrais identifiants Core→redb Rust, et restauration HAOS→HAOS déjà acquise. Aucun replay de ces certifications.
