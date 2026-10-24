@@ -1,0 +1,9 @@
+# Opt-in Supervisor background-job correlation (lab-only)
+
+The official Supervisor Store supports `background: true` for installation and update; it returns `data.job_id`, which can be polled using the read-only `/jobs/<job_id>` endpoint. See https://contributors.home-assistant.io/apps/supervisor-api/apps/ and https://contributors.home-assistant.io/apps/supervisor-api/supervisor/ plus https://github.com/home-assistant/developers.home-assistant/blob/master/docs/api/supervisor/endpoints.md.
+
+`prepare_background_job(app, operation)` constructs fixed-path Store **install** or backup-preserving **update** POST requests for arbitrary safe App slugs. Existing synchronous requests remain unchanged. Other operation kinds fail closed. No caller supplies a URL, method, job id, App target, or arbitrary body.
+
+In the explicitly feature-gated, disposable-QEMU-only audited preview transport, an authenticated successful Supervisor response must contain a lowercase 32-hex-character job id for this request. The new typed receipt contains only the validated requested App, action, job id and `completion_verified=false`. Missing, malformed or duplicate-key response fields fail closed. Unknown JSON fields and credentials are discarded. A synchronous response cannot inject a job id into its receipt. Background update does **not** claim its postcondition has already occurred.
+
+**Limits:** This is an accepted-submission correlation, **not** durable end-user authorization, job completion or verified restore. A lost/malformed network response after a POST leaves an indeterminate outcome; never automatically replay it. Persist the correlation with authenticated Core identity and an idempotent operation journal before connecting a read-only watcher. Job polling and exact App/version postconditions are still necessary. There is no production write endpoint, production UI action or rollout; release status remains NOT_PRODUCTION_READY (0/15).
