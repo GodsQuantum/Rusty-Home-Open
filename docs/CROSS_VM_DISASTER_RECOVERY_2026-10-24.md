@@ -1,6 +1,6 @@
 # P8p — Independent fresh second-VM HAOS full restore (new, distinct scope)
 
-**Status: CI PENDING, NOT_PRODUCTION_READY, 0/15 production gates.**
+**Status: ACTUAL QEMU SUCCESS 6/6, NOT_PRODUCTION_READY, 0/15 production gates.**
 
 Already proven, DO NOT repeat: full restore within the same genuine HAOS 18.3 QEMU VM, encrypted full restore, wrong password refusal, real File Editor partial data recovery and App rollback. See [the canonical evidence index](CERTIFICATION_EVIDENCE_REGISTER.md). This experiment is materially different: backup transfer from a SOURCE VM to an independent, empty TARGET VM.
 
@@ -17,3 +17,7 @@ Workflow: .github/workflows/p8p-cross-vm-recovery.yml; source: scripts/p8p_cross
 ## État actuel et non-redondance
 
 [PR #86](https://github.com/GodsQuantum/Rusty-Home-Open/pull/86) exécute cette preuve indépendante. La première révision a échoué à déclencher le workflow général à cause d'une erreur YAML (correctif sur SHA 39b778274be83510f6a4ed9757e648dbc67638dd), pas à cause d'une erreur de restauration HAOS. Attendre le véritable résultat de source + target avant de promouvoir cet élément dans le registre des preuves. L'ensemble du reste des restorations SAME-VM existe déjà et reste attesté.
+
+## Verified CI result
+
+Real pinned HAOS 18.3 source+fresh-target [run 40134632585](https://github.com/GodsQuantum/Rusty-Home-Open/actions/runs/40134632585) on SHA 161307bd227b279c73df5a33da759a19ed4ac1ae: source 3/3 PASS, target 3/3 PASS, both strict JUnit validators PASS. This is a bounded HAOS-to-HAOS recovery proof, NOT Rust native HA replacement certification.

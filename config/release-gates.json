@@ -47,7 +47,7 @@
       "id": "haos_backup_restore",
       "status": "lab_partial",
       "blocked_reason": [
-        "Already verified in actual pinned HAOS 18.3 QEMU: full backup SHA256, full restore of mutated share bytes and official Core version IN THE SAME GUEST, encrypted full backup plus correct-password recovery, wrong-password refusal without data mutation, and genuine File Editor SHA256 partial App data restore (17/17 run 40127707580). The independent second fresh-machine disaster recovery test is separate and NOT yet verified (PR #86); full Rusty Home cross-vendor migration and household-equivalent state remain unverified."
+        "Actual HAOS 18.3 QEMU verified source full backup transferred with SHA256 to a SECOND fresh HAOS VM with distinct boot ID, restored exact share marker bytes and matching Core version (6/6 run 40134632585). Previously verified SAME-VM full and encrypted restore, wrong-password refusal and real File Editor App data SHA256 roundtrip (17/17 run 40127707580). This is HAOS->HAOS laboratory recovery, NOT HAOS->Rusty Home Core replacement, generic third-party App databases, live secrets, radio ownership, or complete production migration."
       ],
       "certification_artifact": null
     },

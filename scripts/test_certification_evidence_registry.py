@@ -78,10 +78,31 @@ def main() -> None:
     assert required <= ids, ("previously certified lab evidence disappeared", required - ids)
 
     absent = {item["id"]: item for item in entry["not_yet_proven"]}
-    assert absent["full-restore-fresh-second-machine"]["status"] == "not_verified"
     assert absent["generic-cross-vendor-data-migration"]["status"] == "not_verified"
     assert absent["production-full-device-restore"]["status"] == "not_verified"
-    assert "DEUXIÈME VM" in absent["full-restore-fresh-second-machine"]["reason"]
+    assert "full-restore-fresh-second-machine" not in absent
+    second = entry["cross_vm_verification"]
+    assert second["id"] == "haos-full-restore-fresh-second-vm"
+    assert second["status"] == "verified_in_two_disposable_qemu_guests"
+    assert second["conclusion"] == "success"
+    assert re.fullmatch("[0-9a-f]{40}", second["run_sha"])
+    assert second["run_sha"] != proof["run_sha"]
+    assert second["source_junit_passed"] == second["target_junit_passed"] == 3
+    assert second["run_url"] == "https://github.com/GodsQuantum/Rusty-Home-Open/actions/runs/40134632585"
+    assert second["run_sha"] == "161307bd227b279c73df5a33da759a19ed4ac1ae"
+    guest = (ROOT / "scripts/p8p_cross_vm_backup_pytest.py").read_text(encoding="utf-8")
+    qemu = (ROOT / ".github/workflows/p8p-cross-vm-recovery.yml").read_text(encoding="utf-8")
+    strict = (ROOT / "scripts/check_p8p_cross_vm_junit.py").read_text(encoding="utf-8")
+    assert "boot!=target_boot" in guest and "sha256sum " in guest
+    assert qemu.count("./run_tests.sh ") == 2
+    for phase in ("source", "target"):
+        assert second[phase + "_test"] in guest
+        assert second[phase + "_test"] in qemu
+        assert 'junit_reports/tests.xml ' + phase in qemu
+        assert phase in strict
+    for marker in second["markers"]:
+        assert marker in qemu or marker in strict, marker
+    assert "NOT migration to Rusty Home" in second["scope_limit"]
     summary = (ROOT / "docs/CERTIFICATION_EVIDENCE_REGISTER.md").read_text(encoding="utf-8")
     journal = (ROOT / "docs/WORK_LOG.md").read_text(encoding="utf-8")
     for item in ids:
@@ -90,8 +111,8 @@ def main() -> None:
     assert "avant" in journal and "40127707580" in journal
     for md in ("README.md", "README.fr.md", "docs/RELEASE_STATUS.md", "docs/CERTIFICATION_LEDGER.md"):
         assert "CERTIFICATION_EVIDENCE_REGISTER.md" in (ROOT / md).read_text(), md
-    print(f"PASS: {len(cases)} historic scoped proofs remain wired to 17/17 real QEMU tests; "
-          "same-VM restore verified, fresh-second-VM NOT verified, 0/15 production gates")
+    print(f"PASS: {len(cases)} historic SAME-VM proofs plus separate fresh second-VM 3/3+3/3 "
+          "real QEMU recovery; generic Rust migration NOT verified, 0/15 production gates")
 
 if __name__ == "__main__":
     main()
