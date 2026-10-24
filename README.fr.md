@@ -72,6 +72,6 @@ Ces tests ne commandent aucun appareil et n'autorisent aucune mise en production
 
 ## En savoir plus
 
-[Tests de restauration déjà réalisés](docs/CERTIFICATION_EVIDENCE_REGISTER.md) · [Journal du projet](docs/WORK_LOG.md) · [Avancement](STATUS.md) · [Feuille de route](docs/ROADMAP.md) · [Preuves techniques](docs/RELEASE_STATUS.md) · [Préparation à la publication](docs/PUBLIC_RELEASE_CHECKLIST.md) · [Contribuer](CONTRIBUTING.md) · [Charte graphique](branding/PALETTE.md)
+[Tests de restauration déjà réalisés](docs/CERTIFICATION_EVIDENCE_REGISTER.md) · [Journal du projet](docs/WORK_LOG.md) · [Plan de certification production](docs/PRODUCTION_CERTIFICATION_MASTERPLAN_2026-10-24.md) · [Handoff à jour](docs/HANDOFF_CURRENT.md) · [Avancement](STATUS.md) · [Feuille de route](docs/ROADMAP.md) · [Preuves techniques](docs/RELEASE_STATUS.md) · [Préparation à la publication](docs/PUBLIC_RELEASE_CHECKLIST.md) · [Contribuer](CONTRIBUTING.md) · [Charte graphique](branding/PALETTE.md)
 
 **Mentions légales :** un audit des licences, de l'historique et des données privées est nécessaire avant publication. Voir [provenance](docs/THIRD_PARTY_PROVENANCE.md). Rusty Home est indépendant de Home Assistant / Nabu Casa.

@@ -19,3 +19,7 @@ The [canonical evidence index](CERTIFICATION_EVIDENCE_REGISTER.md) and [developm
 ## Newly demonstrated: independent fresh HAOS restore in disposable KVM
 
 [6/6 separate source+target genuine QEMU checks](https://github.com/GodsQuantum/Rusty-Home-Open/actions/runs/40135221183) prove HAOS-to-HAOS full backup migration to a clean second HAOS guest, including exact synthetic share bytes and Core version. This does NOT demonstrate restoring an HAOS backup inside the Rusty Home native runtime. Production remains NOT_PRODUCTION_READY, 0/15 gates. See [canonical evidence registry](CERTIFICATION_EVIDENCE_REGISTER.md).
+
+## Certified evidence vs remaining product development
+
+See [the exhaustive 15-gate production audit](PRODUCTION_CERTIFICATION_MASTERPLAN_2026-10-24.md), [current handoff](HANDOFF_CURRENT.md), and [canonical evidence register](CERTIFICATION_EVIDENCE_REGISTER.md). Based on 76 merged PRs (8/50/18 by UTC date Oct22–24), 9 gates have partial lab evidence and 6 remain blocked; no gate fully certified. The native Rust kernel remains synthetic/experimental and the Core reader lab-only; official HAOS-to-HAOS restoration does not establish replacement of Home Assistant Core.
