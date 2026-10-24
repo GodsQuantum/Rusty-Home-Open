@@ -22,6 +22,30 @@ MAX_HEADER = 32
 class InvalidBackup(ValueError):
     pass
 
+def parse_backup_manifest(raw: bytes) -> dict:
+    """Fail closed on duplicate JSON keys (including nested addon metadata).
+
+    Without pairs_hook, a malicious archive can present two different
+    "protected", "type", or "addons" objects; the last silently wins.
+    """
+    def unique_pairs(pairs):
+        obj = {}
+        for name, value in pairs:
+            if name in obj:
+                raise InvalidBackup("duplicate metadata key")
+            obj[name] = value
+        return obj
+    def reject_nonfinite(_):
+        raise InvalidBackup("nonfinite backup metadata")
+    try:
+        metadata = json.loads(raw, object_pairs_hook=unique_pairs,
+                              parse_constant=reject_nonfinite)
+    except (ValueError, UnicodeDecodeError) as exc:
+        raise InvalidBackup("invalid backup.json") from exc
+    if not isinstance(metadata, dict):
+        raise InvalidBackup("backup metadata must be object")
+    return metadata
+
 def normalized_archive_name(s: str) -> str:
     """Allow Supervisor's one leading './', reject all other dot traversal.
 
@@ -54,135 +78,139 @@ def get_expected(path: Path) -> set[str]:
     return out
 
 def inspect_backup(path: Path, expected: set[str] | None = None) -> dict:
-    if not path.is_file() or path.is_symlink() or path.stat().st_size > MAX_ARCHIVE_SIZE:
-        raise InvalidBackup("backup must be a regular file, within size limits")
+    # Open the exact inode read-only with O_NOFOLLOW: preflight must not
+    # check one path then accidentally consume a replaced symbolic link.
+    # O_NONBLOCK avoids hangs on malicious FIFO paths before fstat validation.
+    try:
+        fd = os.open(path, os.O_RDONLY | os.O_NOFOLLOW | os.O_CLOEXEC | os.O_NONBLOCK)
+    except OSError as exc:
+        raise InvalidBackup("cannot safely open backup") from exc
     member_count = 0
     entries: dict[str, tarfile.TarInfo] = {}
-    with tarfile.open(path, mode="r:*") as tf:
-        # Only read tar headers; never unpack nested secrets/config.
-        for member in tf:
-            member_count += 1
-            if member_count > MAX_MEMBERS:
-                raise InvalidBackup("too many archive members")
-            if member.name in (".", "./") and member.isdir():
-                continue  # benign tar root-directory marker
-            name = normalized_archive_name(member.name)
-            if name in entries:
-                raise InvalidBackup("duplicate canonical tar member name")
-            if member.issym() or member.islnk() or member.isdev() or member.isfifo():
-                raise InvalidBackup("link/device entries prohibited")
-            if not (member.isfile() or member.isdir()):
-                raise InvalidBackup("unsupported archive entry type")
-            if member.size < 0 or member.size > MAX_MEMBER_SIZE:
-                raise InvalidBackup("archive member exceeds size limit")
-            entries[name] = member
-        manifest = entries.get("backup.json")
-        if manifest is None or not manifest.isfile() or manifest.size > MAX_MANIFEST:
-            raise InvalidBackup("missing/oversized backup.json")
-        fp = tf.extractfile(manifest)
-        if fp is None:
-            raise InvalidBackup("cannot read backup.json")
-        with fp:
-            raw = fp.read(MAX_MANIFEST + 1)
-        if len(raw) > MAX_MANIFEST:
-            raise InvalidBackup("manifest too large")
-        try:
-            meta = json.loads(raw)
-        except (ValueError, UnicodeDecodeError) as e:
-            raise InvalidBackup("invalid backup.json") from e
-        if not isinstance(meta, dict):
-            raise InvalidBackup("backup metadata must be object")
-        advertised_addons = meta.get("addons", [])
-        if not isinstance(advertised_addons, list):
-            raise InvalidBackup("metadata addons must be list")
-        addons = set()
-        for x in advertised_addons:
-            name = x.get("slug") if isinstance(x, dict) else (x if isinstance(x, str) else None)
-            if not isinstance(name, str) or not name or "/" in name or len(name) > 128:
-                raise InvalidBackup("invalid addon slug")
-            if name in addons:
-                raise InvalidBackup("duplicate addon slug")
-            addons.add(name)
-        backup_type = meta.get("type")
-        if backup_type is not None and backup_type not in ("full", "partial"):
-            raise InvalidBackup("unexpected backup type")
-        protected = meta.get("protected")
-        if protected is not None and not isinstance(protected, bool):
-            raise InvalidBackup("invalid protected flag")
-        inner = sorted(n for n in entries if n.endswith((".tar.gz", ".tar")) and entries[n].isfile())
-        formats: dict[str, int] = {"securetar": 0, "gzip_plain": 0, "unrecognized": 0}
-        part_types: dict[str, str] = {}
-        for n in inner:
-            handle = tf.extractfile(entries[n])
-            if handle is None:
-                raise InvalidBackup("unreadable archive part")
-            with handle:
-                head = handle.read(MAX_HEADER)
-            if head.startswith(b"SecureTar"):
-                kind = "securetar"
-            elif head.startswith(b"\x1f\x8b"):
-                kind = "gzip_plain"
-            else:
-                kind = "unrecognized"
-            formats[kind] += 1
-            part_types[n] = kind
-        file_names = set(inner)
-        # Match documented conventional Supervisor addon filenames, not
-        # every possible custom addon packaging or encryption generation.
-        candidate_addon_parts = {s for s in addons if s + ".tar.gz" in file_names or s + ".tar" in file_names}
-        home_part = "homeassistant.tar.gz" in file_names or "homeassistant.tar" in file_names
-        warnings = []
-        blockers = []
-        supervisor_part = next((n for n in ("supervisor.tar.gz", "supervisor.tar") if n in part_types), None)
-        supervisor_kind = part_types.get(supervisor_part) if supervisor_part else None
-        if supervisor_kind == "unrecognized":
-            blockers.append("supervisor_payload_unrecognized")
-        elif supervisor_part and protected is not None:
-            expected_kind = "securetar" if protected else "gzip_plain"
-            if supervisor_kind != expected_kind:
-                blockers.append("supervisor_encryption_mismatch")
-        if backup_type == "full" and not supervisor_part:
-            warnings.append("full_backup_without_supervisor_payload_check_upstream_version")
-        if protected is True and formats["gzip_plain"] > 0:
-            warnings.append("protected_flag_but_plain_gzip_detected")
-            blockers.append("part_envelope_inconsistent_with_protection")
-        if protected is False and formats["securetar"] > 0:
-            warnings.append("unprotected_flag_but_securetar_detected")
-            blockers.append("part_envelope_inconsistent_with_protection")
-        if addons - candidate_addon_parts:
-            warnings.append("declared_addon_payload_not_identified")
-            blockers.append("advertised_addon_payload_missing")
-        if expected and not expected.issubset(addons):
-            warnings.append("missing_installed_addons_in_backup")
-            blockers.append("expected_apps_not_in_backup")
-        if not home_part:
-            warnings.append("no_homeassistant_payload_identified")
-            blockers.append("homeassistant_payload_missing")
-        core = meta.get("homeassistant", {})
-        version = core.get("version") if isinstance(core, dict) else None
-        # Version is optional and sanitized; don't print raw metadata.
-        version = version if isinstance(version, str) and len(version) < 60 and all(ch.isascii() and (ch.isalnum() or ch in ".-_") for ch in version) else None
-        return {
-            "mode": "offline_metadata_only_no_decryption_no_extraction",
-            "source": "synthetic_or_user_supplied_archive",
-            "archive_member_count": member_count,
-            "addons_advertised_count": len(addons),
-            "addon_payloads_identified_count": len(candidate_addon_parts),
-            "expected_installed_addons_count": len(expected) if expected else None,
-            "expected_installed_addons_present_count": len(addons & expected) if expected else None,
-            "missing_installed_addons_count": len(expected - addons) if expected else None,
-            "homeassistant_payload_identified": home_part,
-            "ha_core_version": version,
-            "protected_metadata_flag": protected,
-            "part_envelopes": formats,
-            "supervisor_payload_identified": supervisor_part is not None,
-            "supervisor_envelope": supervisor_kind,
-            "blocking_issues": sorted(set(blockers)),
-            "eligible_for_migration": False,
-            "warnings": sorted(set(warnings)),
-            "can_restore": False,
-            "reason": "metadata preflight is not encrypted backup validation or restore parity"
-        }
+    with os.fdopen(fd, "rb") as stream:
+        info = os.fstat(stream.fileno())
+        if not stat.S_ISREG(info.st_mode) or info.st_size > MAX_ARCHIVE_SIZE:
+            raise InvalidBackup("backup must be a regular file within size limits")
+        with tarfile.open(fileobj=stream, mode="r:*") as tf:
+            # Only read tar headers; never unpack nested secrets/config.
+            for member in tf:
+                member_count += 1
+                if member_count > MAX_MEMBERS:
+                    raise InvalidBackup("too many archive members")
+                if member.name in (".", "./") and member.isdir():
+                    continue  # benign tar root-directory marker
+                name = normalized_archive_name(member.name)
+                if name in entries:
+                    raise InvalidBackup("duplicate canonical tar member name")
+                if member.issym() or member.islnk() or member.isdev() or member.isfifo():
+                    raise InvalidBackup("link/device entries prohibited")
+                if not (member.isfile() or member.isdir()):
+                    raise InvalidBackup("unsupported archive entry type")
+                if member.size < 0 or member.size > MAX_MEMBER_SIZE:
+                    raise InvalidBackup("archive member exceeds size limit")
+                entries[name] = member
+            manifest = entries.get("backup.json")
+            if manifest is None or not manifest.isfile() or manifest.size > MAX_MANIFEST:
+                raise InvalidBackup("missing/oversized backup.json")
+            fp = tf.extractfile(manifest)
+            if fp is None:
+                raise InvalidBackup("cannot read backup.json")
+            with fp:
+                raw = fp.read(MAX_MANIFEST + 1)
+            if len(raw) > MAX_MANIFEST:
+                raise InvalidBackup("manifest too large")
+            meta = parse_backup_manifest(raw)
+            advertised_addons = meta.get("addons", [])
+            if not isinstance(advertised_addons, list):
+                raise InvalidBackup("metadata addons must be list")
+            addons = set()
+            for x in advertised_addons:
+                name = x.get("slug") if isinstance(x, dict) else (x if isinstance(x, str) else None)
+                if not isinstance(name, str) or not name or "/" in name or len(name) > 128:
+                    raise InvalidBackup("invalid addon slug")
+                if name in addons:
+                    raise InvalidBackup("duplicate addon slug")
+                addons.add(name)
+            backup_type = meta.get("type")
+            if backup_type is not None and backup_type not in ("full", "partial"):
+                raise InvalidBackup("unexpected backup type")
+            protected = meta.get("protected")
+            if protected is not None and not isinstance(protected, bool):
+                raise InvalidBackup("invalid protected flag")
+            inner = sorted(n for n in entries if n.endswith((".tar.gz", ".tar")) and entries[n].isfile())
+            formats: dict[str, int] = {"securetar": 0, "gzip_plain": 0, "unrecognized": 0}
+            part_types: dict[str, str] = {}
+            for n in inner:
+                handle = tf.extractfile(entries[n])
+                if handle is None:
+                    raise InvalidBackup("unreadable archive part")
+                with handle:
+                    head = handle.read(MAX_HEADER)
+                if head.startswith(b"SecureTar"):
+                    kind = "securetar"
+                elif head.startswith(b"\x1f\x8b"):
+                    kind = "gzip_plain"
+                else:
+                    kind = "unrecognized"
+                formats[kind] += 1
+                part_types[n] = kind
+            file_names = set(inner)
+            # Match documented conventional Supervisor addon filenames, not
+            # every possible custom addon packaging or encryption generation.
+            candidate_addon_parts = {s for s in addons if s + ".tar.gz" in file_names or s + ".tar" in file_names}
+            home_part = "homeassistant.tar.gz" in file_names or "homeassistant.tar" in file_names
+            warnings = []
+            blockers = []
+            supervisor_part = next((n for n in ("supervisor.tar.gz", "supervisor.tar") if n in part_types), None)
+            supervisor_kind = part_types.get(supervisor_part) if supervisor_part else None
+            if supervisor_kind == "unrecognized":
+                blockers.append("supervisor_payload_unrecognized")
+            elif supervisor_part and protected is not None:
+                expected_kind = "securetar" if protected else "gzip_plain"
+                if supervisor_kind != expected_kind:
+                    blockers.append("supervisor_encryption_mismatch")
+            if backup_type == "full" and not supervisor_part:
+                warnings.append("full_backup_without_supervisor_payload_check_upstream_version")
+            if protected is True and formats["gzip_plain"] > 0:
+                warnings.append("protected_flag_but_plain_gzip_detected")
+                blockers.append("part_envelope_inconsistent_with_protection")
+            if protected is False and formats["securetar"] > 0:
+                warnings.append("unprotected_flag_but_securetar_detected")
+                blockers.append("part_envelope_inconsistent_with_protection")
+            if addons - candidate_addon_parts:
+                warnings.append("declared_addon_payload_not_identified")
+                blockers.append("advertised_addon_payload_missing")
+            if expected and not expected.issubset(addons):
+                warnings.append("missing_installed_addons_in_backup")
+                blockers.append("expected_apps_not_in_backup")
+            if not home_part:
+                warnings.append("no_homeassistant_payload_identified")
+                blockers.append("homeassistant_payload_missing")
+            core = meta.get("homeassistant", {})
+            version = core.get("version") if isinstance(core, dict) else None
+            # Version is optional and sanitized; don't print raw metadata.
+            version = version if isinstance(version, str) and len(version) < 60 and all(ch.isascii() and (ch.isalnum() or ch in ".-_") for ch in version) else None
+            return {
+                "mode": "offline_metadata_only_no_decryption_no_extraction",
+                "source": "synthetic_or_user_supplied_archive",
+                "archive_member_count": member_count,
+                "addons_advertised_count": len(addons),
+                "addon_payloads_identified_count": len(candidate_addon_parts),
+                "expected_installed_addons_count": len(expected) if expected else None,
+                "expected_installed_addons_present_count": len(addons & expected) if expected else None,
+                "missing_installed_addons_count": len(expected - addons) if expected else None,
+                "homeassistant_payload_identified": home_part,
+                "ha_core_version": version,
+                "protected_metadata_flag": protected,
+                "part_envelopes": formats,
+                "supervisor_payload_identified": supervisor_part is not None,
+                "supervisor_envelope": supervisor_kind,
+                "blocking_issues": sorted(set(blockers)),
+                "eligible_for_migration": False,
+                "warnings": sorted(set(warnings)),
+                "can_restore": False,
+                "reason": "metadata preflight is not encrypted backup validation or restore parity"
+            }
 
 def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__)
