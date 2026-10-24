@@ -60,3 +60,7 @@ required-features = ["managed-apps-preview"]
 [[example]]
 name = "guest_core_users_probe"
 required-features = ["core-user-live-lab"]
+
+[[example]]
+name = "guest_supervisor_verified_async_install"
+required-features = ["durable-dispatch-fence-lab"]

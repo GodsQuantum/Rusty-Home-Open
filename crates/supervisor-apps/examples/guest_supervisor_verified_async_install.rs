@@ -40,7 +40,9 @@ fn run() -> Result<(), ()> {
     let requested = prepare_background_job(&app, Operation::Install).map_err(|_| ())?;
     let mut journal =
         FileAuditJournal::open(&Path::new("/hars-lab-audit").join("verified-async-install.jsonl"))
-            .map_err(|_| ())?;
+            .map_err(|_| {
+                eprintln!("P8N_FAIL_AUDIT_OPEN");
+            })?;
     let actor = Actor::new("qemu_verified_fixture", Role::Administrator).map_err(|_| ())?;
     let mut policy = Policy::default();
     policy.grant(actor.subject(), &app, &[Action::Install]);
@@ -52,23 +54,49 @@ fn run() -> Result<(), ()> {
         Some(&consent),
         &mut journal,
     )
-    .map_err(|_| ())?
-    .ok_or(())?;
+    .map_err(|_| {
+        eprintln!("P8N_FAIL_AUDIT_WRITE");
+    })?
+    .ok_or_else(|| {
+        eprintln!("P8N_FAIL_POLICY_DENIED");
+    })?;
+    println!("P8N_STAGE_AUTH_AUDIT_PASS");
     let path = Path::new("/hars-lab-audit");
     let mut fence =
-        DurableDispatchFence::open(&path.join("verified-async-intents.redb")).map_err(|_| ())?;
+        DurableDispatchFence::open(&path.join("verified-async-intents.redb")).map_err(|_| {
+            eprintln!("P8N_FAIL_FENCE_OPEN");
+        })?;
     let mut watches =
-        DurableJobWatches::open(&path.join("verified-async-watches.redb")).map_err(|_| ())?;
-    let client = AppSupervisorClient::from_environment().map_err(|_| ())?;
-    let armed = fence.arm(permit, now_ms()?).map_err(|_| ())?;
+        DurableJobWatches::open(&path.join("verified-async-watches.redb")).map_err(|_| {
+            eprintln!("P8N_FAIL_WATCH_OPEN");
+        })?;
+    let client = AppSupervisorClient::from_environment().map_err(|_| {
+        eprintln!("P8N_FAIL_TOKEN");
+    })?;
+    let armed = fence.arm(permit, now_ms()?).map_err(|_| {
+        eprintln!("P8N_FAIL_FENCE_ARM");
+    })?;
+    println!("P8N_STAGE_DURABLE_ARM_PASS");
     let id = armed.id().to_owned();
     // Exactly ONE audited background POST. Never repeat on ambiguous response.
     let posted = client
         .preview_execute_fenced(&mut fence, armed)
-        .map_err(|_| ())?;
+        .map_err(|error| match error {
+            hars_supervisor_apps::durable_dispatch_fence_lab::TrackedError::Transport(e) => {
+                eprintln!("P8N_FAIL_POST_TRANSPORT_{e:?}")
+            }
+            hars_supervisor_apps::durable_dispatch_fence_lab::TrackedError::Storage(_) => {
+                eprintln!("P8N_FAIL_POST_PERSISTENCE")
+            }
+        })?;
+    println!("P8N_STAGE_POST_RECEIPT_PASS");
     if posted.receipt.job_id().is_none() || posted.operation_id != id {
+        eprintln!("P8N_FAIL_UNCORRELATED_JOB");
         return Err(());
     }
+    println!("P8N_STAGE_JOB_UUID_PASS");
+    let mut reported_pending = false;
+    let mut reported_failure = false;
     for _ in 0..50 {
         let result =
             fence.verify_and_close_install(&id, &mut watches, &client, ApiVersion::V1, now_ms()?);
@@ -91,8 +119,23 @@ fn run() -> Result<(), ()> {
                 println!("P8N_REAL_SUPERVISOR_ASYNC_INSTALL_JOB_APP_AND_REDB_PASS");
                 return Ok(());
             }
-            Ok(None) => thread::sleep(Duration::from_secs(2)),
-            Err(_) => {
+            Ok(None) => {
+                if !reported_pending {
+                    println!("P8N_POLL_WAITING_FOR_VERIFIED_POSTCONDITION");
+                    reported_pending = true;
+                }
+                thread::sleep(Duration::from_secs(2));
+            }
+            Err(error) => {
+                if !reported_failure {
+                    match error {
+                        hars_supervisor_apps::durable_dispatch_fence_lab::VerifiedCloseError::Poll(_) =>
+                            eprintln!("P8N_POLL_REMOTE_READ_FAILED"),
+                        hars_supervisor_apps::durable_dispatch_fence_lab::VerifiedCloseError::Storage(_) =>
+                            eprintln!("P8N_POLL_DURABLE_STORE_FAILED"),
+                    }
+                    reported_failure = true;
+                }
                 // A read outage cannot justify resubmitting the mutation.
                 thread::sleep(Duration::from_secs(2));
             }
