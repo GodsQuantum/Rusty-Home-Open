@@ -91,11 +91,6 @@
   ],
   "not_yet_proven": [
     {
-      "id": "full-restore-fresh-second-machine",
-      "status": "not_verified",
-      "reason": "Les restaurations complète, chiffrée et partielle confirmées travaillent dans la VM HAOS déjà démarrée ; aucune preuve de déploiement vers une DEUXIÈME VM fraîchement installée, indépendante et vide n'a été retrouvée. Rechercher d'abord de nouvelles preuves avant tout nouveau test."
-    },
-    {
       "id": "generic-cross-vendor-data-migration",
       "status": "not_verified",
       "reason": "Les données exactes ont été restaurées pour File Editor et des fixtures locales ; aucune migration garantie de toutes les Apps et intégrations tierces."
@@ -105,5 +100,23 @@
       "status": "not_verified",
       "reason": "Aucun cutover sur matériel et aucun transfert de contrôleurs radio, comptes réels et données de foyer."
     }
-  ]
+  ],
+  "cross_vm_verification": {
+    "id": "haos-full-restore-fresh-second-vm",
+    "status": "verified_in_two_disposable_qemu_guests",
+    "run_url": "https://github.com/GodsQuantum/Rusty-Home-Open/actions/runs/40134632585",
+    "run_sha": "161307bd227b279c73df5a33da759a19ed4ac1ae",
+    "conclusion": "success",
+    "source_junit_passed": 3,
+    "target_junit_passed": 3,
+    "source_test": "test_hars_cross_vm_source",
+    "target_test": "test_hars_cross_vm_target",
+    "markers": [
+      "P8P_SOURCE_REAL_QEMU_3_OF_3_PASS",
+      "P8P_TARGET_REAL_QEMU_3_OF_3_PASS",
+      "P8P_CROSS_VM_SOURCE_TO_FRESH_TARGET_OFFICIAL_HAOS_PASS"
+    ],
+    "claim": "Genuine HAOS 18.3 source full backup transferred unchanged by SHA-256; independent fresh target QEMU process with different kernel boot ID imported backup, restored exact synthetic share marker bytes and official Core version.",
+    "scope_limit": "Official HAOS to HAOS only, two disposable QEMU instances; NOT migration to Rusty Home native engine, not arbitrary third-party App DB, user credentials, physical hardware, or full production replacement."
+  }
 }

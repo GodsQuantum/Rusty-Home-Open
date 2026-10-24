@@ -21,13 +21,13 @@ Les scripts sources sont `scripts/p8c2_real_haos_supervisor_pytest.py`, leur sé
 
 L'ancienne campagne [du 22 octobre 2026](https://github.com/GodsQuantum/Rusty-Home-Open/actions/runs/39873207970) avait déjà validé 16/16 ; la campagne plus récente 17/17 est la référence.
 
-## Ce qui n'est PAS démontré
+## Nouvelle preuve : restauration sur DEUX VM HAOS différentes
 
-- **Une restauration complète sur une *deuxième* installation HAOS vierge distincte de la VM source** : preuve non retrouvée. Avant toute expérience, vérifier à nouveau les run GitHub, tests du dépôt et historique. Ne pas rebaptiser « nouvelle installation » la remise en état dans la même VM.
-- Migration complète de données de fournisseurs arbitraires vers Rusty Home et compatibilité de tous les appareils/radios : non certifiées.
-- Sauvegarde/restauration d'un foyer réel, flux d'authentification utilisateur en production et recette de retour arrière *multimachine* : non certifiés.
+**Réussie le 24 octobre 2026.** La campagne [GitHub 40134632585](https://github.com/GodsQuantum/Rusty-Home-Open/actions/runs/40134632585), SHA exact 161307bd227b279c73df5a33da759a19ed4ac1ae, a réussi **3/3 tests source + 3/3 tests cible**, sans saut. Elle est séparée des 17/17 tests SAME-VM ci-dessus.
 
-Cette nuance ne diminue pas les tests réels déjà réussis. Elle empêche seulement de leur attribuer un périmètre plus large.
+La VM source produit une vraie archive complète Supervisor, l'envoie à un relais local borné et enregistre son SHA-256 et boot ID. La deuxième VM part du disque officiel HAOS 18.3 intact, doit avoir un boot ID différent et aucun fichier marqueur source ; elle télécharge le tar, vérifie la taille et le SHA-256, importe puis restaure la sauvegarde avec la vraie CLI HAOS, et démontre la récupération des octets exacts et de Home Assistant Core/Supervisor. Voir [protocole et limitations](CROSS_VM_DISASTER_RECOVERY_2026-10-24.md).
+
+**Ce qui reste NON prouvé :** la migration d'un foyer HAOS vers le moteur **Rusty Home**, les bases de toutes les applications tierces, le remplacement de Core et du Supervisor, les contrôleurs physiques, comptes réels, réseau et rollback d'un matériel entier. La seconde VM prouve HAOS→HAOS, pas HAOS→Rusty Home.
 
 ## Protocole obligatoire pour toute nouvelle session
 

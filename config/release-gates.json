@@ -39,7 +39,7 @@
       "id": "supervisor_apps_restore",
       "status": "lab_partial",
       "blocked_reason": [
-        "Genuine HAOS 18.3 KVM Supervisor App lifecycle and disposable third-party backup/restore checks passed (run 40002933713). Still missing representative persistent-data restore across arbitrary installed Apps and independent rollback proof."
+        "Actual official HAOS 18.3 QEMU has verified File Editor App data byte-for-byte partial restoration and disposable local App v1 to v2 version change then backup-based rollback after manager SIGKILL (run 40127707580). Does not certify arbitrary real third-party App database state, auth credentials or full Rust-native lifecycle parity."
       ],
       "certification_artifact": null
     },
@@ -47,7 +47,7 @@
       "id": "haos_backup_restore",
       "status": "lab_partial",
       "blocked_reason": [
-        "Disposable genuine HAOS 18.3 KVM has demonstrated a bounded backup/restore path, but encrypted archives, application data, real user-equivalent state and independent full-system disaster recovery remain unverified."
+        "Actual HAOS 18.3 QEMU verified source full backup transferred with SHA256 to a SECOND fresh HAOS VM with distinct boot ID, restored exact share marker bytes and matching Core version (6/6 run 40134632585). Previously verified SAME-VM full and encrypted restore, wrong-password refusal and real File Editor App data SHA256 roundtrip (17/17 run 40127707580). This is HAOS->HAOS laboratory recovery, NOT HAOS->Rusty Home Core replacement, generic third-party App databases, live secrets, radio ownership, or complete production migration."
       ],
       "certification_artifact": null
     },
@@ -55,7 +55,7 @@
       "id": "rollback_verified",
       "status": "blocked",
       "blocked_reason": [
-        "No witnessed full host rollback preserving Core states, App databases, networking, radios and credentials following a deliberately failed migration."
+        "A real QEMU disposable local App v1 to v2 downgrade after manager SIGKILL did restore exact v1 bytes and version (run 40127707580). Full host migration rollback across independent machines, complete Core states, real App DBs, user accounts, physical radios and network ownership remain NOT verified."
       ],
       "certification_artifact": null
     },
