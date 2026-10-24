@@ -993,6 +993,9 @@ pub enum PreviewReceipt {
     Accepted {
         app: String,
         action: crate::managed_apps::Action,
+        /// Exact job UUID from this authenticated, background Supervisor POST;
+        /// never accepted from a caller, read-only poll or UI-supplied label.
+        job_id: Option<String>,
         /// Only a successful authenticated postcondition check may set true.
         completion_verified: bool,
     },
@@ -1005,6 +1008,12 @@ pub enum PreviewReceipt {
 
 #[cfg(feature = "managed-apps-preview")]
 impl PreviewReceipt {
+    pub fn job_id(&self) -> Option<&str> {
+        match self {
+            Self::Accepted { job_id, .. } => job_id.as_deref(),
+            Self::BackupCreated { .. } => None,
+        }
+    }
     pub fn backup_slug(&self) -> Option<&str> {
         match self {
             Self::BackupCreated { slug, .. } => Some(slug),
@@ -1034,6 +1043,21 @@ fn preview_submission_receipt(
     update_postcondition_verified: bool,
 ) -> Result<PreviewReceipt, TransportError> {
     use crate::managed_apps::{Action, BackupSlug};
+    // A job UUID is a correlation token ONLY when it arrives in the response
+    // to our own audited, exact-target authenticated background POST.
+    // Unknown/malformed/missing tokens produce an uncertain outcome, never
+    // a fabricated receipt; the caller MUST NOT blindly retry the POST.
+    let job_id = if request.background_job() {
+        let id = data
+            .get("job_id")
+            .and_then(serde_json::Value::as_str)
+            .ok_or(TransportError::BadResponse)?;
+        crate::job_status::job_path(crate::official_store::ApiVersion::V1, id)
+            .map_err(|_| TransportError::BadResponse)?;
+        Some(id.to_owned())
+    } else {
+        None
+    };
     match request.action() {
         Action::Backup => {
             let slug = data
@@ -1051,7 +1075,10 @@ fn preview_submission_receipt(
         action => Ok(PreviewReceipt::Accepted {
             app: request.target().to_owned(),
             action,
-            completion_verified: action == Action::Update && update_postcondition_verified,
+            job_id,
+            completion_verified: !request.background_job()
+                && action == Action::Update
+                && update_postcondition_verified,
         }),
     }
 }
@@ -1131,7 +1158,11 @@ impl AppSupervisorClient {
         if parsed.get("result").and_then(serde_json::Value::as_str) != Some("ok") {
             return Err(TransportError::BadResponse);
         }
-        let updated = if let Some(plan) = update_plan {
+        // Asynchronous submissions are accepted, NOT completed. The target
+        // cannot be postflight-verified until its actual returned job ends.
+        let updated = if request.background_job() {
+            false
+        } else if let Some(plan) = update_plan {
             let updated = self.fetch_installed_app_info(request.target())?;
             verify_update_postflight(&updated, request.target(), &plan)?;
             true
@@ -1178,6 +1209,7 @@ mod typed_submission_receipt_tests {
                 PreviewReceipt::Accepted {
                     app: "unlisted_vendor_877".into(),
                     action,
+                    job_id: None,
                     completion_verified: false
                 }
             );
@@ -1253,6 +1285,7 @@ mod typed_submission_receipt_tests {
             PreviewReceipt::Accepted {
                 app: "unlisted_vendor_877".into(),
                 action: Action::Update,
+                job_id: None,
                 completion_verified: true
             }
         );
@@ -1262,6 +1295,86 @@ mod typed_submission_receipt_tests {
                 .unwrap()
                 .completion_verified()
         );
+    }
+}
+
+#[cfg(all(test, feature = "managed-apps-preview"))]
+mod background_job_origin_tests {
+    use super::*;
+    use crate::managed_apps::{AppSlug, ManagerError, Operation, prepare_background_job};
+
+    const JOB: &str = "0123456789abcdef0123456789abcdef";
+
+    #[test]
+    fn only_official_install_and_backup_preserving_update_can_request_background_jobs() {
+        let app = AppSlug::parse("new_vendor_2027").unwrap();
+        let install = prepare_background_job(&app, Operation::Install).unwrap();
+        assert_eq!(install.method(), "POST");
+        assert_eq!(install.path(), "/store/addons/new_vendor_2027/install");
+        assert!(install.background_job());
+        assert_eq!(install.body(), br#"{"background":true}"#);
+        let update = prepare_background_job(&app, Operation::UpdateWithBackup).unwrap();
+        assert!(update.background_job());
+        assert_eq!(update.path(), "/store/addons/new_vendor_2027/update");
+        assert_eq!(update.body(), br#"{"backup":true,"background":true}"#);
+        for op in [
+            Operation::Start,
+            Operation::Stop,
+            Operation::Restart,
+            Operation::BackupPartial,
+        ] {
+            assert_eq!(
+                prepare_background_job(&app, op),
+                Err(ManagerError::UnsupportedBackgroundJob)
+            );
+        }
+    }
+
+    #[test]
+    fn only_authenticated_submissions_can_origin_bind_strict_job_ids() {
+        let app = AppSlug::parse("brand_new_vendor").unwrap();
+        for operation in [Operation::Install, Operation::UpdateWithBackup] {
+            let req = prepare_background_job(&app, operation).unwrap();
+            let data = serde_json::json!({
+                "job_id": JOB,
+                "token": "DO_NOT_LEAK",
+                "options": {"secret":"ALSO_DO_NOT_LEAK"},
+                "app": "pretend_wrong_app"
+            });
+            let receipt = preview_submission_receipt(&data, &req, true).unwrap();
+            assert_eq!(receipt.job_id(), Some(JOB));
+            assert!(!receipt.completion_verified());
+            assert!(!format!("{receipt:?}").contains("DO_NOT_LEAK"));
+            assert!(!format!("{receipt:?}").contains("pretend_wrong_app"));
+            for bad in [
+                serde_json::json!({}),
+                serde_json::json!({"job_id":null}),
+                serde_json::json!({"job_id":"123"}),
+                serde_json::json!({"job_id":"0123456789ABCDEF0123456789ABCDEF"}),
+                serde_json::json!({"job_id":"0123456789abcdef0123456789abcdef/../../"}),
+                serde_json::json!({"job_id":42}),
+            ] {
+                assert_eq!(
+                    preview_submission_receipt(&bad, &req, false),
+                    Err(TransportError::BadResponse)
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn ordinary_synchronous_reply_cannot_inject_unrequested_job_identity() {
+        let app = AppSlug::parse("another_vendor").unwrap();
+        let req = crate::managed_apps::prepare(&app, Operation::Start).unwrap();
+        assert!(!req.background_job());
+        let receipt = preview_submission_receipt(
+            &serde_json::json!({"job_id":JOB,"options":{"key":"HIDDEN"}}),
+            &req,
+            false,
+        )
+        .unwrap();
+        assert_eq!(receipt.job_id(), None);
+        assert!(!receipt.completion_verified());
     }
 }
 
