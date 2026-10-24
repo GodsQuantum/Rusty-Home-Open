@@ -13,6 +13,39 @@ fn lab_registry_dir(raw: &str) -> anyhow::Result<std::path::PathBuf> {
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     let args: Vec<_> = std::env::args().collect();
+    if args.len() == 4 && args[1] == "--lab-ha-core-state-snapshot-readonly" {
+        use std::io::Read;
+        use std::os::unix::fs::{MetadataExt, OpenOptionsExt, PermissionsExt};
+        if nix::unistd::Uid::effective().is_root() {
+            anyhow::bail!("no root execution for Home Assistant state snapshot");
+        }
+        let path = std::path::Path::new(&args[3]);
+        let file = std::fs::OpenOptions::new()
+            .read(true)
+            .custom_flags(nix::libc::O_NOFOLLOW | nix::libc::O_NONBLOCK | nix::libc::O_CLOEXEC)
+            .open(path)?;
+        let meta = file.metadata()?;
+        if !meta.is_file()
+            || meta.len() > 24 * 1024 * 1024
+            || meta.nlink() != 1
+            || meta.uid() != nix::unistd::Uid::current().as_raw()
+            || meta.permissions().mode() & 0o077 != 0
+        {
+            anyhow::bail!("unsafe private Core state snapshot file")
+        }
+        let mut data = Vec::new();
+        file.take(24 * 1024 * 1024 + 1).read_to_end(&mut data)?;
+        if data.len() > 24 * 1024 * 1024 {
+            anyhow::bail!("oversized Core state snapshot")
+        }
+        let proof = hars_native_kernel::ha_registry_shadow::observe_states(
+            std::path::Path::new(&args[2]),
+            &data,
+        )
+        .await?;
+        println!("{}", serde_json::to_string(&proof)?);
+        return Ok(());
+    }
     if args.len() == 3 && args[1] == "--lab-ha-registry-shadow-readonly" {
         if nix::unistd::Uid::effective().is_root() {
             anyhow::bail!("no root execution for Core identity shadow");

@@ -120,6 +120,52 @@ pub struct Stage {
     pub no_device_commands: bool,
     pub no_live_states: bool,
 }
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ReadOnlyState {
+    pub entity_id: String,
+    pub state: String,
+}
+/// Strict official Core State.as_dict JSON snapshot, not a subscription.
+pub fn parse_core_state_snapshot(raw: &[u8]) -> Result<Vec<ReadOnlyState>> {
+    if raw.is_empty() || raw.len() > MAX_EXPORT {
+        bail!("missing or oversized Core state snapshot")
+    }
+    let StrictValue(value): StrictValue =
+        serde_json::from_slice(raw).context("invalid or duplicate state snapshot keys")?;
+    let list = value
+        .as_array()
+        .context("Core state snapshot must be array")?;
+    if list.len() > MAX_ENTITIES {
+        bail!("too many Core states")
+    }
+    let mut seen = BTreeSet::new();
+    let mut states = Vec::with_capacity(list.len());
+    for item in list {
+        let id = read_string(item, "entity_id")?;
+        let state = read_string(item, "state")?;
+        let timestamp = read_string(item, "last_updated")?;
+        if id.len() > 255
+            || id
+                .bytes()
+                .any(|b| b.is_ascii_control() || b == b'/' || b == b'\\')
+            || state.len() > 4096
+            || state.chars().any(char::is_control)
+            || timestamp.len() > 64
+            || timestamp.chars().any(char::is_control)
+            || !(timestamp.ends_with("+00:00") || timestamp.ends_with('Z'))
+            || !seen.insert(id.to_owned())
+        {
+            bail!("unsafe Core state payload")
+        }
+        states.push(ReadOnlyState {
+            entity_id: id.to_owned(),
+            state: state.to_owned(),
+        });
+    }
+    states.sort_by(|a, b| a.entity_id.cmp(&b.entity_id));
+    Ok(states)
+}
+
 fn is_digest(s: &str) -> bool {
     s.len() == 64
         && s.bytes()
@@ -548,6 +594,24 @@ mod tests {
         assert!(parse_export(&other).is_err());
         assert!(parse_export(&vec![b' '; MAX_EXPORT + 1]).is_err());
     }
+    #[test]
+    fn authentic_state_shape_and_adversarial_values() {
+        let good = serde_json::json!([
+            {"entity_id":"sensor.value","state":"21.5",
+             "last_updated":"2026-10-24T23:59:00+00:00","attributes":{"unit":"°C"}},
+            {"entity_id":"switch.value","state":"on",
+             "last_updated":"2026-10-24T23:59:00+00:00"}
+        ]);
+        let rows = parse_core_state_snapshot(&serde_json::to_vec(&good).unwrap()).unwrap();
+        assert_eq!(rows.len(), 2);
+        assert_eq!(rows[0].state, "21.5");
+        assert_eq!(rows[1].state, "on");
+        assert!(parse_core_state_snapshot(br#"[{"entity_id":"sensor.a","entity_id":"sensor.b","state":"on","last_updated":"2026-10-24T23:59:00+00:00"}]"#).is_err());
+        assert!(parse_core_state_snapshot(br#"[{"entity_id":"sensor.a","state":"on","last_updated":"2026-10-24T23:59:00+00:00"},{"entity_id":"sensor.a","state":"off","last_updated":"2026-10-24T23:59:00+00:00"}]"#).is_err());
+        assert!(parse_core_state_snapshot(br#"[{"entity_id":"sensor.a","state":"on"}]"#).is_err());
+        assert!(parse_core_state_snapshot(br#"[{"entity_id":"sensor.a","state":42,"last_updated":"2026-10-24T23:59:00+00:00"}]"#).is_err());
+    }
+
     #[test]
     fn tampered_private_database_cannot_publish_or_activate_wrong_mapping() {
         let dir = tempfile::tempdir().unwrap();
