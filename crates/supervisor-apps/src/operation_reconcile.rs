@@ -4,9 +4,9 @@
 use crate::installed_inventory::{RunningApp, RunningInventory};
 use crate::job_status::{JobStatus, State, job_path};
 use crate::official_store::ApiVersion;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum Operation {
     Install,
@@ -71,7 +71,7 @@ impl Watch {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum Outcome {
     NoEvidence,
@@ -82,7 +82,7 @@ pub enum Outcome {
     Confirmed,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Observation {
     pub slug: String,
     pub operation: Operation,

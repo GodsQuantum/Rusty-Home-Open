@@ -26,6 +26,8 @@ pub mod app_config_schema;
 pub mod app_detail;
 pub mod app_stats;
 pub mod catalog_filter;
+#[cfg(feature = "durable-job-watch")]
+pub mod durable_job_watch;
 pub mod official_store;
 pub mod official_transport;
 pub mod operation_preflight;
