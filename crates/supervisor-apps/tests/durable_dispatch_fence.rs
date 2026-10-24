@@ -183,3 +183,68 @@ fn crash_fixture_abort_after_commit() {
     unsafe { nix::libc::raise(nix::libc::SIGKILL) };
     unreachable!("SIGKILL must terminate the child");
 }
+
+#[test]
+fn real_process_race_allows_only_one_app_dispatch() {
+    let dir = private_dir();
+    // Initialize and close one shared database, then launch competing OS
+    // processes. No in-process mutex or fake mock lock is involved.
+    drop(DurableDispatchFence::open(&dir.path().join("shared.redb")).unwrap());
+    let mut children = Vec::new();
+    for index in 0..4_u8 {
+        let child = std::process::Command::new(std::env::current_exe().unwrap())
+            .args(["--exact", "concurrent_child_arm", "--nocapture"])
+            .env("RUSTY_DISPATCH_PROCESS_RACE_DIR", dir.path())
+            .env("RUSTY_DISPATCH_PROCESS_RACE_INDEX", index.to_string())
+            .spawn()
+            .unwrap();
+        children.push(child);
+    }
+    std::fs::write(dir.path().join("go"), b"start").unwrap();
+    for mut child in children {
+        assert!(child.wait().unwrap().success(), "fixture child must report");
+    }
+    let outcomes: Vec<_> = (0..4_u8)
+        .map(|i| std::fs::read_to_string(dir.path().join(format!("result-{i}"))).unwrap())
+        .collect();
+    assert_eq!(
+        outcomes
+            .iter()
+            .filter(|outcome| outcome.as_str() == "armed")
+            .count(),
+        1,
+        "exactly one process may persist the same App dispatch: {outcomes:?}"
+    );
+    let mut recovered = DurableDispatchFence::open(&dir.path().join("shared.redb")).unwrap();
+    assert!(
+        recovered
+            .arm(permitted(dir.path(), "vendor_2050"), 222)
+            .is_err()
+    );
+    assert!(
+        recovered
+            .arm(permitted(dir.path(), "another_vendor_2050"), 223)
+            .is_ok()
+    );
+}
+
+#[test]
+fn concurrent_child_arm() {
+    let Ok(folder) = std::env::var("RUSTY_DISPATCH_PROCESS_RACE_DIR") else {
+        return;
+    };
+    let directory = std::path::PathBuf::from(folder);
+    let index = std::env::var("RUSTY_DISPATCH_PROCESS_RACE_INDEX").unwrap();
+    let begin = std::time::Instant::now();
+    while !directory.join("go").exists() {
+        assert!(
+            begin.elapsed().as_secs() < 5,
+            "timed out waiting for parent"
+        );
+        std::thread::sleep(std::time::Duration::from_millis(5));
+    }
+    let granted = DurableDispatchFence::open(&directory.join("shared.redb"))
+        .and_then(|mut fence| fence.arm(permitted(&directory, "vendor_2050"), 111));
+    let outcome = if granted.is_ok() { "armed" } else { "denied" };
+    std::fs::write(directory.join(format!("result-{index}")), outcome).unwrap();
+}
