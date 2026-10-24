@@ -39,6 +39,7 @@ jobs:
       - name: Experimental Supervisor dispatch fence replay tests
         run: |
           cargo test --locked -p hars-supervisor-apps --features durable-dispatch-fence-lab --test durable_dispatch_fence
+          cargo test --locked -p hars-supervisor-apps --all-features --lib durable_origin_binding_tests
           cargo clippy --locked -p hars-supervisor-apps --all-targets --features durable-dispatch-fence-lab -- -D warnings
       - name: Durable lab session bounds, atomic revocation and replay protection
         run: |
