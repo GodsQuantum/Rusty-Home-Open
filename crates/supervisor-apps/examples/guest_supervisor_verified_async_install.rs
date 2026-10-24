@@ -182,6 +182,8 @@ fn run() -> Result<(), ()> {
                         ) => eprintln!("P8N_POLL_WATCH_STORAGE_ERROR"),
                         hars_supervisor_apps::durable_dispatch_fence_lab::VerifiedCloseError::Storage(_) =>
                             eprintln!("P8N_POLL_DURABLE_STORE_FAILED"),
+                        hars_supervisor_apps::durable_dispatch_fence_lab::VerifiedCloseError::MissingOfficialJob =>
+                            eprintln!("P8N_JOB_EXPIRED_SAFE_UNRESOLVED"),
                     }
                     reported_failure = true;
                 }
