@@ -7,6 +7,9 @@ publish = false
 description = "Read-only dynamic Home Assistant Supervisor app repository inspector"
 
 [features]
+# Default read-only durable job watch state; NOT an authorization receipt.
+default = ["durable-job-watch"]
+durable-job-watch = ["dep:redb"]
 # This gated proof may mutate only the fixture App core_ssh on disposable HAOS.
 # Default builds contain NO supervisor lifecycle write code.
 lab-app-actions = []
