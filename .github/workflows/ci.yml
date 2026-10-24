@@ -30,6 +30,12 @@ jobs:
           python3 scripts/test_p8i_core_user_rbac_contract.py
           cargo test --locked -p hars-supervisor-apps --features core-user-rbac-lab --lib
           cargo clippy --locked -p hars-supervisor-apps --all-targets --features core-user-rbac-lab -- -D warnings
+      - name: Active Core account, trusted ingress and durable one-shot consent preview
+        run: |
+          python3 scripts/test_core_corroborated_preview_contract.py
+          python3 scripts/test_core_corroborated_consent_contract.py
+          cargo test --locked -p hars-supervisor-apps --features core-corroborated-preview-lab --lib core_corroborated_permit_lab
+          cargo clippy --locked -p hars-supervisor-apps --all-targets --features core-corroborated-preview-lab -- -D warnings
       - name: Durable lab session bounds, atomic revocation and replay protection
         run: |
           python3 scripts/test_p8i_durable_contract.py
