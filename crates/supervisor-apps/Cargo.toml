@@ -28,6 +28,9 @@ core-user-live-lab = ["core-user-live-readonly"]
 # Preview-only join of trusted ingress claim, fresh Core user state and
 # per-App policy. No network, no HTTP endpoint, no write transport.
 core-user-rbac-lab = ["core-user-snapshot-lab", "managed-apps-preview"]
+# Dedicated QEMU-only composition: live Core corroboration, per-App grants,
+# persisted single-use confirmation, owner-only durable audit, no HTTP writes.
+core-corroborated-preview-lab = ["core-user-live-readonly", "persistent-session-lab"]
 
 [dependencies]
 serde = { version = "1", features = ["derive"] }
