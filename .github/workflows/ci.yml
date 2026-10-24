@@ -104,6 +104,8 @@ jobs:
         run: python3 scripts/test_firstparty_license_manifests.py
       - name: Public fixtures and source privacy check
         run: python3 scripts/test_public_redaction.py
+      - name: Previously executed HAOS restoration evidence and duplicate-work prevention
+        run: python3 scripts/test_certification_evidence_registry.py
       - name: Verify public certification gate ledger
         run: python3 scripts/test_public_certification_ledger.py
       - name: Review-signed, non-forgeable release evidence only (synthetic test keys)
