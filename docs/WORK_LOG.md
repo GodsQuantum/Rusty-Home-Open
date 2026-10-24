@@ -1,5 +1,15 @@
 # Rusty Home — journal de développement et de certification
 
+## 2026-10-24 — Audit exhaustif des oublis, raccourcis 2026 et rythme réel
+
+- Relecture de origin/main 6585cb41d95dc3a04c52309d2ad8f3405064dd7f, du registre canonique (8 preuves mêmes VM + 1 seconde VM), des 15 gates et des 8 crates Rust : **9 critères partiels, 6 bloqués, 0 intégralement certifiés**.
+- PR GitHub vérifiées via API : **76 merges**, 8 le 22/10 UTC, 50 le 23/10, 18 le 24/10, médiane création→fusion **9,0 minutes**. Aucune extrapolation directe à la parité.
+- Démasquage du goulot : native-kernel utilise principalement des périphériques synthétiques ; ha-compat lit des données via une session de laboratoire. Les restores réels HAOS vers HAOS ne sont pas un Rusty Home natif prêt.
+- Recherche de la documentation officielle d'octobre 2026 : seulement HAOS/Container supportés, version Core 2026.10.3 plus récente que le témoin CI, paquet Matter officiel migré à matter.js ; réutilisation de Core/HACS, OCI, MQTT v5 et piles radio existantes raccourcit le travail.
+- Nouveaux documents : docs/PRODUCTION_CERTIFICATION_MASTERPLAN_2026-10-24.md, docs/HANDOFF_CURRENT.md, config/certification-masterplan-audit-20261024.json ; commande scripts/show_handoff.py et test scripts/test_certification_masterplan_contract.py intégrés à la CI, modèle de PR avec mise à jour obligatoire des preuves et du handoff.
+- Les trois trajectoires A/B/C et les hypothèses de durée sont dans le masterplan. Aucune autorisation de déploiement ; aucune modification de HAOS familial.
+
+
 ## 2026-10-24 — PR #86 fusionnée, statut source→nouvelle VM clos
 
 - La [PR #86](https://github.com/GodsQuantum/Rusty-Home-Open/pull/86) a réussi tous les contrôles GitHub et a été fusionnée le 24 octobre 2026, à 21:44:37 UTC, dans main : c5e7a82b0e13b521f529d51190868e54e1867751.

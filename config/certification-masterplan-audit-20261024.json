@@ -1,0 +1,238 @@
+{
+  "schema_version": 1,
+  "audit_date": "2026-10-24",
+  "repo": "GodsQuantum/Rusty-Home-Open",
+  "audited_main_sha": "6585cb41d95dc3a04c52309d2ad8f3405064dd7f",
+  "history": {
+    "first_public_pr_created_utc": "2026-10-22T22:33:43Z",
+    "last_merge_utc": "2026-10-24T21:49:26Z",
+    "merged_prs": 76,
+    "merged_by_utc_day": {
+      "2026-10-22": 8,
+      "2026-10-23": 50,
+      "2026-10-24": 18
+    },
+    "median_pr_lifecycle_minutes": 9.0,
+    "p75_pr_lifecycle_minutes": 28.1,
+    "interpretation": "Concurrent small PRs and lab CI work; not implementation of 76 independent full product features. Zero complete production gates over this observation period."
+  },
+  "production": {
+    "certified": 0,
+    "partial": 9,
+    "blocked": 6,
+    "total": 15,
+    "deployment_authorized": false
+  },
+  "prior_verified_proofs": [
+    "full_restore_same_HAOS_guest",
+    "encrypted_full_restore_same_guest",
+    "wrong_password_rejected",
+    "file_editor_exact_data_restore",
+    "local_app_versioned_rollback",
+    "real_Supervisor_App_sync_install_ACID",
+    "async_job_disappearance_fail_closed",
+    "fresh_second_HAOS_guest_full_restore_6_of_6",
+    "selected_official_Core_and_HACS_labs",
+    "real_debian_signed_APT_labs",
+    "4_fuzz_surfaces_and_SPdx"
+  ],
+  "architecture_reality": {
+    "native_kernel": "Synthetic-only driver and experimental MQTT/native services; NO arbitrary real hardware or HA Core parity",
+    "ha_compat": "Loopback synthetic WS/read-only; missing production writes and OAuth",
+    "supervisor_apps": "Real Supervisor read/limited lab-opt-in writes in disposable HAOS; default product interface read-only"
+  },
+  "workstreams": {
+    "authenticated_host_transport": {
+      "gate_status": "lab_partial",
+      "group": "security",
+      "focus_interactions_estimate": [
+        2,
+        5
+      ],
+      "remaining_proof": "End-to-end authenticated host→Rust write transport; per-request scopes, revocation, cross-user denial, actual QEMU+production-like threat review.",
+      "fast_path": "Reuse official Supervisor ingress/Core identity; no custom OAuth proxy; least-privilege protected App.",
+      "already_evidenced": "Official isolated Supervisor Ingress rejects forged peer/header requests; native Rust product App runs nonroot (GitHub runs 40004128675 and 40002933713). Still missing authorized write sessions, per-operation revocation and production-host penetration tests."
+    },
+    "ha_core_hacs_29_runtime": {
+      "gate_status": "lab_partial",
+      "group": "interop",
+      "focus_interactions_estimate": [
+        6,
+        12
+      ],
+      "remaining_proof": "Core 2026.10.3 compatibility baseline; 29 representative integration lifecycles in CI (not a 29-integration product limit), upgrade/downgrade, config flow, automations, restarts.",
+      "fast_path": "Keep existing Python Home Assistant Core/HACS runtime in supported sidecar where parity is required; use official pytest and hassfest.",
+      "already_evidenced": "Official Core 2026.10.2 and selected real HACS integrations passed isolated CI (runs 40004128648 and 40004128595); complete 29/29 integration lifecycles, migrations, hardware-dependent behaviors and long recovery are not validated."
+    },
+    "hacs_github_oauth": {
+      "gate_status": "lab_partial",
+      "group": "interop",
+      "focus_interactions_estimate": [
+        2,
+        5
+      ],
+      "remaining_proof": "Authorize live OAuth flow with token renewal, expiry, revocation, errors, simultaneous users; CI secret isolation.",
+      "fast_path": "Reuse official Core OAuth config entries and existing HACS, instead of implementing an OAuth provider.",
+      "already_evidenced": "Pinned integrations load in genuine isolated Core; live interactive GitHub OAuth login, token renewal, revocation, multiuser isolation and outage recovery are not certified."
+    },
+    "apps_9_lifecycle": {
+      "gate_status": "blocked",
+      "group": "apps",
+      "focus_interactions_estimate": [
+        4,
+        10
+      ],
+      "remaining_proof": "Use 9 representative REAL third-party Apps as conformance fixtures; verify generic install/start/update/restart/stop/backup/rollback/cleanup including DB state.",
+      "fast_path": "Reuse OCI container runtime and upstream Store API semantics; select fixtures by protocol rather than fixed vendor allowlist.",
+      "already_evidenced": "Nine-App migration fixtures remain synthetic; nine representative real Supervisor Apps still require full install, start, update, stop and rollback with persistent data checks."
+    },
+    "supervisor_apps_restore": {
+      "gate_status": "lab_partial",
+      "group": "data",
+      "focus_interactions_estimate": [
+        3,
+        7
+      ],
+      "remaining_proof": "Persist and restore multiple stateful App DBs beyond File Editor; verify backup schema and partial, failed and encrypted restores.",
+      "fast_path": "Use native backup/restore of services; retain SHA256 proofs and official supervisor fixtures.",
+      "already_evidenced": "Actual official HAOS 18.3 QEMU has verified File Editor App data byte-for-byte partial restoration and disposable local App v1 to v2 version change then backup-based rollback after manager SIGKILL (run 40127707580). Does not certify arbitrary real third-party App database state, auth credentials or full Rust-native lifecycle parity."
+    },
+    "haos_backup_restore": {
+      "gate_status": "lab_partial",
+      "group": "data",
+      "focus_interactions_estimate": [
+        3,
+        8
+      ],
+      "remaining_proof": "Already proven same-VM + second HAOS VM. New gap is import/transform restored HAOS entities, automations, registries, secrets into Rusty Home runtime with fidelity and reversibility.",
+      "fast_path": "Keep HAOS backup as disaster-recovery fallback; add distinct Rust-native migration checksum/manifest, no third redundant HAOS->HAOS test.",
+      "already_evidenced": "Actual HAOS 18.3 QEMU verified source full backup transferred with SHA256 to a SECOND fresh HAOS VM with distinct boot ID, restored exact share marker bytes and matching Core version (6/6 run 40135221183). Previously verified SAME-VM full and encrypted restore, wrong-password refusal and real File Editor App data SHA256 roundtrip (17/17 run 40127707580). This is HAOS->HAOS laboratory recovery, NOT HAOS->Rusty Home Core replacement, generic third-party App databases, live secrets, radio ownership, or complete production migration."
+    },
+    "rollback_verified": {
+      "gate_status": "blocked",
+      "group": "data",
+      "focus_interactions_estimate": [
+        3,
+        7
+      ],
+      "remaining_proof": "Already proven one real versioned App rollback; missing complete failed-host Rust cutover and return to functioning original with accounts/DB/device IDs unchanged.",
+      "fast_path": "Transactional staging; VM snapshot and blue-green rollback using existing PVE APIs, no destructive household migration.",
+      "already_evidenced": "A real QEMU disposable local App v1 to v2 downgrade after manager SIGKILL did restore exact v1 bytes and version (run 40127707580). Full host migration rollback across independent machines, complete Core states, real App DBs, user accounts, physical radios and network ownership remain NOT verified."
+    },
+    "single_radio_owner": {
+      "gate_status": "blocked",
+      "group": "hardware",
+      "focus_interactions_estimate": [
+        3,
+        7
+      ],
+      "remaining_proof": "Real Zigbee/Thread/Z-Wave radio ownership transfer/failover with hardware adapters, exclusive leases, no dual commands.",
+      "fast_path": "Reuse Zigbee2MQTT and Z-Wave JS UI and official Matter Server; prove exclusive controller fencing.",
+      "already_evidenced": "A synthetic cross-process Linux radio lock and SIGKILL fencing exist, but real Zigbee/Thread/Matter radio transfers and simultaneous-controller fault isolation are untested."
+    },
+    "ha_ws_reconnection": {
+      "gate_status": "lab_partial",
+      "group": "interop",
+      "focus_interactions_estimate": [
+        2,
+        5
+      ],
+      "remaining_proof": "24-72h websocket loss/recovery, backpressure and state convergence tests on official Core event streams under realistic load.",
+      "fast_path": "Upstream WS interfaces + snapshot/resubscribe; avoid maintaining hand-written protocol forks.",
+      "already_evidenced": "Real isolated Core and bounded WebSocket tests exist; multi-day reconnect, authentication renewal, packet loss, back-pressure and stale state convergence have not been certified."
+    },
+    "production_ui_auth": {
+      "gate_status": "blocked",
+      "group": "security",
+      "focus_interactions_estimate": [
+        3,
+        7
+      ],
+      "remaining_proof": "Production multi-user write RBAC, CSRF protection, sessions, admin revocation and replay-denied audited mutations.",
+      "fast_path": "Official ingress for HAOS App path; segregate read-only public endpoints and mutation admin grants.",
+      "already_evidenced": "Native Supervisor Ingress authenticates read-only sessions in isolated HAOS, but end-to-end per-user write RBAC, CSRF protection, one-time approvals and revocation across sessions are disabled or unproved."
+    },
+    "native_drivers_services": {
+      "gate_status": "blocked",
+      "group": "architecture",
+      "focus_interactions_estimate": [
+        12,
+        35
+      ],
+      "remaining_proof": "Prove vendor-neutral real-driver coverage and service automation beyond synthetic Rust hub. For true Pure Rust Core parity this is open-ended.",
+      "fast_path": "Prioritize MQTT 5 discovery and OCI-provided Matter.js, Zigbee2MQTT, Z-Wave JS, then targeted native Rust drivers; never claim arbitrary Python HACS works in pure Rust.",
+      "already_evidenced": "No complete real-device coverage: Linux host drivers, physical radios, USB passthrough, cloud providers and native service parity with Home Assistant remain unqualified."
+    },
+    "performance_full_stack": {
+      "gate_status": "blocked",
+      "group": "reliability",
+      "focus_interactions_estimate": [
+        3,
+        7
+      ],
+      "remaining_proof": "Measure end-to-end entity throughput, WS latency, restart latency, CPU/RAM vs HAOS, and 72h soak plus faults.",
+      "fast_path": "Use one evidence-bearing GH/perf laboratory with artifacts rather than repeating microbenchmarks.",
+      "already_evidenced": "Native Rust microbenchmarks and isolated Core scale are not whole-home representative. Real 24h+ soak, peak workloads, memory, crash recovery and hardware resource regression remain."
+    },
+    "packaging_updates": {
+      "gate_status": "lab_partial",
+      "group": "release",
+      "focus_interactions_estimate": [
+        3,
+        7
+      ],
+      "remaining_proof": "Reproducible multi-arch signed release artifacts and rollback on existing staging install, cold boot, upgrade and uninstall.",
+      "fast_path": "Upstream HA Apps prebuilt OCI image publishing, Debian signed apt only where needed; avoid rebuilding source on end-user device.",
+      "already_evidenced": "Real disposable .deb install, upgrade, downgrade, purge and offline signed APT tamper rejection passed on main (run 40004128778). Still missing release signing infrastructure, published packages, service migration and rollback on an existing installation."
+    },
+    "third_party_licenses": {
+      "gate_status": "lab_partial",
+      "group": "release",
+      "focus_interactions_estimate": [
+        2,
+        6
+      ],
+      "remaining_proof": "SBOM/source already signed; independently review source+binaries+assets+OCI image redistribution and signed release obligations.",
+      "fast_path": "Reuse existing SPDX/Sigstore automation; add release-image SBOM and human legal approval.",
+      "already_evidenced": "Six external crates without bundled license files now have version-matched upstream source texts; the full Cargo.lock source SPDX is reproducible and Sigstore-attested (run 40027460088). Still missing independently reviewed binary-release BOM, all source/asset/firmware copyright notices, redistribution obligations and formal legal approval."
+    },
+    "security_stress_fuzz": {
+      "gate_status": "lab_partial",
+      "group": "security",
+      "focus_interactions_estimate": [
+        3,
+        8
+      ],
+      "remaining_proof": "Threat model and independent penetration test of genuine writable routes, longer fuzz corpora, incident/rollback and remediation retests.",
+      "fast_path": "Reuse RustSec, cargo-fuzz, ASan, Zizmor/GitHub attestations; minimize distinct auth paths.",
+      "already_evidenced": "Four genuine production Rust surfaces, including seven-action App preflight, passed sanitizer-instrumented pinned libFuzzer smoke (run 40026397117); not a complete security audit. Still missing independent penetration tests, cross-service attacker modeling, privilege-escalation review, broad fuzz coverage, prolonged stress and remediation retests."
+    }
+  },
+  "track_options": {
+    "A_haos_app_not_full_replacement": {
+      "description": "Rusty Home as secured HAOS App/controller preserving official Core+Supervisor; useful early alpha, NOT a HAOS replacement",
+      "focused_interactions_range": [
+        6,
+        15
+      ],
+      "elapsed_calendar_range": "2–5 weeks conditional on per-user security+24h soak"
+    },
+    "B_host_haos_alternative_core_kept": {
+      "description": "Rust manager/container host replaces HAOS/Supervisor orchestration while retaining genuine Home Assistant Core, HACS and vendor services",
+      "focused_interactions_range": [
+        30,
+        70
+      ],
+      "elapsed_calendar_range": "2–5+ months conditional on hardware/staging and independent security review"
+    },
+    "C_entirely_native_rust_home_assistant_parity": {
+      "description": "Replace BOTH HAOS/Supervisor AND Python Home Assistant Core for arbitrary integrations and devices in Rust",
+      "focused_interactions_range": [
+        100,
+        300
+      ],
+      "elapsed_calendar_range": "12–36+ months, highly uncertain; no defensible guaranteed completion date"
+    }
+  },
+  "assumptions": "An interaction is a substantial focused continue-session with actual code+CI/merge, NOT a literal single chat message. Ranges overlap and are NOT additive. Real hardware and external audit cannot be accelerated simply by producing more PRs. Zero certified gates means no unconditional product deadline."
+}
