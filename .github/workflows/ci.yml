@@ -64,6 +64,8 @@ jobs:
         run: python3 scripts/test_app_migration_policy.py
       - name: Offline HAOS backup archive nofollow and duplicate-manifest negative tests
         run: python3 scripts/test_ha_backup_inspector.py
+      - name: Real File Editor App data restore evidence scope and QEMU contract
+        run: python3 scripts/test_p8jm_file_editor_data_restore_contract.py
       - name: Synthetic inventory and loopback HTTP integration
         run: |
           bash scripts/test-lab.sh
