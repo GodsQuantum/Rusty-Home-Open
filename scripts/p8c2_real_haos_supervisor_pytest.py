@@ -484,12 +484,33 @@ def test_hars_manager_role_app(shell, shell_json):
             assert candidate.get("full_access") is not True
             # No HTTP client retries this POST. The Rust binary owns the
             # audited permit, DB fence, typed job binding and verified release.
-            records = shell.run_check(
-                "docker exec app_local_hars_rust_probe "
-                "/hars-fenced-install --acknowledge-disposable-qemu "
-                + verified_slug,
-                timeout=230,
-            )
+            try:
+                records = shell.run_check(
+                    "docker exec app_local_hars_rust_probe "
+                    "/hars-fenced-install --acknowledge-disposable-qemu "
+                    + verified_slug,
+                    timeout=230,
+                )
+            except Exception:
+                # Do not swallow an actual failed install proof. This
+                # independent official GET reports only a safe, finite
+                # installed flag/state and NEVER raw Supervisor messages.
+                try:
+                    observed = shell_json(
+                        "ha apps info " + verified_slug + " --no-progress --raw-json",
+                        timeout=50,
+                    )
+                    info = observed.get("data") or {}
+                    state = info.get("state")
+                    if state not in ("started", "stopped", "unknown", "error"):
+                        state = "other"
+                    verified_installed = info.get("installed") is True
+                    print("P8N_GUEST_OFFICIAL_INSTALLED",
+                          int(verified_installed),
+                          "STATE", state)
+                except Exception:
+                    print("P8N_GUEST_OFFICIAL_READ_UNAVAILABLE")
+                raise
             assert any(
                 "P8N_REAL_SUPERVISOR_ASYNC_INSTALL_JOB_APP_AND_REDB_PASS" in line
                 for line in records
