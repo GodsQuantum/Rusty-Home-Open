@@ -1,10 +1,11 @@
 # Rusty Home — journal de développement et de certification
 
-## 2026-10-24 — P8p, nouvelle validation inter-VM (proposée, CI non encore prouvée)
+## 2026-10-24 — P8p, nouvelle validation inter-VM (proposée, CI en cours, confirmation finale non encore prouvée)
 
 - **Anti-redondance :** vérification du registre du PR #85 avant de commencer. Même VM complète/chiffrée, File Editor et rollback sont déjà réussis, conservés.
 - **Lacune nouvelle :** migration d’une sauvegarde complète entre DEUX processus QEMU HAOS réellement indépendants : identification boot ID de source/target, import de tar SHA-256 vérifié, restauration des octets et Core sur installation vierge.
 - **Travaux :** scripts du relais local borné, workflow KVM séparé, deux tests réels et contrôle JUnit anti-faux-positifs, test de contrat CI. **Ne PAS annoncer comme réussi avant les exécutions GitHub du SHA exact.**
+- **GitHub :** [PR #86](https://github.com/GodsQuantum/Rusty-Home-Open/pull/86), branche test/fresh-second-haos-restore-20261024, premier commit fc26d357245d4a0d51de2362e072341b17bb9e60, correction CI 39b778274be83510f6a4ed9757e648dbc67638dd. Le premier run avait un YAML incorrect (sauts de ligne littéraux) ; problème corrigé immédiatement, sans cacher le résultat échoué. Statut test réel : PENDING.
 - **Blocage production :** même une réussite officielle HAOS→HAOS ne remplace pas le moteur Home Assistant/Core par Rusty Home ; 0/15 gates tant qu’aucune certification indépendante n’existe.
 
 

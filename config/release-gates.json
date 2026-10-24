@@ -39,7 +39,7 @@
       "id": "supervisor_apps_restore",
       "status": "lab_partial",
       "blocked_reason": [
-        "Genuine HAOS 18.3 KVM Supervisor App lifecycle and disposable third-party backup/restore checks passed (run 40002933713). Still missing representative persistent-data restore across arbitrary installed Apps and independent rollback proof."
+        "Actual official HAOS 18.3 QEMU has verified File Editor App data byte-for-byte partial restoration and disposable local App v1 to v2 version change then backup-based rollback after manager SIGKILL (run 40127707580). Does not certify arbitrary real third-party App database state, auth credentials or full Rust-native lifecycle parity."
       ],
       "certification_artifact": null
     },
@@ -47,7 +47,7 @@
       "id": "haos_backup_restore",
       "status": "lab_partial",
       "blocked_reason": [
-        "Disposable genuine HAOS 18.3 KVM has demonstrated a bounded backup/restore path, but encrypted archives, application data, real user-equivalent state and independent full-system disaster recovery remain unverified."
+        "Already verified in actual pinned HAOS 18.3 QEMU: full backup SHA256, full restore of mutated share bytes and official Core version IN THE SAME GUEST, encrypted full backup plus correct-password recovery, wrong-password refusal without data mutation, and genuine File Editor SHA256 partial App data restore (17/17 run 40127707580). The independent second fresh-machine disaster recovery test is separate and NOT yet verified (PR #86); full Rusty Home cross-vendor migration and household-equivalent state remain unverified."
       ],
       "certification_artifact": null
     },
@@ -55,7 +55,7 @@
       "id": "rollback_verified",
       "status": "blocked",
       "blocked_reason": [
-        "No witnessed full host rollback preserving Core states, App databases, networking, radios and credentials following a deliberately failed migration."
+        "A real QEMU disposable local App v1 to v2 downgrade after manager SIGKILL did restore exact v1 bytes and version (run 40127707580). Full host migration rollback across independent machines, complete Core states, real App DBs, user accounts, physical radios and network ownership remain NOT verified."
       ],
       "certification_artifact": null
     },

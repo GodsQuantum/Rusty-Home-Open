@@ -13,3 +13,7 @@ The relay streams and SHA-256-hashes only one 1-GiB-max synthetic tar file, fsyn
 This would prove **official HAOS to official HAOS disaster recovery** in two disposable guest VMs. It does NOT prove Rusty Home can replace Home Assistant Core itself, generic third-party databases, hardware radio ownership, private credentials, recovery across architectures, production OAuth or all 15 release gates. A live CI success is mandatory before recording this as verified. Do not confuse a successful same-guest round trip with separate-target recovery.
 
 Workflow: .github/workflows/p8p-cross-vm-recovery.yml; source: scripts/p8p_cross_vm_backup_pytest.py; relay: scripts/p8p_cross_vm_backup_relay.py; strict JUnit: scripts/check_p8p_cross_vm_junit.py.
+
+## État actuel et non-redondance
+
+[PR #86](https://github.com/GodsQuantum/Rusty-Home-Open/pull/86) exécute cette preuve indépendante. La première révision a échoué à déclencher le workflow général à cause d'une erreur YAML (correctif sur SHA 39b778274be83510f6a4ed9757e648dbc67638dd), pas à cause d'une erreur de restauration HAOS. Attendre le véritable résultat de source + target avant de promouvoir cet élément dans le registre des preuves. L'ensemble du reste des restorations SAME-VM existe déjà et reste attesté.
