@@ -39,7 +39,7 @@ class RealFileEditorPartialRestore(unittest.TestCase):
             self.assertIn(mark,case)
         self.assertLess(case.index("P8JM_REAL_FILE_EDITOR_MUTATED"),case.index('"ha backups restore "'))
         self.assertLess(case.index("finally:"),case.index('"ha apps uninstall "'))
-    def test_official_haos_sixteen_exact_fail_closed(self):
+    def test_official_haos_seventeen_exact_fail_closed(self):
         flow=(ROOT/".github/workflows/p8c2-haos-qemu.yml").read_text()
         self.assertIn("-snapshot -accel kvm",flow)
         self.assertIn("::test_hars_real_official_file_editor_partial_restore_bytes_qemu",flow)
@@ -49,8 +49,8 @@ class RealFileEditorPartialRestore(unittest.TestCase):
         self.assertIn('("skipped", "failure", "error")',guard)
     def test_only_synthetic_data_not_global_certification(self):
         doc=(ROOT/"docs/P8JM_REAL_FILE_EDITOR_DATA_RESTORE_2026-10-22.md").read_text()
-        for mark in ("NOT_PRODUCTION_READY","synthetic VM","huit autres Apps",
-                     "données fictives","16/16"):
+        for mark in ("NOT_PRODUCTION_READY","synthetic VM","Apps non testées",
+                     "données fictives","17 scénarios sur 17","0/15"):
             self.assertIn(mark,doc)
 if __name__ == "__main__":
     unittest.main()
