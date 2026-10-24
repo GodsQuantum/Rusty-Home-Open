@@ -23,7 +23,7 @@ L'ancienne campagne [du 22 octobre 2026](https://github.com/GodsQuantum/Rusty-Ho
 
 ## Nouvelle preuve : restauration sur DEUX VM HAOS différentes
 
-**Réussie le 24 octobre 2026.** La campagne [GitHub 40134632585](https://github.com/GodsQuantum/Rusty-Home-Open/actions/runs/40134632585), SHA exact 161307bd227b279c73df5a33da759a19ed4ac1ae, a réussi **3/3 tests source + 3/3 tests cible**, sans saut. Elle est séparée des 17/17 tests SAME-VM ci-dessus.
+**Réussie le 24 octobre 2026.** La campagne [GitHub 40135221183](https://github.com/GodsQuantum/Rusty-Home-Open/actions/runs/40135221183), SHA exact 8d3b1263f0cb65f11fdbb9f3979a58af052b3731, a réussi **3/3 tests source + 3/3 tests cible**, sans saut. Elle est séparée des 17/17 tests SAME-VM ci-dessus.
 
 La VM source produit une vraie archive complète Supervisor, l'envoie à un relais local borné et enregistre son SHA-256 et boot ID. La deuxième VM part du disque officiel HAOS 18.3 intact, doit avoir un boot ID différent et aucun fichier marqueur source ; elle télécharge le tar, vérifie la taille et le SHA-256, importe puis restaure la sauvegarde avec la vraie CLI HAOS, et démontre la récupération des octets exacts et de Home Assistant Core/Supervisor. Voir [protocole et limitations](CROSS_VM_DISASTER_RECOVERY_2026-10-24.md).
 

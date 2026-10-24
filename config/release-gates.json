@@ -47,7 +47,7 @@
       "id": "haos_backup_restore",
       "status": "lab_partial",
       "blocked_reason": [
-        "Actual HAOS 18.3 QEMU verified source full backup transferred with SHA256 to a SECOND fresh HAOS VM with distinct boot ID, restored exact share marker bytes and matching Core version (6/6 run 40134632585). Previously verified SAME-VM full and encrypted restore, wrong-password refusal and real File Editor App data SHA256 roundtrip (17/17 run 40127707580). This is HAOS->HAOS laboratory recovery, NOT HAOS->Rusty Home Core replacement, generic third-party App databases, live secrets, radio ownership, or complete production migration."
+        "Actual HAOS 18.3 QEMU verified source full backup transferred with SHA256 to a SECOND fresh HAOS VM with distinct boot ID, restored exact share marker bytes and matching Core version (6/6 run 40135221183). Previously verified SAME-VM full and encrypted restore, wrong-password refusal and real File Editor App data SHA256 roundtrip (17/17 run 40127707580). This is HAOS->HAOS laboratory recovery, NOT HAOS->Rusty Home Core replacement, generic third-party App databases, live secrets, radio ownership, or complete production migration."
       ],
       "certification_artifact": null
     },

@@ -88,8 +88,8 @@ def main() -> None:
     assert re.fullmatch("[0-9a-f]{40}", second["run_sha"])
     assert second["run_sha"] != proof["run_sha"]
     assert second["source_junit_passed"] == second["target_junit_passed"] == 3
-    assert second["run_url"] == "https://github.com/GodsQuantum/Rusty-Home-Open/actions/runs/40134632585"
-    assert second["run_sha"] == "161307bd227b279c73df5a33da759a19ed4ac1ae"
+    assert second["run_url"] == "https://github.com/GodsQuantum/Rusty-Home-Open/actions/runs/40135221183"
+    assert second["run_sha"] == "8d3b1263f0cb65f11fdbb9f3979a58af052b3731"
     guest = (ROOT / "scripts/p8p_cross_vm_backup_pytest.py").read_text(encoding="utf-8")
     qemu = (ROOT / ".github/workflows/p8p-cross-vm-recovery.yml").read_text(encoding="utf-8")
     strict = (ROOT / "scripts/check_p8p_cross_vm_junit.py").read_text(encoding="utf-8")

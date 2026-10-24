@@ -20,4 +20,4 @@ Workflow: .github/workflows/p8p-cross-vm-recovery.yml; source: scripts/p8p_cross
 
 ## Verified CI result
 
-Real pinned HAOS 18.3 source+fresh-target [run 40134632585](https://github.com/GodsQuantum/Rusty-Home-Open/actions/runs/40134632585) on SHA 161307bd227b279c73df5a33da759a19ed4ac1ae: source 3/3 PASS, target 3/3 PASS, both strict JUnit validators PASS. This is a bounded HAOS-to-HAOS recovery proof, NOT Rust native HA replacement certification.
+Real pinned HAOS 18.3 source+fresh-target [run 40135221183](https://github.com/GodsQuantum/Rusty-Home-Open/actions/runs/40135221183) on SHA 8d3b1263f0cb65f11fdbb9f3979a58af052b3731: source 3/3 PASS, target 3/3 PASS, both strict JUnit validators PASS. This is a bounded HAOS-to-HAOS recovery proof, NOT Rust native HA replacement certification.

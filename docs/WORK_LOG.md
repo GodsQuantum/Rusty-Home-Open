@@ -1,5 +1,13 @@
 # Rusty Home — journal de développement et de certification
 
+## 2026-10-24 — PR #86 fusionnée, statut source→nouvelle VM clos
+
+- La [PR #86](https://github.com/GodsQuantum/Rusty-Home-Open/pull/86) a réussi tous les contrôles GitHub et a été fusionnée le 24 octobre 2026, à 21:44:37 UTC, dans main : c5e7a82b0e13b521f529d51190868e54e1867751.
+- Preuve finale [run 40135221183](https://github.com/GodsQuantum/Rusty-Home-Open/actions/runs/40135221183), SHA exact 8d3b1263f0cb65f11fdbb9f3979a58af052b3731, réussite 3/3 VM source + 3/3 VM cible, aucune omission ; précédent run vert 40134632585.
+- Le registre des preuves mentionne désormais la **seconde VM vierge** comme vérifiée. Ne pas refaire ce scénario HAOS→HAOS par erreur.
+- Ce n'est PAS la migration vers le moteur Rust et ne valide PAS les comptes réels, radios et bases App tierces. Production toujours NOT_PRODUCTION_READY, 0/15 gates.
+
+
 ## 2026-10-24 — P8p, nouvelle validation inter-VM (3/3 source et 3/3 cible RÉUSSIS en QEMU réel)
 
 - **Anti-redondance :** vérification du registre du PR #85 avant de commencer. Même VM complète/chiffrée, File Editor et rollback sont déjà réussis, conservés.
@@ -31,4 +39,4 @@ Ce journal est persistant dans **GitHub** et dans le dossier de travail **LXC700
 
 ## Prochaines tâches distinctes, sans redondance
 
-Une éventuelle **restauration sur une deuxième VM fraîche** (indépendante de la source), la migration de données arbitraires vers le moteur Rust et les tests de périphériques physiques sont **des tests différents** du round-trip déjà effectué. Ils ne doivent être entrepris qu'après inventaire des preuves et de la stratégie de réversibilité. Les 15 gates de production restent non certifiés.
+**Mise à jour postérieure :** la restauration HAOS→HAOS sur une deuxième VM fraîche a été réalisée avec succès dans PR #86 (voir en-tête du journal). Les tâches véritablement manquantes concernent la migration de données depuis HAOS VERS LE MOTEUR Rusty Home, l'exécution des Apps tierces, les comptes et les vrais périphériques physiques, la sécurité et l'endurance de l'application. Les 15 gates de production restent non certifiés.
