@@ -39,11 +39,18 @@ pub fn authorize_recorded(
 #[derive(Debug)]
 pub struct AuditedPermit {
     request: PreparedRequest,
+    /// Recorded, authorized fixture subject; compiled only with the dispatch ledger.
+    #[cfg(feature = "durable-dispatch-fence-lab")]
+    actor_subject: String,
 }
 
 impl AuditedPermit {
     pub(crate) fn request(&self) -> &PreparedRequest {
         &self.request
+    }
+    #[cfg(feature = "durable-dispatch-fence-lab")]
+    pub(crate) fn actor_subject(&self) -> &str {
+        &self.actor_subject
     }
 }
 
@@ -58,9 +65,15 @@ pub fn grant_recorded(
     journal: &mut FileAuditJournal,
 ) -> io::Result<Option<AuditedPermit>> {
     let decision = authorize_recorded(policy, actor, request, acknowledgement, journal)?;
-    Ok(decision.allowed().then(|| AuditedPermit {
-        request: request.clone(),
-    }))
+    Ok(if decision.allowed() {
+        actor.map(|_verified_actor| AuditedPermit {
+            request: request.clone(),
+            #[cfg(feature = "durable-dispatch-fence-lab")]
+            actor_subject: _verified_actor.subject().to_owned(),
+        })
+    } else {
+        None
+    })
 }
 
 #[derive(Serialize, Deserialize)]
