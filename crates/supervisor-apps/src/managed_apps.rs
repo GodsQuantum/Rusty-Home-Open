@@ -10,6 +10,7 @@ pub enum ManagerError {
     UnsafeAppSlug,
     UnsafeBackupSlug,
     NotAuthorized,
+    UnsupportedBackgroundJob,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -84,6 +85,7 @@ pub struct PreparedRequest {
     human_target: String,
     action: Action,
     restore_backup: Option<BackupSlug>,
+    background_job: bool,
 }
 
 impl PreparedRequest {
@@ -108,6 +110,9 @@ impl PreparedRequest {
     }
     pub fn requires_explicit_authorization(&self) -> bool {
         true
+    }
+    pub fn background_job(&self) -> bool {
+        self.background_job
     }
     /// This is a pure validation predicate, NOT a user-auth implementation.
     /// The calling application must verify identity/role before passing true.
@@ -174,5 +179,26 @@ pub fn prepare(app: &AppSlug, operation: Operation) -> Result<PreparedRequest, M
         human_target: slug.to_string(),
         action,
         restore_backup,
+        background_job: false,
     })
+}
+
+/// Explicit opt-in for official, job-tracked Store install or update only.
+/// Remains a pure request builder: never authenticates or submits a POST.
+/// Synchronous start/stop/restart/backup/restore are deliberately excluded.
+pub fn prepare_background_job(
+    app: &AppSlug,
+    operation: Operation,
+) -> Result<PreparedRequest, ManagerError> {
+    if !matches!(&operation, Operation::Install | Operation::UpdateWithBackup) {
+        return Err(ManagerError::UnsupportedBackgroundJob);
+    }
+    let mut request = prepare(app, operation)?;
+    request.body = match request.action() {
+        Action::Install => br#"{"background":true}"#.to_vec(),
+        Action::Update => br#"{"backup":true,"background":true}"#.to_vec(),
+        _ => return Err(ManagerError::UnsupportedBackgroundJob),
+    };
+    request.background_job = true;
+    Ok(request)
 }
