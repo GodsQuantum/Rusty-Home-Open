@@ -167,3 +167,6 @@ mod tests {
         assert_eq!(project(&e), Err(ProjectionError::InvalidPlatform));
     }
 }
+
+/// Opt-in private read-only HA entity registry import staging, no device writes.
+pub mod registry_stage;

@@ -29,6 +29,10 @@ jobs:
         run: |
           python3 scripts/test_p6c_config_entry_lifecycle_contract.py
           bash scripts/run_config_entry_lifecycle_core.sh
+      - name: Genuine Core storage entity registry to durable private Rust read-only shadow and rollback
+        run: |
+          python3 scripts/test_p8q_core_registry_contract.py
+          bash scripts/run_p8q_real_core_to_native_registry.sh
       - name: Verify no test container leaked
         if: always()
         run: |

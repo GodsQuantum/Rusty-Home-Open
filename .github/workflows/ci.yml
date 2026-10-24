@@ -60,6 +60,10 @@ jobs:
         run: |
           python3 scripts/test_store_repository_filter_contract.py
           node scripts/test_dynamic_store_repository_filter.mjs
+      - name: HA Core identity registry to Rust private stage, cross-process rollback and fail-closed contract
+        run: |
+          python3 scripts/test_p8q_core_registry_contract.py
+          python3 scripts/test_ha_registry_stager.py
       - name: Vendor-neutral migration preflight over variable App inventories
         run: python3 scripts/test_app_migration_policy.py
       - name: Offline HAOS backup archive nofollow and duplicate-manifest negative tests
