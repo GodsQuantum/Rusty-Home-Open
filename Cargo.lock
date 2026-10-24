@@ -533,11 +533,15 @@ dependencies = [
 name = "hars-interop-moli"
 version = "0.1.0"
 dependencies = [
+ "anyhow",
  "hex",
  "moli-core",
+ "nix",
+ "redb",
  "serde",
  "serde_json",
  "sha2",
+ "tempfile",
 ]
 
 [[package]]
