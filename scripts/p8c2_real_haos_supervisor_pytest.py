@@ -391,7 +391,7 @@ def test_hars_manager_role_app(shell, shell_json):
     app="local_hars_rust_probe"
     directory="/mnt/data/supervisor/apps/local/hars_rust_probe"
     shell.run_check("mkdir -p "+directory+"/audit_layer")
-    for asset in ("config.yaml", "Dockerfile", "guest_supervisor_live", "guest_supervisor_lab_lifecycle", "guest_supervisor_managed_preview", "audit_layer/.seed"):
+    for asset in ("config.yaml", "Dockerfile", "guest_supervisor_live", "guest_supervisor_lab_lifecycle", "guest_supervisor_managed_preview", "guest_supervisor_verified_async_install", "audit_layer/.seed"):
         shell.run_check(
             "curl --fail --silent --show-error --max-time 30 "
             "http://10.0.2.2:18673/hars_rust_probe/"+asset+
@@ -462,6 +462,70 @@ def test_hars_manager_role_app(shell, shell_json):
             _sleep(2)
         else:
             raise AssertionError("Rust manager-role App never authenticated to Supervisor")
+        # P8N: the real manager-role Rust App submits ONE background
+        # Supervisor Store installation, polls its authentic job and installed
+        # inventory independently, and only then releases the durable fence.
+        # Entirely disposable on this QEMU snapshot; no household host/device.
+        verified_slug = "local_hars_verified_fixture"
+        verified_dir = "/mnt/data/supervisor/apps/local/hars_verified_fixture"
+        shell.run_check("mkdir -p " + verified_dir)
+        verified_installed = False
+        try:
+            for asset in ("config.yaml", "Dockerfile", "guest_supervisor_live"):
+                shell.run_check(
+                    "curl --fail --silent --show-error --max-time 30 "
+                    "http://10.0.2.2:18673/hars_verified_fixture/" + asset
+                    + " -o " + verified_dir + "/" + asset,
+                    timeout=45,
+                )
+            candidate = _ensure_store(shell_json, verified_slug, "1.0.0", sleeper=_sleep)
+            assert candidate.get("slug") == verified_slug
+            assert candidate.get("available") is not False
+            assert candidate.get("full_access") is not True
+            # No HTTP client retries this POST. The Rust binary owns the
+            # audited permit, DB fence, typed job binding and verified release.
+            records = shell.run_check(
+                "docker exec app_local_hars_rust_probe "
+                "/hars-fenced-install --acknowledge-disposable-qemu "
+                + verified_slug,
+                timeout=230,
+            )
+            assert any(
+                "P8N_REAL_SUPERVISOR_ASYNC_INSTALL_JOB_APP_AND_REDB_PASS" in line
+                for line in records
+            ), "Official background job or durable closure was not certified"
+            verified_installed = True
+            result = shell_json(
+                "ha apps info " + verified_slug + " --no-progress --raw-json",
+                timeout=75,
+            )
+            installed = result.get("data") or {}
+            assert result.get("result") == "ok"
+            assert installed.get("slug") == verified_slug
+            assert installed.get("version") == "1.0.0"
+            assert installed.get("state") in ("started", "stopped")
+            print("P8N_GENUINE_HAOS_ASYNC_INSTALL_AND_DURABLE_UNLOCK_PASS")
+        finally:
+            # Explicitly remove only this disposable local test App. Never
+            # repeat an uncertain install after a guest command timeout.
+            if not verified_installed:
+                try:
+                    current = shell_json(
+                        "ha apps info " + verified_slug + " --no-progress --raw-json",
+                        timeout=45,
+                    ).get("data") or {}
+                    verified_installed = bool(current.get("installed"))
+                except Exception:
+                    pass
+            if verified_installed:
+                removed = shell_json(
+                    "ha apps uninstall " + verified_slug
+                    + " --no-progress --raw-json",
+                    timeout=180,
+                )
+                assert removed.get("result") == "ok", "QEMU fixture cleanup refused"
+            shell.run_check("rm -rf " + verified_dir)
+
         # P8i.d.6: dedicated least-privilege Core-only App in QEMU.
         # Manager App retains homeassistant_api:false and cannot query Core.
         # No user IDs, tokens or JSON are exposed in test output.

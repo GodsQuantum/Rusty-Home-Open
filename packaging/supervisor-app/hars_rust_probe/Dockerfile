@@ -10,6 +10,8 @@ COPY --chmod=0555 guest_supervisor_live /hars-supervisor-probe
 COPY --chmod=0555 guest_supervisor_lab_lifecycle /hars-lifecycle
 # P8h validated dynamic operation preview is disabled in default Rust builds.
 COPY --chmod=0555 guest_supervisor_managed_preview /hars-manager
+# Verified async dispatch proof: available ONLY in disposable HAOS CI.
+COPY --chmod=0555 guest_supervisor_verified_async_install /hars-fenced-install
 # Private LAB-only writable audit directory for UID 1000 (nonroot).
 # Supervisor /data may be root-owned: never chmod or chown host-mounted data.
 COPY --chown=1000:1000 --chmod=0700 audit_layer/ /hars-lab-audit/
