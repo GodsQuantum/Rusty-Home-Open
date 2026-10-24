@@ -18,4 +18,4 @@ The [canonical evidence index](CERTIFICATION_EVIDENCE_REGISTER.md) and [developm
 
 ## Newly demonstrated: independent fresh HAOS restore in disposable KVM
 
-[6/6 separate source+target genuine QEMU checks](https://github.com/GodsQuantum/Rusty-Home-Open/actions/runs/40134632585) prove HAOS-to-HAOS full backup migration to a clean second HAOS guest, including exact synthetic share bytes and Core version. This does NOT demonstrate restoring an HAOS backup inside the Rusty Home native runtime. Production remains NOT_PRODUCTION_READY, 0/15 gates. See [canonical evidence registry](CERTIFICATION_EVIDENCE_REGISTER.md).
+[6/6 separate source+target genuine QEMU checks](https://github.com/GodsQuantum/Rusty-Home-Open/actions/runs/40135221183) prove HAOS-to-HAOS full backup migration to a clean second HAOS guest, including exact synthetic share bytes and Core version. This does NOT demonstrate restoring an HAOS backup inside the Rusty Home native runtime. Production remains NOT_PRODUCTION_READY, 0/15 gates. See [canonical evidence registry](CERTIFICATION_EVIDENCE_REGISTER.md).
