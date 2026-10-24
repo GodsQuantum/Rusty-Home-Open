@@ -64,3 +64,7 @@ required-features = ["core-user-live-lab"]
 [[example]]
 name = "guest_supervisor_verified_async_install"
 required-features = ["durable-dispatch-fence-lab"]
+
+[[example]]
+name = "guest_supervisor_verified_sync_install"
+required-features = ["durable-dispatch-fence-lab"]

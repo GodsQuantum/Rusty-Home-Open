@@ -59,6 +59,7 @@ jobs:
           cargo build --locked -p hars-supervisor-apps --target x86_64-unknown-linux-musl --features lab-app-actions --example guest_supervisor_lab_lifecycle
           cargo build --locked -p hars-supervisor-apps --target x86_64-unknown-linux-musl --features managed-apps-preview --example guest_supervisor_managed_preview
           cargo build --locked -p hars-supervisor-apps --target x86_64-unknown-linux-musl --features durable-dispatch-fence-lab --example guest_supervisor_verified_async_install
+          cargo build --locked -p hars-supervisor-apps --target x86_64-unknown-linux-musl --features durable-dispatch-fence-lab --example guest_supervisor_verified_sync_install
           cargo build --locked -p hars-supervisor-apps --target x86_64-unknown-linux-musl --features core-user-live-lab --example guest_core_users_probe
           BINARY=target/x86_64-unknown-linux-musl/debug/examples/guest_supervisor_live
           test -x "$BINARY"
@@ -126,6 +127,11 @@ jobs:
           cp "$GITHUB_WORKSPACE/target/x86_64-unknown-linux-musl/debug/examples/guest_supervisor_lab_lifecycle" "$RUNNER_TEMP/hars-app-assets/hars_rust_probe/guest_supervisor_lab_lifecycle"
           cp "$GITHUB_WORKSPACE/target/x86_64-unknown-linux-musl/debug/examples/guest_supervisor_managed_preview" "$RUNNER_TEMP/hars-app-assets/hars_rust_probe/guest_supervisor_managed_preview"
           cp "$GITHUB_WORKSPACE/target/x86_64-unknown-linux-musl/debug/examples/guest_supervisor_verified_async_install" "$RUNNER_TEMP/hars-app-assets/hars_rust_probe/guest_supervisor_verified_async_install"
+          cp "$GITHUB_WORKSPACE/target/x86_64-unknown-linux-musl/debug/examples/guest_supervisor_verified_sync_install" "$RUNNER_TEMP/hars-app-assets/hars_rust_probe/guest_supervisor_verified_sync_install"
+          mkdir -p "$RUNNER_TEMP/hars-app-assets/hars_sync_fixture"
+          cp "$GITHUB_WORKSPACE/packaging/supervisor-app/hars_sync_fixture/config.yaml" "$RUNNER_TEMP/hars-app-assets/hars_sync_fixture/config.yaml"
+          cp "$GITHUB_WORKSPACE/packaging/supervisor-app/hars_sync_fixture/Dockerfile" "$RUNNER_TEMP/hars-app-assets/hars_sync_fixture/Dockerfile"
+          cp "$GITHUB_WORKSPACE/target/x86_64-unknown-linux-musl/debug/examples/guest_supervisor_live" "$RUNNER_TEMP/hars-app-assets/hars_sync_fixture/guest_supervisor_live"
           mkdir -p "$RUNNER_TEMP/hars-app-assets/hars_verified_fixture"
           cp "$GITHUB_WORKSPACE/packaging/supervisor-app/hars_verified_fixture/config.yaml" "$RUNNER_TEMP/hars-app-assets/hars_verified_fixture/config.yaml"
           cp "$GITHUB_WORKSPACE/packaging/supervisor-app/hars_verified_fixture/Dockerfile" "$RUNNER_TEMP/hars-app-assets/hars_verified_fixture/Dockerfile"

@@ -12,6 +12,8 @@ COPY --chmod=0555 guest_supervisor_lab_lifecycle /hars-lifecycle
 COPY --chmod=0555 guest_supervisor_managed_preview /hars-manager
 # Verified async dispatch proof: available ONLY in disposable HAOS CI.
 COPY --chmod=0555 guest_supervisor_verified_async_install /hars-fenced-install
+# Native synchronous Store install; no ephemeral background job to lose.
+COPY --chmod=0555 guest_supervisor_verified_sync_install /hars-sync-install
 # Private LAB-only writable audit directory for UID 1000 (nonroot).
 # Supervisor /data may be root-owned: never chmod or chown host-mounted data.
 COPY --chown=1000:1000 --chmod=0700 audit_layer/ /hars-lab-audit/
