@@ -122,10 +122,10 @@ fn run() -> Result<(), ()> {
             Ok(None) => {
                 if !reported_pending {
                     println!("P8N_POLL_WAITING_FOR_VERIFIED_POSTCONDITION");
-                    if let Some(job) = posted.receipt.job_id() {
-                        if let Ok(Some(observation)) = watches.get(job) {
-                            println!("P8N_POLL_LAST_OBSERVATION_{:?}", observation.outcome);
-                        }
+                    if let Some(job) = posted.receipt.job_id()
+                        && let Ok(Some(observation)) = watches.get(job)
+                    {
+                        println!("P8N_POLL_LAST_OBSERVATION_{:?}", observation.outcome);
                     }
                     reported_pending = true;
                 }
@@ -142,6 +142,8 @@ fn run() -> Result<(), ()> {
                         ) => eprintln!("P8N_POLL_WATCH_STORAGE_ERROR"),
                         hars_supervisor_apps::durable_dispatch_fence_lab::VerifiedCloseError::Storage(_) =>
                             eprintln!("P8N_POLL_DURABLE_STORE_FAILED"),
+                        hars_supervisor_apps::durable_dispatch_fence_lab::VerifiedCloseError::MissingOfficialJob =>
+                            eprintln!("P8N_POLL_EXACT_JOB_MISSING_FROM_AUTHENTICATED_INDEX"),
                     }
                     reported_failure = true;
                 }

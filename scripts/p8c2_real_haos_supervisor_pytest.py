@@ -504,10 +504,16 @@ def test_hars_manager_role_app(shell, shell_json):
                     state = info.get("state")
                     if state not in ("started", "stopped", "unknown", "error"):
                         state = "other"
-                    verified_installed = info.get("installed") is True
-                    print("P8N_GUEST_OFFICIAL_INSTALLED",
-                          int(verified_installed),
-                          "STATE", state)
+                    # Current official Supervisor info does not always expose
+                    # an "installed" boolean; a matching real installed
+                    # version and managed-App state are stronger evidence.
+                    verified_installed = (
+                        info.get("slug") == verified_slug
+                        and info.get("version") == "1.0.0"
+                        and state in ("started", "stopped", "error")
+                    )
+                    print("P8N_GUEST_OFFICIAL_VERSION_AND_STATE",
+                          int(verified_installed), "STATE", state)
                 except Exception:
                     print("P8N_GUEST_OFFICIAL_READ_UNAVAILABLE")
                 raise
@@ -535,7 +541,11 @@ def test_hars_manager_role_app(shell, shell_json):
                         "ha apps info " + verified_slug + " --no-progress --raw-json",
                         timeout=45,
                     ).get("data") or {}
-                    verified_installed = bool(current.get("installed"))
+                    verified_installed = (
+                        current.get("slug") == verified_slug
+                        and current.get("version") == "1.0.0"
+                        and current.get("state") in ("started", "stopped", "error")
+                    )
                 except Exception:
                     pass
             if verified_installed:
