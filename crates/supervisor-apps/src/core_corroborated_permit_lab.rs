@@ -62,6 +62,62 @@ pub fn grant_corroborated_disposable_preview(
     )
 }
 
+/// Enforce a real authenticated Core admin and one-use, App-bound fixture
+/// consent before the durable intent can be armed. The accepted Supervisor
+/// TCP peer and fresh Core WS lookup are verified by the existing authority
+/// gate. This function does not perform or expose Supervisor POST, cannot
+/// be called with a browser-provided user/role, and remains QEMU-only.
+#[cfg(feature = "core-durable-dispatch-lab")]
+#[allow(clippy::too_many_arguments)]
+pub fn arm_corroborated_disposable_dispatch(
+    accepted_tcp: &TcpStream,
+    ingress_headers: &[(&str, &str)],
+    policy: &Policy,
+    sessions: &mut DurableFixtureSessions,
+    session_token: &str,
+    request: &PreparedRequest,
+    confirmation: Option<&str>,
+    journal: &mut FileAuditJournal,
+    fence: &mut crate::durable_dispatch_fence_lab::DurableDispatchFence,
+    now: u64,
+) -> Result<Option<crate::durable_dispatch_fence_lab::ArmedDispatch>, CorroborationError> {
+    // The only source for this capability is a freshly verified Core account
+    // and an already-consumed, exactly scoped durable consent.
+    let Some(permit) = grant_corroborated_disposable_preview(
+        accepted_tcp,
+        ingress_headers,
+        policy,
+        sessions,
+        session_token,
+        request,
+        confirmation,
+        journal,
+        now,
+    )?
+    else {
+        return Ok(None);
+    };
+    arm_granted_disposable_dispatch(permit, fence, now).map(Some)
+}
+
+/// Never public: only a Core-corroborated one-use grant can reach this helper
+/// through the real entry point. Unit tests supply the separate typed Core
+/// fixture seam to verify atomic dispatch behavior without contacting HAOS.
+#[cfg(feature = "core-durable-dispatch-lab")]
+fn arm_granted_disposable_dispatch(
+    permit: AuditedPermit,
+    fence: &mut crate::durable_dispatch_fence_lab::DurableDispatchFence,
+    trusted_now: u64,
+) -> Result<crate::durable_dispatch_fence_lab::ArmedDispatch, CorroborationError> {
+    let now_ms = trusted_now.checked_mul(1000).ok_or_else(|| {
+        CorroborationError::DurableState(io::Error::new(
+            io::ErrorKind::InvalidInput,
+            "trusted clock overflow",
+        ))
+    })?;
+    fence.arm(permit, now_ms).map_err(Into::into)
+}
+
 /// A fresh authenticated Core account check is required both when a
 /// confirmation is issued and when that confirmation is redeemed.
 fn corroborated_active_admin(
@@ -586,5 +642,190 @@ mod tests {
             )
             .is_err()
         );
+    }
+}
+
+#[cfg(all(test, feature = "core-durable-dispatch-lab"))]
+mod durable_dispatch_auth_tests {
+    use super::*;
+    use crate::{
+        durable_dispatch_fence_lab::{DispatchState, DurableDispatchFence},
+        ingress_identity_lab::ingress_user_claim,
+        managed_apps::{Action, AppSlug, Operation, prepare},
+        rbac_lab::{Actor, Role},
+    };
+    use std::{
+        fs,
+        net::{Ipv4Addr, SocketAddr, SocketAddrV4},
+        os::unix::fs::PermissionsExt,
+    };
+
+    fn claim() -> IngressUserClaim {
+        ingress_user_claim(
+            SocketAddr::V4(SocketAddrV4::new(Ipv4Addr::new(172, 30, 32, 2), 8045)),
+            &[("X-Remote-User-Id", "coreowner")],
+        )
+        .unwrap()
+    }
+
+    #[test]
+    fn denied_core_status_cannot_arm_a_dispatch_and_one_use_consent_survives_restart() {
+        let dir = tempfile::tempdir().unwrap();
+        fs::set_permissions(dir.path(), fs::Permissions::from_mode(0o700)).unwrap();
+        let sessions_file = dir.path().join("sessions.redb");
+        let dispatch_file = dir.path().join("dispatch.redb");
+        let mut sessions = DurableFixtureSessions::open(&sessions_file).unwrap();
+        let mut dispatch = DurableDispatchFence::open(&dispatch_file).unwrap();
+        let mut journal = FileAuditJournal::open(&dir.path().join("audit.jsonl")).unwrap();
+        let app = AppSlug::parse("unseen_vendor_2032").unwrap();
+        let request = prepare(&app, Operation::Install).unwrap();
+        let mut policy = Policy::default();
+        policy.grant("coreowner", &app, &[Action::Install]);
+        let session = sessions
+            .issue_fixture(
+                Actor::new("coreowner", Role::Administrator).unwrap(),
+                100,
+                300,
+                120,
+            )
+            .unwrap();
+        let consent = sessions
+            .issue_confirmation(&policy, session.as_str(), &request, 100)
+            .unwrap()
+            .unwrap();
+        for bad in [CoreAccountStatus::Denied, CoreAccountStatus::ActiveNonAdmin] {
+            assert!(
+                grant_checked_fixture_status(
+                    bad,
+                    &claim(),
+                    &policy,
+                    &mut sessions,
+                    session.as_str(),
+                    &request,
+                    Some(consent.as_str()),
+                    &mut journal,
+                    100
+                )
+                .unwrap()
+                .is_none()
+            );
+        }
+        let permit = grant_checked_fixture_status(
+            CoreAccountStatus::ActiveAdmin,
+            &claim(),
+            &policy,
+            &mut sessions,
+            session.as_str(),
+            &request,
+            Some(consent.as_str()),
+            &mut journal,
+            100,
+        )
+        .unwrap()
+        .expect("consented and current Core-admin fixture");
+        let armed = arm_granted_disposable_dispatch(permit, &mut dispatch, 100).unwrap();
+        let record = dispatch.get(armed.id()).unwrap().unwrap();
+        assert_eq!(record.app, app.as_str());
+        assert_eq!(record.actor_subject, "coreowner");
+        assert_eq!(record.state, DispatchState::Uncertain);
+        assert_eq!(record.created_ms, 100_000);
+        assert!(record.job_id.is_none());
+        let id = armed.id().to_owned();
+        drop(armed);
+        drop(dispatch);
+        drop(sessions);
+        let mut reopened_sessions = DurableFixtureSessions::open(&sessions_file).unwrap();
+        let mut reopened_dispatch = DurableDispatchFence::open(&dispatch_file).unwrap();
+        assert!(
+            grant_checked_fixture_status(
+                CoreAccountStatus::ActiveAdmin,
+                &claim(),
+                &policy,
+                &mut reopened_sessions,
+                session.as_str(),
+                &request,
+                Some(consent.as_str()),
+                &mut journal,
+                101,
+            )
+            .unwrap()
+            .is_none()
+        );
+        assert_eq!(
+            reopened_dispatch.get(&id).unwrap().unwrap().state,
+            DispatchState::Uncertain
+        );
+        let new_consent = reopened_sessions
+            .issue_confirmation(&policy, session.as_str(), &request, 101)
+            .unwrap()
+            .unwrap();
+        let second = grant_checked_fixture_status(
+            CoreAccountStatus::ActiveAdmin,
+            &claim(),
+            &policy,
+            &mut reopened_sessions,
+            session.as_str(),
+            &request,
+            Some(new_consent.as_str()),
+            &mut journal,
+            101,
+        )
+        .unwrap()
+        .expect("fresh second grant, but not a second App dispatch");
+        assert!(reopened_dispatch.arm(second, 101_000).is_err());
+    }
+
+    #[test]
+    fn overflowed_trusted_clock_never_arms_an_intent() {
+        let dir = tempfile::tempdir().unwrap();
+        fs::set_permissions(dir.path(), fs::Permissions::from_mode(0o700)).unwrap();
+        let mut sessions = DurableFixtureSessions::open(&dir.path().join("sessions.redb")).unwrap();
+        let mut dispatch = DurableDispatchFence::open(&dir.path().join("dispatch.redb")).unwrap();
+        let mut journal = FileAuditJournal::open(&dir.path().join("audit.jsonl")).unwrap();
+        let app = AppSlug::parse("future_vendor_time").unwrap();
+        let request = prepare(&app, Operation::Start).unwrap();
+        let mut policy = Policy::default();
+        policy.grant("coreowner", &app, &[Action::Start]);
+        let session = sessions
+            .issue_fixture(
+                Actor::new("coreowner", Role::Administrator).unwrap(),
+                100,
+                300,
+                120,
+            )
+            .unwrap();
+        let permit = grant_checked_fixture_status(
+            CoreAccountStatus::ActiveAdmin,
+            &claim(),
+            &policy,
+            &mut sessions,
+            session.as_str(),
+            &request,
+            None,
+            &mut journal,
+            100,
+        )
+        .unwrap()
+        .unwrap();
+        assert!(matches!(
+            arm_granted_disposable_dispatch(permit, &mut dispatch, u64::MAX),
+            Err(CorroborationError::DurableState(_))
+        ));
+        // No operation was saved, so another audited grant for this App can
+        // be issued; a malformed timestamp never causes a false commit.
+        let renewed = grant_checked_fixture_status(
+            CoreAccountStatus::ActiveAdmin,
+            &claim(),
+            &policy,
+            &mut sessions,
+            session.as_str(),
+            &request,
+            None,
+            &mut journal,
+            101,
+        )
+        .unwrap()
+        .unwrap();
+        assert!(dispatch.arm(renewed, 101_000).is_ok());
     }
 }

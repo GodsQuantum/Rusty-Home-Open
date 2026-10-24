@@ -33,6 +33,8 @@ core-user-rbac-lab = ["core-user-snapshot-lab", "managed-apps-preview"]
 core-corroborated-preview-lab = ["core-user-live-readonly", "persistent-session-lab"]
 # LAB-only crash-consistent one-dispatch-per-App guard, no product mutations.
 durable-dispatch-fence-lab = ["managed-apps-preview", "dep:redb"]
+# Still QEMU/lab-only: bind corroborated current Core admin to durable App intent.
+core-durable-dispatch-lab = ["core-corroborated-preview-lab", "durable-dispatch-fence-lab"]
 
 [dependencies]
 serde = { version = "1", features = ["derive"] }
