@@ -39,11 +39,16 @@ pub fn authorize_recorded(
 #[derive(Debug)]
 pub struct AuditedPermit {
     request: PreparedRequest,
+    /// Recorded, authorized fixture subject; cannot be supplied to transport separately.
+    actor_subject: String,
 }
 
 impl AuditedPermit {
     pub(crate) fn request(&self) -> &PreparedRequest {
         &self.request
+    }
+    pub(crate) fn actor_subject(&self) -> &str {
+        &self.actor_subject
     }
 }
 
@@ -58,9 +63,14 @@ pub fn grant_recorded(
     journal: &mut FileAuditJournal,
 ) -> io::Result<Option<AuditedPermit>> {
     let decision = authorize_recorded(policy, actor, request, acknowledgement, journal)?;
-    Ok(decision.allowed().then(|| AuditedPermit {
-        request: request.clone(),
-    }))
+    Ok(if decision.allowed() {
+        actor.map(|trusted| AuditedPermit {
+            request: request.clone(),
+            actor_subject: trusted.subject().to_owned(),
+        })
+    } else {
+        None
+    })
 }
 
 #[derive(Serialize, Deserialize)]
