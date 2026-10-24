@@ -517,11 +517,18 @@ def test_hars_manager_role_app(shell, shell_json):
                 except Exception:
                     print("P8N_GUEST_OFFICIAL_READ_UNAVAILABLE")
                 raise
-            assert any(
+            verified_closure = any(
                 "P8N_REAL_SUPERVISOR_ASYNC_INSTALL_JOB_APP_AND_REDB_PASS" in line
                 for line in records
-            ), "Official background job or durable closure was not certified"
-            verified_installed = True
+            )
+            verified_expiry = any(
+                "P8N_REAL_HAOS_JOB_EXPIRED_UNCERTAIN_LOCK_STAYS_CLOSED_PASS" in line
+                for line in records
+            )
+            assert verified_closure ^ verified_expiry, (
+                "Neither one positive job-and-App proof nor one verified "
+                "fail-closed post-job-cleanup proof was observed"
+            )
             result = shell_json(
                 "ha apps info " + verified_slug + " --no-progress --raw-json",
                 timeout=75,
@@ -531,7 +538,15 @@ def test_hars_manager_role_app(shell, shell_json):
             assert installed.get("slug") == verified_slug
             assert installed.get("version") == "1.0.0"
             assert installed.get("state") in ("started", "stopped")
-            print("P8N_GENUINE_HAOS_ASYNC_INSTALL_AND_DURABLE_UNLOCK_PASS")
+            verified_installed = True
+            if verified_closure:
+                print("P8N_GENUINE_HAOS_ASYNC_INSTALL_AND_DURABLE_UNLOCK_PASS")
+            else:
+                # Deliberately NOT a job-success nor unlock assertion.
+                # HAOS with cleanup=True evicts the finished job; Rust
+                # must refuse to treat missing proof as authorisation.
+                print("P8N_GENUINE_HAOS_JOB_EVICTED_SAFE_FENCE_PASS")
+                print("P8N_POSITIVE_TERMINAL_JOB_PROOF_NOT_CERTIFIED")
         finally:
             # Explicitly remove only this disposable local test App. Never
             # repeat an uncertain install after a guest command timeout.

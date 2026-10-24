@@ -1,5 +1,7 @@
 //! Executable proof of actual Supervisor async App install -> official job
-//! GET -> independent installed inventory GET -> durable fence release.
+//! GET -> independent installed inventory GET -> safe, durable outcome.
+//! On Supervisor job cleanup before terminal observation, ONLY prove that
+//! the uncertain App dispatch stays locked across restart.
 //! ONLY within a disposable HAOS QEMU guest; the human Core identity/consent
 //! production gateway is intentionally out of scope for this fixture.
 use hars_supervisor_apps::{
@@ -97,7 +99,8 @@ fn run() -> Result<(), ()> {
     println!("P8N_STAGE_JOB_UUID_PASS");
     let mut reported_pending = false;
     let mut reported_failure = false;
-    for _ in 0..50 {
+    let mut index_missing = 0u8;
+    for _ in 0..200 {
         let result =
             fence.verify_and_close_install(&id, &mut watches, &client, ApiVersion::V1, now_ms()?);
         match result {
@@ -129,7 +132,44 @@ fn run() -> Result<(), ()> {
                     }
                     reported_pending = true;
                 }
-                thread::sleep(Duration::from_secs(2));
+                thread::sleep(Duration::from_millis(200));
+            }
+            Err(hars_supervisor_apps::durable_dispatch_fence_lab::VerifiedCloseError::MissingOfficialJob) => {
+                // Supervisor jobs with cleanup=true disappear upon completion.
+                // Their disappearance is NOT proof of successful installation.
+                // Re-check twice, then certify that the uncertain dispatch
+                // stays locked in a reopened private durable ledger.
+                index_missing += 1;
+                if index_missing < 2 {
+                    thread::sleep(Duration::from_millis(200));
+                    continue;
+                }
+                let job_id = posted.receipt.job_id().ok_or(())?;
+                let observed = watches.get(job_id).map_err(|_| ())?.ok_or(())?;
+                if observed.outcome != Some(hars_supervisor_apps::operation_reconcile::Outcome::Running) {
+                    eprintln!("P8N_EXPIRED_BEFORE_ANY_VERIFIED_RUNNING_JOB");
+                    return Err(());
+                }
+                drop(watches);
+                drop(fence);
+                let mut reopened = DurableDispatchFence::open(&path.join("verified-async-intents.redb"))
+                    .map_err(|_| ())?;
+                let unresolved = reopened.get(&id).map_err(|_| ())?.ok_or(())?;
+                if unresolved.state != DispatchState::Accepted
+                    || unresolved.job_id.as_deref() != Some(job_id)
+                    || unresolved.app != app.as_str()
+                    || unresolved.actor_subject != actor.subject()
+                {
+                    return Err(());
+                }
+                let separate_grant = grant_recorded(&policy, Some(&actor), &requested, Some(&consent), &mut journal)
+                    .map_err(|_| ())?.ok_or(())?;
+                if reopened.arm(separate_grant, now_ms()?).is_ok() {
+                    eprintln!("P8N_EXPIRED_JOB_WRONGLY_UNLOCKED_APP");
+                    return Err(());
+                }
+                println!("P8N_REAL_HAOS_JOB_EXPIRED_UNCERTAIN_LOCK_STAYS_CLOSED_PASS");
+                return Ok(());
             }
             Err(error) => {
                 if !reported_failure {
@@ -142,8 +182,6 @@ fn run() -> Result<(), ()> {
                         ) => eprintln!("P8N_POLL_WATCH_STORAGE_ERROR"),
                         hars_supervisor_apps::durable_dispatch_fence_lab::VerifiedCloseError::Storage(_) =>
                             eprintln!("P8N_POLL_DURABLE_STORE_FAILED"),
-                        hars_supervisor_apps::durable_dispatch_fence_lab::VerifiedCloseError::MissingOfficialJob =>
-                            eprintln!("P8N_POLL_EXACT_JOB_MISSING_FROM_AUTHENTICATED_INDEX"),
                     }
                     reported_failure = true;
                 }
