@@ -6,8 +6,9 @@
 //! its UUID. Two-phase commits preserve watches and observed states on restart.
 use crate::{
     installed_inventory::RunningInventory,
-    job_status::{JobStatus, job_path},
+    job_status::{JobStatus, State, job_path},
     official_store::ApiVersion,
+    official_transport::{AppSupervisorClient, LocalSupervisorClient, TransportError},
     operation_reconcile::{Operation, Outcome, Watch, reconcile},
 };
 use redb::{Database, ReadableDatabase, ReadableTable, ReadableTableMetadata, TableDefinition};
@@ -88,7 +89,99 @@ pub struct DurableJobWatches {
     db: Database,
 }
 
+/// Distinguish failed authenticated Supervisor reads from local persistence
+/// failures. Neither should be interpreted as a successful App operation.
+#[derive(Debug)]
+pub enum OfficialPollError {
+    Transport(TransportError),
+    Storage(io::Error),
+}
+
+impl From<io::Error> for OfficialPollError {
+    fn from(error: io::Error) -> Self {
+        Self::Storage(error)
+    }
+}
+
+impl From<TransportError> for OfficialPollError {
+    fn from(error: TransportError) -> Self {
+        Self::Transport(error)
+    }
+}
+
 impl DurableJobWatches {
+    /// Read a previously registered watch using only the authenticated official
+    /// App Supervisor's read-only job/inventory APIs, never caller-supplied JSON.
+    /// This does NOT check Core-user authorization or prove POST provenance.
+    pub fn poll_app_supervisor(
+        &mut self,
+        job_id: &str,
+        version: ApiVersion,
+        client: &AppSupervisorClient,
+        now_ms: u64,
+    ) -> Result<Option<WatchReceipt>, OfficialPollError> {
+        self.poll_with(
+            job_id,
+            version,
+            now_ms,
+            |v, id| client.fetch_job(v, id),
+            |v| client.fetch_installed(v),
+        )
+    }
+
+    /// Same bounded official GET protocol on an explicitly loopback-only
+    /// Supervisor adapter, suitable for isolated integration tests.
+    pub fn poll_local_supervisor(
+        &mut self,
+        job_id: &str,
+        version: ApiVersion,
+        client: &LocalSupervisorClient,
+        now_ms: u64,
+    ) -> Result<Option<WatchReceipt>, OfficialPollError> {
+        self.poll_with(
+            job_id,
+            version,
+            now_ms,
+            |v, id| client.fetch_job(v, id),
+            |v| client.fetch_installed(v),
+        )
+    }
+
+    fn poll_with<FJ, FI>(
+        &mut self,
+        job_id: &str,
+        version: ApiVersion,
+        now_ms: u64,
+        fetch_job: FJ,
+        fetch_inventory: FI,
+    ) -> Result<Option<WatchReceipt>, OfficialPollError>
+    where
+        FJ: FnOnce(ApiVersion, &str) -> Result<JobStatus, TransportError>,
+        FI: FnOnce(ApiVersion) -> Result<RunningInventory, TransportError>,
+    {
+        let Some(previous) = self.get(job_id)? else {
+            // No remote GET is made for unregistered or unsafe job identifiers.
+            return Ok(None);
+        };
+        if now_ms < previous.created_ms || previous.observed_ms.is_some_and(|last| now_ms < last) {
+            return Err(OfficialPollError::Storage(invalid()));
+        }
+        if matches!(previous.outcome, Some(Outcome::Failed | Outcome::Confirmed)) {
+            // A terminal observation is immutable, including after a restart.
+            return Ok(Some(previous));
+        }
+        let job = fetch_job(version, job_id)?;
+        let inventory = if job.state == State::Succeeded {
+            // No cached inventory, fabricated empty results or optimistic
+            // success when this independent official GET fails.
+            Some(fetch_inventory(version)?)
+        } else {
+            None
+        };
+        self.observe(job_id, Some(&job), inventory.as_ref(), now_ms)
+            .map_err(Into::into)
+    }
+
     /// Owner-private 0700 directory, owner-only regular 0600 file.
     /// Never accepts a symlink or a shared/hard-linked database file.
     pub fn open(path: &Path) -> io::Result<Self> {
