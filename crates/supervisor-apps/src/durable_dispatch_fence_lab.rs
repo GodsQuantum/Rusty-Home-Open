@@ -32,6 +32,9 @@ pub enum DispatchState {
     Uncertain,
     /// Response indicated accepted; actual App state is NOT yet verified.
     Accepted,
+    /// Authenticated official job and independent installed App state agreed.
+    /// Completed operation history is retained; App lock may be cleared.
+    Confirmed,
 }
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -75,6 +78,7 @@ fn decode(data: &str) -> io::Result<DispatchRecord> {
         .as_ref()
         .is_some_and(|id| job_path(ApiVersion::V1, id).is_err())
         || (row.state == DispatchState::Uncertain && row.job_id.is_some())
+        || (row.state == DispatchState::Confirmed && row.job_id.is_none())
     {
         return Err(invalid());
     }
@@ -103,6 +107,26 @@ pub enum TrackedError {
 pub struct TrackedReceipt {
     pub operation_id: String,
     pub receipt: PreviewReceipt,
+}
+
+/// A remote poll error or local durable storage fault is never success.
+#[cfg(feature = "durable-job-watch")]
+#[derive(Debug)]
+pub enum VerifiedCloseError {
+    Storage(io::Error),
+    Poll(crate::durable_job_watch::OfficialPollError),
+}
+#[cfg(feature = "durable-job-watch")]
+impl From<io::Error> for VerifiedCloseError {
+    fn from(value: io::Error) -> Self {
+        Self::Storage(value)
+    }
+}
+#[cfg(feature = "durable-job-watch")]
+impl From<crate::durable_job_watch::OfficialPollError> for VerifiedCloseError {
+    fn from(value: crate::durable_job_watch::OfficialPollError) -> Self {
+        Self::Poll(value)
+    }
 }
 
 impl DurableDispatchFence {
@@ -191,6 +215,199 @@ impl DurableDispatchFence {
         )
     }
 
+    /// Resume an accepted asynchronous INSTALL through authenticated,
+    /// official Supervisor GET only. The observed job and independent installed
+    /// App postcondition must both be confirmed before releasing the App lock.
+    /// Never retries a POST. No user HTTP route is exposed.
+    #[cfg(feature = "durable-job-watch")]
+    pub fn verify_and_close_install(
+        &mut self,
+        operation_id: &str,
+        watches: &mut crate::durable_job_watch::DurableJobWatches,
+        client: &AppSupervisorClient,
+        version: ApiVersion,
+        now_ms: u64,
+    ) -> Result<Option<DispatchRecord>, VerifiedCloseError> {
+        self.verify_and_close_with(
+            operation_id,
+            watches,
+            version,
+            now_ms,
+            |v, id| client.fetch_job(v, id),
+            |v| client.fetch_installed(v),
+        )
+    }
+
+    /// Identical official GET protocol with a strictly loopback-only client.
+    #[cfg(feature = "durable-job-watch")]
+    pub fn verify_and_close_local_install(
+        &mut self,
+        operation_id: &str,
+        watches: &mut crate::durable_job_watch::DurableJobWatches,
+        client: &crate::official_transport::LocalSupervisorClient,
+        version: ApiVersion,
+        now_ms: u64,
+    ) -> Result<Option<DispatchRecord>, VerifiedCloseError> {
+        self.verify_and_close_with(
+            operation_id,
+            watches,
+            version,
+            now_ms,
+            |v, id| client.fetch_job(v, id),
+            |v| client.fetch_installed(v),
+        )
+    }
+
+    /// Authorization-sensitive release MUST get fresh authenticated responses.
+    /// The generic watch ledger deliberately allows caller-supplied fixtures
+    /// and returns cached terminal statuses, so it cannot alone unlock Apps.
+    #[cfg(feature = "durable-job-watch")]
+    fn verify_and_close_with<FJ, FI>(
+        &mut self,
+        operation_id: &str,
+        watches: &mut crate::durable_job_watch::DurableJobWatches,
+        version: ApiVersion,
+        now_ms: u64,
+        fetch_job: FJ,
+        fetch_inventory: FI,
+    ) -> Result<Option<DispatchRecord>, VerifiedCloseError>
+    where
+        FJ: FnOnce(ApiVersion, &str) -> Result<crate::job_status::JobStatus, TransportError>,
+        FI: FnOnce(
+            ApiVersion,
+        ) -> Result<crate::installed_inventory::RunningInventory, TransportError>,
+    {
+        use crate::{
+            durable_job_watch::OfficialPollError,
+            job_status::State,
+            operation_reconcile::{Operation, Outcome, Watch, reconcile},
+        };
+        let row = self.read_pending_install(operation_id, watches, now_ms)?;
+        if row.state == DispatchState::Confirmed {
+            // Persisted final state already verified before its ACID commit.
+            return Ok(Some(row));
+        }
+        let job_id = row.job_id.as_deref().ok_or_else(invalid)?;
+        // Always request an actual job again. A previously persisted
+        // "confirmed" watch might have come from a caller-supplied synthetic
+        // observation and is NOT sufficient proof of remote completion.
+        let job = fetch_job(version, job_id)
+            .map_err(|e| VerifiedCloseError::Poll(OfficialPollError::Transport(e)))?;
+        let installed = if job.state == State::Succeeded {
+            Some(
+                fetch_inventory(version)
+                    .map_err(|e| VerifiedCloseError::Poll(OfficialPollError::Transport(e)))?,
+            )
+        } else {
+            None
+        };
+        let watch = Watch::new(&row.app, job_id, Operation::Install, None)
+            .map_err(|_| VerifiedCloseError::Storage(invalid()))?;
+        let fresh = reconcile(&watch, Some(&job), installed.as_ref());
+        // Preserve a read-only observation after the two authenticated GETs.
+        // Storage failures must not silently release the safety fence.
+        let persisted = watches.observe(job_id, Some(&job), installed.as_ref(), now_ms)?;
+        if fresh.outcome != Outcome::Confirmed {
+            return Ok(None);
+        }
+        self.close_after_official_observation(operation_id, persisted.as_ref())
+            .map_err(Into::into)
+    }
+
+    /// Read the trusted submission-to-job binding, never a UI-provided
+    /// receipt, and prepare its idempotent durable watch before polling.
+    #[cfg(feature = "durable-job-watch")]
+    fn read_pending_install(
+        &self,
+        operation_id: &str,
+        watches: &mut crate::durable_job_watch::DurableJobWatches,
+        now_ms: u64,
+    ) -> io::Result<DispatchRecord> {
+        let row = self.get(operation_id)?.ok_or_else(invalid)?;
+        if now_ms < row.created_ms || row.action != Action::Install {
+            return Err(invalid());
+        }
+        if row.state == DispatchState::Accepted {
+            self.register_accepted_install_watch(operation_id, watches, now_ms)?;
+        } else if row.state != DispatchState::Confirmed {
+            // Uncertain POST receipt must never trigger a GET-based unlock.
+            return Err(invalid());
+        }
+        Ok(row)
+    }
+
+    #[cfg(feature = "durable-job-watch")]
+    fn close_after_official_observation(
+        &mut self,
+        operation_id: &str,
+        observed: Option<&crate::durable_job_watch::WatchReceipt>,
+    ) -> io::Result<Option<DispatchRecord>> {
+        use crate::operation_reconcile::{Operation, Outcome};
+        let row = self.get(operation_id)?.ok_or_else(invalid)?;
+        if row.state == DispatchState::Confirmed {
+            return Ok(Some(row));
+        }
+        if row.state != DispatchState::Accepted || row.action != Action::Install {
+            return Err(invalid());
+        }
+        let Some(watch) = observed else {
+            return Ok(None);
+        };
+        if watch.outcome != Some(Outcome::Confirmed) {
+            return Ok(None);
+        }
+        // Require strict origin, actor, operation and creation chronology.
+        if !watch.postcondition_observed
+            || watch.action != Operation::Install
+            || watch.prior_version.is_some()
+            || row.job_id.as_deref() != Some(watch.job_id.as_str())
+            || watch.app_slug != row.app
+            || watch.actor_label != row.actor_subject
+            || watch.created_ms < row.created_ms
+            || watch.observed_ms.is_none_or(|t| t < watch.created_ms)
+        {
+            return Err(invalid());
+        }
+        let mut tx = self.db.begin_write().map_err(error)?;
+        tx.set_two_phase_commit(true);
+        let completed;
+        {
+            // Re-read under write transaction, preventing stale competing
+            // closers from removing a newer operation's App fence.
+            let mut records = tx.open_table(RECORDS).map_err(error)?;
+            let raw = records
+                .get(operation_id)
+                .map_err(error)?
+                .map(|g| g.value().to_owned())
+                .ok_or_else(invalid)?;
+            let mut current = decode(&raw)?;
+            if current.state == DispatchState::Confirmed {
+                return Ok(Some(current));
+            }
+            if current != row {
+                return Err(invalid());
+            }
+            let mut active = tx.open_table(ACTIVE).map_err(error)?;
+            let active_id = active
+                .get(current.app.as_str())
+                .map_err(error)?
+                .map(|v| v.value().to_owned())
+                .ok_or_else(invalid)?;
+            if active_id != operation_id {
+                return Err(invalid());
+            }
+            current.state = DispatchState::Confirmed;
+            let encoded = serde_json::to_string(&current).map_err(error)?;
+            records
+                .insert(operation_id, encoded.as_str())
+                .map_err(error)?;
+            active.remove(current.app.as_str()).map_err(error)?;
+            completed = current;
+        }
+        tx.commit().map_err(error)?;
+        Ok(Some(completed))
+    }
+
     /// Two-phase commit BEFORE a possible write. Concurrent and restarted
     /// processes cannot arm a second action for the same App. No automatic
     /// expiry or success-based unlock is implemented in this experimental lab.
@@ -256,6 +473,11 @@ impl DurableDispatchFence {
             // Other calls cannot spoof an accepted result or close the fence;
             // this private method sees only the actual preview_execute result.
             if let Ok(receipt) = response {
+                // Re-entrant or delayed transport receipts cannot regress a
+                // terminal, independently verified completion back to accepted.
+                if row.state != DispatchState::Uncertain {
+                    return Err(invalid());
+                }
                 let (app, action, id) = match receipt {
                     PreviewReceipt::Accepted {
                         app,
@@ -402,7 +624,7 @@ mod durable_origin_binding_tests {
             );
             id
         };
-        let fence = DurableDispatchFence::open(&db).unwrap();
+        let mut fence = DurableDispatchFence::open(&db).unwrap();
         let mut watches = DurableJobWatches::open(&watches_db).unwrap();
         let row = fence
             .register_accepted_install_watch(&operation_id, &mut watches, 105)
@@ -450,20 +672,244 @@ mod durable_origin_binding_tests {
             crate::official_transport::SupervisorToken::new("fixture_token".into()).unwrap(),
         )
         .unwrap();
-        let verified = watches
-            .poll_local_supervisor(JOB, ApiVersion::V1, &client, 110)
+        let closed = fence
+            .verify_and_close_local_install(
+                &operation_id,
+                &mut watches,
+                &client,
+                ApiVersion::V1,
+                110,
+            )
             .unwrap()
             .unwrap();
+        assert_eq!(closed.state, DispatchState::Confirmed);
+        let verified = watches.get(JOB).unwrap().unwrap();
         assert_eq!(
             verified.outcome,
             Some(crate::operation_reconcile::Outcome::Confirmed)
         );
         assert!(verified.postcondition_observed);
         handler.join().unwrap();
+        // A durable, independently confirmed completion permits a new
+        // separately audited App operation, not a replay of the old permit.
+        let new_armed = fence
+            .arm(
+                permit(dir.path(), "future_vendor_2029", Operation::Install),
+                111,
+            )
+            .unwrap();
+        assert_ne!(new_armed.id(), operation_id);
+        drop(new_armed);
+        drop(fence);
+        let mut fence = DurableDispatchFence::open(&db).unwrap();
+        let disconnected = crate::official_transport::LocalSupervisorClient::new(
+            "127.0.0.1:1".parse().unwrap(),
+            crate::official_transport::SupervisorToken::new("offline_fixture".into()).unwrap(),
+        )
+        .unwrap();
+        assert_eq!(
+            fence
+                .verify_and_close_local_install(
+                    &operation_id,
+                    &mut watches,
+                    &disconnected,
+                    ApiVersion::V1,
+                    112
+                )
+                .unwrap()
+                .unwrap()
+                .state,
+            DispatchState::Confirmed
+        );
         assert!(
             fence
                 .register_accepted_install_watch(&"f".repeat(64), &mut watches, 110)
                 .is_err()
+        );
+    }
+
+    /// Disposable, authenticated loopback GET fixture. Explicit request paths
+    /// and credentials are inspected so these tests cannot fake a network poll.
+    fn serve_reads(
+        expected: Vec<(String, String)>,
+    ) -> (
+        crate::official_transport::LocalSupervisorClient,
+        std::thread::JoinHandle<()>,
+    ) {
+        use std::io::{Read, Write};
+        let listener = std::net::TcpListener::bind(("127.0.0.1", 0)).unwrap();
+        let addr = listener.local_addr().unwrap();
+        let worker = std::thread::spawn(move || {
+            for (path, body) in expected {
+                let (mut stream, _) = listener.accept().unwrap();
+                stream
+                    .set_read_timeout(Some(std::time::Duration::from_secs(2)))
+                    .unwrap();
+                let mut data = Vec::new();
+                let mut chunk = [0_u8; 1024];
+                while !data.windows(4).any(|w| w == b"\r\n\r\n") {
+                    let n = stream.read(&mut chunk).unwrap();
+                    assert!(n > 0 && data.len() < 8192);
+                    data.extend_from_slice(&chunk[..n]);
+                }
+                let request = String::from_utf8(data).unwrap();
+                assert!(request.starts_with(&format!("GET {path} HTTP/1.1\r\n")));
+                assert!(request.contains("Authorization: Bearer sandbox_token\r\n"));
+                let response = if body == "DENIED" {
+                    "HTTP/1.1 401 Unauthorized\r\nContent-Length: 0\r\nConnection: close\r\n\r\n"
+                        .to_owned()
+                } else {
+                    format!(
+                        "HTTP/1.1 200 OK\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{body}",
+                        body.len()
+                    )
+                };
+                stream.write_all(response.as_bytes()).unwrap();
+            }
+        });
+        let client = crate::official_transport::LocalSupervisorClient::new(
+            addr,
+            crate::official_transport::SupervisorToken::new("sandbox_token".into()).unwrap(),
+        )
+        .unwrap();
+        (client, worker)
+    }
+
+    #[test]
+    fn unauthorized_or_unverified_official_reads_never_unlock_an_app() {
+        let dir = private_dir();
+        let mut fence = DurableDispatchFence::open(&dir.path().join("dispatch.redb")).unwrap();
+        let mut watches = DurableJobWatches::open(&dir.path().join("watches.redb")).unwrap();
+        let armed = fence
+            .arm(
+                permit(dir.path(), "future_vendor_safe", Operation::Install),
+                100,
+            )
+            .unwrap();
+        let id = armed.id().to_owned();
+        fence
+            .record_transport_result(
+                &id,
+                &Ok(PreviewReceipt::Accepted {
+                    app: "future_vendor_safe".into(),
+                    action: Action::Install,
+                    job_id: Some(JOB.into()),
+                    completion_verified: false,
+                }),
+            )
+            .unwrap();
+
+        // A generic watch can be poisoned by a synthetic caller. Even a
+        // cached terminal success MUST NOT authorize dispatch release.
+        fence
+            .register_accepted_install_watch(&id, &mut watches, 100)
+            .unwrap();
+        let fake_job = crate::job_status::JobStatus {
+            id: JOB.into(),
+            progress: 100.0,
+            state: crate::job_status::State::Succeeded,
+            error_count: 0,
+            stage: None,
+            read_only: true,
+        };
+        let fake_inventory = crate::installed_inventory::RunningInventory {
+            api_version: ApiVersion::V1,
+            read_only: true,
+            apps: vec![crate::installed_inventory::RunningApp {
+                slug: "future_vendor_safe".into(),
+                name: "Forged fixture".into(),
+                repository: Some("fixture".into()),
+                state: Some("started".into()),
+                version: Some("1.0".into()),
+                update_available: Some(false),
+            }],
+        };
+        let cached = watches
+            .observe(JOB, Some(&fake_job), Some(&fake_inventory), 100)
+            .unwrap()
+            .unwrap();
+        assert_eq!(
+            cached.outcome,
+            Some(crate::operation_reconcile::Outcome::Confirmed)
+        );
+
+        let (client, worker) = serve_reads(vec![(
+            format!("/jobs/{JOB}"),
+            format!(
+                r#"{{"result":"ok","data":{{"uuid":"{JOB}","progress":40,"done":false,"errors":[],"child_jobs":[]}}}}"#
+            ),
+        )]);
+        assert!(
+            fence
+                .verify_and_close_local_install(&id, &mut watches, &client, ApiVersion::V1, 101)
+                .unwrap()
+                .is_none()
+        );
+        worker.join().unwrap();
+        assert_eq!(
+            fence.get(&id).unwrap().unwrap().state,
+            DispatchState::Accepted
+        );
+
+        let (client, worker) = serve_reads(vec![
+            (
+                format!("/jobs/{JOB}"),
+                format!(
+                    r#"{{"result":"ok","data":{{"uuid":"{JOB}","progress":100,"done":true,"errors":[],"child_jobs":[]}}}}"#
+                ),
+            ),
+            (
+                "/addons".into(),
+                r#"{"result":"ok","data":{"addons":[]}}"#.into(),
+            ),
+        ]);
+        assert!(
+            fence
+                .verify_and_close_local_install(&id, &mut watches, &client, ApiVersion::V1, 102)
+                .unwrap()
+                .is_none()
+        );
+        worker.join().unwrap();
+        // Generic job-watch terminal state is deliberately immutable:
+        // even its forged Confirmed cache does not bypass fresh GET gating.
+        assert_eq!(
+            watches.get(JOB).unwrap().unwrap().outcome,
+            Some(crate::operation_reconcile::Outcome::Confirmed)
+        );
+
+        let (client, worker) = serve_reads(vec![(format!("/jobs/{JOB}"), "DENIED".into())]);
+        assert!(matches!(
+            fence.verify_and_close_local_install(&id, &mut watches, &client, ApiVersion::V1, 103),
+            Err(VerifiedCloseError::Poll(_))
+        ));
+        worker.join().unwrap();
+        assert!(
+            fence
+                .arm(
+                    permit(dir.path(), "future_vendor_safe", Operation::Install),
+                    104
+                )
+                .is_err()
+        );
+        assert_eq!(
+            fence.get(&id).unwrap().unwrap().state,
+            DispatchState::Accepted
+        );
+
+        // Even a client pretending the job is complete cannot close through
+        // a forged receipt lacking the independent official postcondition.
+        let mut fake = watches.get(JOB).unwrap().unwrap();
+        fake.outcome = Some(crate::operation_reconcile::Outcome::Confirmed);
+        fake.postcondition_observed = true;
+        fake.actor_label = "different_actor".into();
+        assert!(
+            fence
+                .close_after_official_observation(&id, Some(&fake))
+                .is_err()
+        );
+        assert_eq!(
+            fence.get(&id).unwrap().unwrap().state,
+            DispatchState::Accepted
         );
     }
 
