@@ -115,6 +115,9 @@ pub struct TrackedReceipt {
 pub enum VerifiedCloseError {
     Storage(io::Error),
     Poll(crate::durable_job_watch::OfficialPollError),
+    /// Neither authoritative job detail nor the separately authenticated
+    /// official index currently proves this original operation's job.
+    MissingOfficialJob,
 }
 #[cfg(feature = "durable-job-watch")]
 impl From<io::Error> for VerifiedCloseError {
@@ -233,8 +236,11 @@ impl DurableDispatchFence {
             watches,
             version,
             now_ms,
-            |v, id| client.fetch_job(v, id),
-            |v| client.fetch_installed(v),
+            (
+                |v, id| client.fetch_job(v, id),
+                |v| client.fetch_installed(v),
+                |v| client.fetch_jobs(v),
+            ),
         )
     }
 
@@ -253,8 +259,11 @@ impl DurableDispatchFence {
             watches,
             version,
             now_ms,
-            |v, id| client.fetch_job(v, id),
-            |v| client.fetch_installed(v),
+            (
+                |v, id| client.fetch_job(v, id),
+                |v| client.fetch_installed(v),
+                |v| client.fetch_jobs(v),
+            ),
         )
     }
 
@@ -262,26 +271,27 @@ impl DurableDispatchFence {
     /// The generic watch ledger deliberately allows caller-supplied fixtures
     /// and returns cached terminal statuses, so it cannot alone unlock Apps.
     #[cfg(feature = "durable-job-watch")]
-    fn verify_and_close_with<FJ, FI>(
+    fn verify_and_close_with<FJ, FI, FL>(
         &mut self,
         operation_id: &str,
         watches: &mut crate::durable_job_watch::DurableJobWatches,
         version: ApiVersion,
         now_ms: u64,
-        fetch_job: FJ,
-        fetch_inventory: FI,
+        reads: (FJ, FI, FL),
     ) -> Result<Option<DispatchRecord>, VerifiedCloseError>
     where
         FJ: FnOnce(ApiVersion, &str) -> Result<crate::job_status::JobStatus, TransportError>,
         FI: FnOnce(
             ApiVersion,
         ) -> Result<crate::installed_inventory::RunningInventory, TransportError>,
+        FL: FnOnce(ApiVersion) -> Result<crate::job_status::JobListing, TransportError>,
     {
         use crate::{
             durable_job_watch::OfficialPollError,
             job_status::State,
             operation_reconcile::{Operation, Outcome, Watch, reconcile},
         };
+        let (fetch_job, fetch_inventory, fetch_job_index) = reads;
         let row = self.read_pending_install(operation_id, watches, now_ms)?;
         if row.state == DispatchState::Confirmed {
             // Persisted final state already verified before its ACID commit.
@@ -291,8 +301,39 @@ impl DurableDispatchFence {
         // Always request an actual job again. A previously persisted
         // "confirmed" watch might have come from a caller-supplied synthetic
         // observation and is NOT sufficient proof of remote completion.
-        let job = fetch_job(version, job_id)
-            .map_err(|e| VerifiedCloseError::Poll(OfficialPollError::Transport(e)))?;
+        let job = match fetch_job(version, job_id) {
+            Ok(job) => job,
+            Err(TransportError::UnexpectedStatus) => {
+                // Some genuine Supervisor builds stop exposing a completed
+                // job's detail endpoint. Never infer success from a 404:
+                // consult a SECOND authenticated official GET /jobs/info,
+                // whose strict parser validates all returned job IDs,
+                // duplicates, tree errors and completion state.
+                let listing = fetch_job_index(version)
+                    .map_err(|e| VerifiedCloseError::Poll(OfficialPollError::Transport(e)))?;
+                if !listing.read_only {
+                    return Err(VerifiedCloseError::Storage(invalid()));
+                }
+                let item = listing
+                    .jobs
+                    .into_iter()
+                    .find(|entry| entry.read_only && entry.id == job_id)
+                    .ok_or(VerifiedCloseError::MissingOfficialJob)?;
+                crate::job_status::JobStatus {
+                    id: item.id,
+                    state: item.state,
+                    progress: item.progress,
+                    error_count: item.error_count,
+                    stage: None,
+                    read_only: true,
+                }
+            }
+            Err(other) => {
+                return Err(VerifiedCloseError::Poll(OfficialPollError::Transport(
+                    other,
+                )));
+            }
+        };
         let installed = if job.state == State::Succeeded {
             Some(
                 fetch_inventory(version)
@@ -758,6 +799,9 @@ mod durable_origin_binding_tests {
                 let response = if body == "DENIED" {
                     "HTTP/1.1 401 Unauthorized\r\nContent-Length: 0\r\nConnection: close\r\n\r\n"
                         .to_owned()
+                } else if body == "NOT_FOUND" {
+                    "HTTP/1.1 404 Not Found\r\nContent-Length: 0\r\nConnection: close\r\n\r\n"
+                        .to_owned()
                 } else {
                     format!(
                         "HTTP/1.1 200 OK\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{body}",
@@ -773,6 +817,109 @@ mod durable_origin_binding_tests {
         )
         .unwrap();
         (client, worker)
+    }
+
+    #[test]
+    fn authenticated_job_index_recovery_cannot_forge_or_skip_install_postcondition() {
+        let dir = private_dir();
+        let slug = "future_vendor_with_job_eviction";
+        let mut fence = DurableDispatchFence::open(&dir.path().join("fence.redb")).unwrap();
+        let mut watches = DurableJobWatches::open(&dir.path().join("watches.redb")).unwrap();
+        let intent = fence
+            .arm(permit(dir.path(), slug, Operation::Install), 100)
+            .unwrap();
+        let id = intent.id().to_owned();
+        fence
+            .record_transport_result(
+                &id,
+                &Ok(PreviewReceipt::Accepted {
+                    app: slug.into(),
+                    action: Action::Install,
+                    job_id: Some(JOB.into()),
+                    completion_verified: false,
+                }),
+            )
+            .unwrap();
+
+        let job_index = |uuid: &str| {
+            serde_json::json!({
+                "result":"ok","data":{"jobs":[{
+                    "uuid":uuid,"progress":100,"done":true,"errors":[],"child_jobs":[]
+                }]}
+            })
+            .to_string()
+        };
+
+        // Detail GET 404 plus *unrelated* successful job does NOT let the
+        // caller borrow another operation's completion.
+        let (remote, worker) = serve_reads(vec![
+            (format!("/jobs/{JOB}"), "NOT_FOUND".into()),
+            (
+                "/jobs/info".into(),
+                job_index("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"),
+            ),
+        ]);
+        assert!(matches!(
+            fence.verify_and_close_local_install(&id, &mut watches, &remote, ApiVersion::V1, 101),
+            Err(VerifiedCloseError::MissingOfficialJob)
+        ));
+        worker.join().unwrap();
+        assert_eq!(
+            fence.get(&id).unwrap().unwrap().state,
+            DispatchState::Accepted
+        );
+        assert!(
+            fence
+                .arm(permit(dir.path(), slug, Operation::Install), 102)
+                .is_err()
+        );
+
+        // Exact official index job success alone cannot bypass independent
+        // installed-App inventory confirmation.
+        let (remote, worker) = serve_reads(vec![
+            (format!("/jobs/{JOB}"), "NOT_FOUND".into()),
+            ("/jobs/info".into(), job_index(JOB)),
+            (
+                "/addons".into(),
+                r#"{"result":"ok","data":{"addons":[]}}"#.into(),
+            ),
+        ]);
+        assert!(
+            fence
+                .verify_and_close_local_install(&id, &mut watches, &remote, ApiVersion::V1, 103)
+                .unwrap()
+                .is_none()
+        );
+        worker.join().unwrap();
+        assert_eq!(
+            fence.get(&id).unwrap().unwrap().state,
+            DispatchState::Accepted
+        );
+
+        // Only job with EXACT original UUID + separate official installed
+        // App GET allow the ACID transition and unlock.
+        let inventory = serde_json::json!({
+            "result":"ok","data":{"addons":[{
+                "slug":slug,"name":"Future unseen vendor",
+                "state":"stopped","version":"1.0.0"
+            }]}
+        })
+        .to_string();
+        let (remote, worker) = serve_reads(vec![
+            (format!("/jobs/{JOB}"), "NOT_FOUND".into()),
+            ("/jobs/info".into(), job_index(JOB)),
+            ("/addons".into(), inventory),
+        ]);
+        let confirmed = fence
+            .verify_and_close_local_install(&id, &mut watches, &remote, ApiVersion::V1, 104)
+            .unwrap()
+            .unwrap();
+        worker.join().unwrap();
+        assert_eq!(confirmed.state, DispatchState::Confirmed);
+        let new_operation = fence
+            .arm(permit(dir.path(), slug, Operation::Install), 105)
+            .unwrap();
+        assert_ne!(new_operation.id(), id);
     }
 
     #[test]
