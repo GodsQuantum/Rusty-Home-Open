@@ -104,7 +104,9 @@ jobs:
         run: python3 scripts/test_firstparty_license_manifests.py
       - name: Public fixtures and source privacy check
         run: python3 scripts/test_public_redaction.py
-      - name: Independent fresh HAOS recovery proof and bounded relay contract\n        run: python3 scripts/test_p8p_cross_vm_contract.py\n      - name: Previously executed HAOS restoration evidence and duplicate-work prevention
+      - name: Independent fresh HAOS recovery proof and bounded relay contract
+        run: python3 scripts/test_p8p_cross_vm_contract.py
+      - name: Previously executed HAOS restoration evidence and duplicate-work prevention
         run: python3 scripts/test_certification_evidence_registry.py
       - name: Verify public certification gate ledger
         run: python3 scripts/test_public_certification_ledger.py
