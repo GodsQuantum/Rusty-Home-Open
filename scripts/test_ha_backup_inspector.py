@@ -99,4 +99,34 @@ with tempfile.TemporaryDirectory(prefix="hars-backup-test-") as temp:
     print("PASS: duplicate ./backup.json vs backup.json rejected")
     expect_error(path,[("backup.json",manifest(),"regular"),("./sub/../escape",b"no","regular")])
     print("PASS: nested traversal still refused")
+    # Duplicate JSON members are a metadata-smuggling vector even with one
+    # canonical tar manifest. Never let json.loads silently take last value.
+    for payload in (
+        b'{"type":"partial","type":"full","addons":[]}',
+        b'{"protected":false,"protected":true,"addons":[]}',
+        b'{"addons":[{"slug":"a","slug":"b"}]}',
+        b'{"addons":[],"homeassistant":{"version":"1","version":"2"}}',
+        b'{"addons":[],"size":NaN}',
+    ):
+        expect_error(path,[("backup.json",payload,"regular")])
+    print("PASS: duplicate nested JSON keys and nonfinite metadata rejected")
+
+    # A preflight must open the inode itself rather than checking a pathname
+    # then following a race-replaced symbolic link. Also refuse FIFOs without
+    # waiting forever for a writer and without opening an actual HAOS file.
+    live_target=Path(temp)/"synthetic-existing.tar"
+    archive(live_target,[("backup.json",manifest(),"regular")])
+    fake_link=Path(temp)/"trick-link.tar"
+    fake_link.symlink_to(live_target)
+    try: inspect_backup(fake_link)
+    except InvalidBackup: pass
+    else: raise AssertionError("symbolic link accepted as backup")
+    fifo=Path(temp)/"trick-pipe.tar"
+    import os
+    os.mkfifo(fifo)
+    try: inspect_backup(fifo)
+    except InvalidBackup: pass
+    else: raise AssertionError("FIFO was accepted as backup")
+    print("PASS: nofollow inode-backed reader rejects symlink and FIFO without blocking")
+
 print("PASS: fixture temporary archives removed")
