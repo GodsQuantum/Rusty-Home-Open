@@ -36,6 +36,12 @@ pub enum DispatchState {
     /// Completed operation history is retained; App lock may be cleared.
     Confirmed,
 }
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum CompletionEvidence {
+    OfficialJobAndInventory,
+    SynchronousTransportAndInventory,
+}
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct DispatchRecord {
@@ -46,6 +52,10 @@ pub struct DispatchRecord {
     pub actor_subject: String,
     pub state: DispatchState,
     pub job_id: Option<String>,
+    /// Optional only for backward-compatible read of earlier verified-job rows.
+    /// Synchronous confirmation must have explicit evidence.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub completion_evidence: Option<CompletionEvidence>,
     pub created_ms: u64,
 }
 fn invalid() -> io::Error {
@@ -78,7 +88,18 @@ fn decode(data: &str) -> io::Result<DispatchRecord> {
         .as_ref()
         .is_some_and(|id| job_path(ApiVersion::V1, id).is_err())
         || (row.state == DispatchState::Uncertain && row.job_id.is_some())
-        || (row.state == DispatchState::Confirmed && row.job_id.is_none())
+        || (row.state != DispatchState::Confirmed && row.completion_evidence.is_some())
+        || (row.state == DispatchState::Confirmed
+            && !matches!(
+                (row.job_id.is_some(), row.completion_evidence),
+                (
+                    true,
+                    None | Some(CompletionEvidence::OfficialJobAndInventory)
+                ) | (
+                    false,
+                    Some(CompletionEvidence::SynchronousTransportAndInventory)
+                )
+            ))
     {
         return Err(invalid());
     }
@@ -438,6 +459,7 @@ impl DurableDispatchFence {
                 return Err(invalid());
             }
             current.state = DispatchState::Confirmed;
+            current.completion_evidence = Some(CompletionEvidence::OfficialJobAndInventory);
             let encoded = serde_json::to_string(&current).map_err(error)?;
             records
                 .insert(operation_id, encoded.as_str())
@@ -447,6 +469,66 @@ impl DurableDispatchFence {
         }
         tx.commit().map_err(error)?;
         Ok(Some(completed))
+    }
+
+    /// Close only after the SAME authenticated synchronous Supervisor POST
+    /// returned success and a fresh GET /addons actually contains this App.
+    /// Private to this module: never expose a public unlock(id, bool) API.
+    fn confirm_sync_postflight(
+        &mut self,
+        operation_id: &str,
+        inventory: &crate::installed_inventory::RunningInventory,
+    ) -> io::Result<DispatchRecord> {
+        if !inventory.read_only || inventory.api_version != ApiVersion::V1 {
+            return Err(invalid());
+        }
+        let initial = self.get(operation_id)?.ok_or_else(invalid)?;
+        if initial.state != DispatchState::Accepted
+            || initial.job_id.is_some()
+            || initial.action != Action::Install
+            || initial.completion_evidence.is_some()
+            || !inventory.apps.iter().any(|item| {
+                item.slug == initial.app
+                    && item.version.as_ref().is_some_and(|v| !v.is_empty())
+                    && matches!(item.state.as_deref(), Some("started" | "stopped"))
+            })
+        {
+            return Err(invalid());
+        }
+        let mut tx = self.db.begin_write().map_err(error)?;
+        tx.set_two_phase_commit(true);
+        let completed;
+        {
+            let mut records = tx.open_table(RECORDS).map_err(error)?;
+            let raw = records
+                .get(operation_id)
+                .map_err(error)?
+                .map(|g| g.value().to_owned())
+                .ok_or_else(invalid)?;
+            let mut row = decode(&raw)?;
+            if row != initial {
+                return Err(invalid());
+            }
+            let mut active = tx.open_table(ACTIVE).map_err(error)?;
+            let locked = active
+                .get(row.app.as_str())
+                .map_err(error)?
+                .map(|g| g.value().to_owned())
+                .ok_or_else(invalid)?;
+            if locked != operation_id {
+                return Err(invalid());
+            }
+            row.state = DispatchState::Confirmed;
+            row.completion_evidence = Some(CompletionEvidence::SynchronousTransportAndInventory);
+            let encoded = serde_json::to_string(&row).map_err(error)?;
+            records
+                .insert(operation_id, encoded.as_str())
+                .map_err(error)?;
+            active.remove(row.app.as_str()).map_err(error)?;
+            completed = row;
+        }
+        tx.commit().map_err(error)?;
+        Ok(completed)
     }
 
     /// Two-phase commit BEFORE a possible write. Concurrent and restarted
@@ -464,6 +546,7 @@ impl DurableDispatchFence {
             actor_subject: permit.actor_subject().to_owned(),
             state: DispatchState::Uncertain,
             job_id: None,
+            completion_evidence: None,
             created_ms: now_ms,
         };
         let json = serde_json::to_string(&row).map_err(error)?;
@@ -549,6 +632,44 @@ impl DurableDispatchFence {
 }
 
 impl AppSupervisorClient {
+    /// Disposable QEMU-only synchronous Store INSTALL. The official POST
+    /// waits for completion (Supervisor default background=false), so no
+    /// ephemeral job UUID is needed. Verify the installed App with a SECOND,
+    /// fresh authenticated official GET before ACID-unlocking the fence.
+    ///
+    /// Every request/transport/inventory/storage error leaves the pre-POST
+    /// intent unresolved. No automatic resubmit or public mutation endpoint.
+    pub fn preview_execute_fenced_sync_install(
+        &self,
+        fence: &mut DurableDispatchFence,
+        armed: ArmedDispatch,
+    ) -> Result<DispatchRecord, TrackedError> {
+        if armed.permit.request().action() != Action::Install
+            || armed.permit.request().background_job()
+        {
+            return Err(TrackedError::Transport(TransportError::BadResponse));
+        }
+        let operation_id = armed.id().to_owned();
+        let response = self.preview_execute_fenced(fence, armed)?;
+        if !matches!(
+            response.receipt,
+            PreviewReceipt::Accepted {
+                action: Action::Install,
+                job_id: None,
+                ..
+            }
+        ) || response.operation_id != operation_id
+        {
+            return Err(TrackedError::Transport(TransportError::BadResponse));
+        }
+        let installed = self
+            .fetch_installed(ApiVersion::V1)
+            .map_err(TrackedError::Transport)?;
+        fence
+            .confirm_sync_postflight(&operation_id, &installed)
+            .map_err(TrackedError::Storage)
+    }
+
     /// LAB only. Consumes one already audited permit and returns an exact
     /// read-only typed receipt. Every failure leaves a durable unresolved
     /// dispatch; retry/release is deliberately NOT provided.
@@ -817,6 +938,125 @@ mod durable_origin_binding_tests {
         )
         .unwrap();
         (client, worker)
+    }
+
+    #[test]
+    fn synchronous_app_install_releases_only_after_separate_verified_inventory() {
+        let dir = private_dir();
+        let db = dir.path().join("sync.redb");
+        let slug = "arbitrary_future_vendor_2040";
+        let mut fence = DurableDispatchFence::open(&db).unwrap();
+        let armed = fence
+            .arm(permit(dir.path(), slug, Operation::Install), 100)
+            .unwrap();
+        let id = armed.id().to_owned();
+        // A successful *synchronous* official POST receipt is necessary but
+        // not sufficient: it remains Accepted and the App lock stays active.
+        fence
+            .record_transport_result(
+                &id,
+                &Ok(PreviewReceipt::Accepted {
+                    app: slug.into(),
+                    action: Action::Install,
+                    job_id: None,
+                    completion_verified: false,
+                }),
+            )
+            .unwrap();
+        assert_eq!(
+            fence.get(&id).unwrap().unwrap().state,
+            DispatchState::Accepted
+        );
+        assert!(
+            fence
+                .arm(permit(dir.path(), slug, Operation::Install), 101)
+                .is_err()
+        );
+
+        let missing = crate::installed_inventory::parse_running_inventory(
+            br#"{"result":"ok","data":{"addons":[]}}"#,
+            ApiVersion::V1,
+        )
+        .unwrap();
+        assert!(fence.confirm_sync_postflight(&id, &missing).is_err());
+        let wrong = crate::installed_inventory::parse_running_inventory(
+            br#"{"result":"ok","data":{"addons":[{"slug":"other_vendor","name":"Other","version":"1.0","state":"stopped"}]}}"#,
+            ApiVersion::V1
+        ).unwrap();
+        assert!(fence.confirm_sync_postflight(&id, &wrong).is_err());
+        let errored = crate::installed_inventory::parse_running_inventory(
+            serde_json::json!({"result":"ok","data":{"addons":[{
+                "slug":slug,"name":"Future app", "version":"1.0", "state":"error"
+            }]}})
+            .to_string()
+            .as_bytes(),
+            ApiVersion::V1,
+        )
+        .unwrap();
+        assert!(fence.confirm_sync_postflight(&id, &errored).is_err());
+        let exact = crate::installed_inventory::parse_running_inventory(
+            serde_json::json!({"result":"ok","data":{"addons":[{
+                "slug":slug,"name":"Future app", "version":"1.0", "state":"stopped"
+            }]}})
+            .to_string()
+            .as_bytes(),
+            ApiVersion::V1,
+        )
+        .unwrap();
+        let mut untrusted = exact.clone();
+        untrusted.read_only = false;
+        assert!(fence.confirm_sync_postflight(&id, &untrusted).is_err());
+        let completed = fence.confirm_sync_postflight(&id, &exact).unwrap();
+        assert_eq!(completed.state, DispatchState::Confirmed);
+        assert_eq!(completed.job_id, None);
+        assert_eq!(
+            completed.completion_evidence,
+            Some(CompletionEvidence::SynchronousTransportAndInventory)
+        );
+        drop(fence);
+        let mut reopened = DurableDispatchFence::open(&db).unwrap();
+        assert_eq!(reopened.get(&id).unwrap().unwrap(), completed);
+        assert!(
+            reopened
+                .arm(permit(dir.path(), slug, Operation::Install), 102)
+                .is_ok()
+        );
+    }
+
+    #[test]
+    fn synchronous_fence_rejects_background_job_and_wrong_action() {
+        let dir = private_dir();
+        let mut fence = DurableDispatchFence::open(&dir.path().join("wrong.redb")).unwrap();
+        let app = "any_third_party_vendor_2099";
+        let armed = fence
+            .arm(permit(dir.path(), app, Operation::Start), 100)
+            .unwrap();
+        let id = armed.id().to_owned();
+        fence
+            .record_transport_result(
+                &id,
+                &Ok(PreviewReceipt::Accepted {
+                    app: app.into(),
+                    action: Action::Start,
+                    job_id: None,
+                    completion_verified: false,
+                }),
+            )
+            .unwrap();
+        let observed = crate::installed_inventory::parse_running_inventory(
+            serde_json::json!({"result":"ok","data":{"addons":[{
+                "slug":app,"name":"Test", "version":"1.0", "state":"started"
+            }]}})
+            .to_string()
+            .as_bytes(),
+            ApiVersion::V1,
+        )
+        .unwrap();
+        assert!(fence.confirm_sync_postflight(&id, &observed).is_err());
+        assert_eq!(
+            fence.get(&id).unwrap().unwrap().state,
+            DispatchState::Accepted
+        );
     }
 
     #[test]

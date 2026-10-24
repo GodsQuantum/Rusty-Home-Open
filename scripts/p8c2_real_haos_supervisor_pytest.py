@@ -391,7 +391,7 @@ def test_hars_manager_role_app(shell, shell_json):
     app="local_hars_rust_probe"
     directory="/mnt/data/supervisor/apps/local/hars_rust_probe"
     shell.run_check("mkdir -p "+directory+"/audit_layer")
-    for asset in ("config.yaml", "Dockerfile", "guest_supervisor_live", "guest_supervisor_lab_lifecycle", "guest_supervisor_managed_preview", "guest_supervisor_verified_async_install", "audit_layer/.seed"):
+    for asset in ("config.yaml", "Dockerfile", "guest_supervisor_live", "guest_supervisor_lab_lifecycle", "guest_supervisor_managed_preview", "guest_supervisor_verified_async_install", "guest_supervisor_verified_sync_install", "audit_layer/.seed"):
         shell.run_check(
             "curl --fail --silent --show-error --max-time 30 "
             "http://10.0.2.2:18673/hars_rust_probe/"+asset+
@@ -571,6 +571,68 @@ def test_hars_manager_role_app(shell, shell_json):
                 )
                 assert removed.get("result") == "ok", "QEMU fixture cleanup refused"
             shell.run_check("rm -rf " + verified_dir)
+
+        # P8O: genuine default synchronous Supervisor Store install.
+        # No background job ID can disappear: wait for the one authenticated
+        # POST to complete and independently GET the exact installed App.
+        sync_slug = "local_hars_sync_fixture"
+        sync_dir = "/mnt/data/supervisor/apps/local/hars_sync_fixture"
+        shell.run_check("mkdir -p " + sync_dir)
+        sync_installed = False
+        try:
+            for asset in ("config.yaml", "Dockerfile", "guest_supervisor_live"):
+                shell.run_check(
+                    "curl --fail --silent --show-error --max-time 30 "
+                    "http://10.0.2.2:18673/hars_sync_fixture/" + asset
+                    + " -o " + sync_dir + "/" + asset,
+                    timeout=45,
+                )
+            available = _ensure_store(shell_json, sync_slug, "1.0.0", sleeper=_sleep)
+            assert available.get("slug") == sync_slug
+            assert available.get("hassio_api") is not True
+            assert available.get("full_access") is not True
+            proof = shell.run_check(
+                "docker exec app_local_hars_rust_probe "
+                "/hars-sync-install --acknowledge-disposable-qemu " + sync_slug,
+                timeout=230,
+            )
+            assert any("P8O_REAL_SUPERVISOR_SYNC_INSTALL_AND_DURABLE_RELEASE_PASS"
+                       in line for line in proof), (
+                "Authenticated synchronous App install + independent "
+                "inventory + durable release not verified"
+            )
+            current = shell_json(
+                "ha apps info " + sync_slug + " --no-progress --raw-json",
+                timeout=75,
+            )
+            data = current.get("data") or {}
+            assert current.get("result") == "ok"
+            assert data.get("slug") == sync_slug
+            assert data.get("version") == "1.0.0"
+            assert data.get("state") in ("started", "stopped")
+            sync_installed = True
+            print("P8O_REAL_HAOS_NATIVE_SYNC_APP_INSTALL_DURABLE_RELEASE_PASS")
+        finally:
+            if not sync_installed:
+                try:
+                    observed = shell_json(
+                        "ha apps info " + sync_slug + " --no-progress --raw-json",
+                        timeout=45,
+                    ).get("data") or {}
+                    sync_installed = (
+                        observed.get("slug") == sync_slug
+                        and observed.get("version") == "1.0.0"
+                        and observed.get("state") in ("started", "stopped", "error")
+                    )
+                except Exception:
+                    pass
+            if sync_installed:
+                removed = shell_json(
+                    "ha apps uninstall " + sync_slug
+                    + " --no-progress --raw-json", timeout=180,
+                )
+                assert removed.get("result") == "ok"
+            shell.run_check("rm -rf " + sync_dir)
 
         # P8i.d.6: dedicated least-privilege Core-only App in QEMU.
         # Manager App retains homeassistant_api:false and cannot query Core.
