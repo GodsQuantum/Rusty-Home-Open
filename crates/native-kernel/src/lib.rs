@@ -467,3 +467,6 @@ mod tests {
         assert!(!rule().is_live());
     }
 }
+
+/// Actual Moli Hub staging of Home Assistant registry identities, NO states/commands.
+pub mod ha_registry_shadow;

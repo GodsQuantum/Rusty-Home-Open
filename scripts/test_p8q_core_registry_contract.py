@@ -19,6 +19,9 @@ for marker in ("from homeassistant", "HomeAssistant(\"/config\")",
                "/config/.storage/core.entity_registry",
                "P8Q_REAL_CORE_REGISTRY_CREATED_AND_SAVED_PASS"):
     assert marker in real,marker
+assert "P8R_REAL_CORE_REGISTRY_INSIDE_ACTUAL_MOLI_HUB_READONLY_PASS" in script
+assert "cargo build --locked --quiet -p hars-native-kernel" in script
+assert "--lab-ha-registry-shadow-readonly" in script
 assert "run_p8q_real_core_to_native_registry.sh" in workflow
 assert "test_p8q_core_registry_contract.py" in workflow
 assert "run_p8q_real_core_to_native_registry.sh" not in (r/".github/workflows/p8c2-haos-qemu.yml").read_text()
