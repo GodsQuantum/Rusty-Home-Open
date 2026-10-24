@@ -28,6 +28,8 @@ core-user-rbac-lab = ["core-user-snapshot-lab", "managed-apps-preview"]
 # Dedicated QEMU-only composition: live Core corroboration, per-App grants,
 # persisted single-use confirmation, owner-only durable audit, no HTTP writes.
 core-corroborated-preview-lab = ["core-user-live-readonly", "persistent-session-lab"]
+# LAB-only crash-consistent one-dispatch-per-App guard, no product mutations.
+durable-dispatch-fence-lab = ["managed-apps-preview", "dep:redb"]
 
 [dependencies]
 serde = { version = "1", features = ["derive"] }

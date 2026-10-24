@@ -19,6 +19,8 @@ pub mod core_user_live_lab;
 pub mod core_user_rbac_lab;
 #[cfg(feature = "core-user-snapshot-lab")]
 pub mod core_user_snapshot_lab;
+#[cfg(feature = "durable-dispatch-fence-lab")]
+pub mod durable_dispatch_fence_lab;
 #[cfg(feature = "ingress-identity-lab")]
 pub mod ingress_identity_lab;
 
