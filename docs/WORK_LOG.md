@@ -1,5 +1,14 @@
 # Rusty Home — journal de développement et de certification
 
+## 2026-10-25 — P8t : événements WebSocket authentifiés en laboratoire vers Moli
+
+- Travaux réutilisés : PR #89 registre Core persistant, #90 périphériques Moli, #91 états du Core, miroir et gestion d'époques hass-rs préexistants.
+- Nouvelle convergence : changements vers véritable Hub Moli via mpsc borné, acquittement, refus des timestamps anciens et contradictoires, purge unavailable/suppressions, refus des commandes et IDs non enregistrés.
+- Test révélateur : fermeture TCP silencieuse non visible immédiatement par hass-rs ; ajout d'une sonde transport get_states bornée qui déclenche la révocation des périphériques.
+- Test de réseau authentifié uniquement sur WebSocket loopback fictif. Pas encore de connexion WebSocket productive au vrai Core ou aux équipements de Cloud9. CI exacte exigée pour certifier l'étape.
+- Détails : docs/HA_WS_TO_MOLI_EVENT_CONVERGENCE_2026-10-25.md ; statut 0/15 production.
+
+
 ## 2026-10-25 — P8s, instantané des états Core dans vrai Moli OS
 
 - **Déjà acquis, pas répété :** #89 Core→identités Rust + rollback; #90 Core→Moli Hub read-only; sauvegardes HAOS précédentes.
