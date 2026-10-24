@@ -5,6 +5,7 @@
 - **Anti-redondance :** réutilise la projection HA→Moli existante, et conserve les anciennes restaurations HAOS (17/17 même VM, 6/6 seconde VM) sans les refaire.
 - **Travaux :** import strict de core.entity_registry, identités Moli, détection de doublons, validation SHA-256, base redb privée, activation CAS atomique et rollback persistant entre processus. CLI explicitement lab-readonly.
 - **Tests locaux :** 338 tests workspace all-features PASS, Clippy strict PASS, 1232 entrées multi-fournisseurs fictives restaurées et mécanismes hostiles refusés.
+- **Premier run GitHub de la PR #89 :** échecs transparents de synchronisation du SHA-256 Cargo.lock (SPDX et licences) et appel privé Core Store sans argument. Les preuves ont été régénérées en respectant les contrôles, et le test Core laisse désormais l'enregistrement officiel s'écrire via son timer de 10 secondes. Ne compter le véritable essai qu'après CI au SHA final.
 - **Preuve en attente :** véritable Core 2026.10.2 isolé doit produire la sauvegarde .storage puis Rust la lire en CI ; non certifié avant run GitHub vert.
 - **Limites :** aucun état dynamique, aucune commande d'appareil, secret ou migration complète HAOS→Rust. Production 0/15.
 - **Détails et prochaines tâches :** docs/NATIVE_HA_ENTITY_REGISTRY_STAGE_2026-10-25.md et HANDOFF_CURRENT.md.

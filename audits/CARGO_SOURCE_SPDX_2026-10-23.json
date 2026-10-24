@@ -3,7 +3,7 @@
   "dataLicense": "CC0-1.0",
   "SPDXID": "SPDXRef-DOCUMENT",
   "name": "Rusty-Home-Open-all-target-Cargo-lock-source-inventory",
-  "documentNamespace": "https://github.com/GodsQuantum/Rusty-Home-Open/spdx/source-lock/250412822231388a3c07111c2195419d635a06681067358390782dc2254569e4",
+  "documentNamespace": "https://github.com/GodsQuantum/Rusty-Home-Open/spdx/source-lock/f1dcb0d79c2780ad9ebdd4a882665a702f22d3ba7ec48b87a99a5ab65fa339b9",
   "creationInfo": {
     "creators": [
       "Tool: RustyHome-Cargo-SPDX-source-inventory"
@@ -7690,7 +7690,17 @@
     },
     {
       "spdxElementId": "SPDXRef-Package-f161a22720bfffe3849c7a28",
+      "relatedSpdxElement": "SPDXRef-Package-3db1fe4f8c5a27aa421840fd",
+      "relationshipType": "DEPENDS_ON"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-f161a22720bfffe3849c7a28",
       "relatedSpdxElement": "SPDXRef-Package-3fb549b655f069030ee734f9",
+      "relationshipType": "DEPENDS_ON"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-f161a22720bfffe3849c7a28",
+      "relatedSpdxElement": "SPDXRef-Package-476b123bcba7b983b480ce8c",
       "relationshipType": "DEPENDS_ON"
     },
     {
@@ -7705,7 +7715,17 @@
     },
     {
       "spdxElementId": "SPDXRef-Package-f161a22720bfffe3849c7a28",
+      "relatedSpdxElement": "SPDXRef-Package-909f83b4fdc8e14b9326db11",
+      "relationshipType": "DEPENDS_ON"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-f161a22720bfffe3849c7a28",
       "relatedSpdxElement": "SPDXRef-Package-b0848c3fe080b43b672d4929",
+      "relationshipType": "DEPENDS_ON"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-f161a22720bfffe3849c7a28",
+      "relatedSpdxElement": "SPDXRef-Package-d892797120796f586ccd5d12",
       "relationshipType": "DEPENDS_ON"
     },
     {

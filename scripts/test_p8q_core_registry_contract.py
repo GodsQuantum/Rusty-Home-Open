@@ -15,7 +15,7 @@ for marker in ("--network none","--read-only","--cap-drop ALL",
                "rollback \"$SHA\"","P8Q_REAL_CORE_ENTITY_REGISTRY_TO_RUST_PERSIST_ROLLBACK_PASS"):
     assert marker in script,marker
 for marker in ("from homeassistant", "HomeAssistant(\"/config\")",
-               "registry.async_get_or_create(", "registry._store.async_save()",
+               "registry.async_get_or_create(", "await asyncio.sleep(12)",
                "/config/.storage/core.entity_registry",
                "P8Q_REAL_CORE_REGISTRY_CREATED_AND_SAVED_PASS"):
     assert marker in real,marker

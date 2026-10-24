@@ -41,8 +41,10 @@ async def main():
                 "sensor",DOMAIN,unique_id=tag,config_entry=entry,
                 suggested_object_id="synthetic_"+tag[-1])
         await hass.async_block_till_done()
-        # Persist using genuine Core Storage, not our synthetic JSON encoder.
-        await registry._store.async_save()
+        # Real Core schedules this registry's persistence after 10 seconds.
+        # Let the public lifecycle flush itself; do not call a private Store
+        # method with an incorrectly guessed signature.
+        await asyncio.sleep(12)
         doc=json.loads(Path("/config/.storage/core.entity_registry").read_bytes())
         assert doc["key"]=="core.entity_registry"
         included=[x for x in doc["data"]["entities"]
