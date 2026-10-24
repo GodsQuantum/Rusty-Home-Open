@@ -562,6 +562,7 @@ name = "hars-native-kernel"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "hars-interop-moli",
  "moli-automation",
  "moli-core",
  "moli-runtime",

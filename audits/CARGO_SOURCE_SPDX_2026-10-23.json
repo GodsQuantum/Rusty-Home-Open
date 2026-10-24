@@ -3,7 +3,7 @@
   "dataLicense": "CC0-1.0",
   "SPDXID": "SPDXRef-DOCUMENT",
   "name": "Rusty-Home-Open-all-target-Cargo-lock-source-inventory",
-  "documentNamespace": "https://github.com/GodsQuantum/Rusty-Home-Open/spdx/source-lock/f1dcb0d79c2780ad9ebdd4a882665a702f22d3ba7ec48b87a99a5ab65fa339b9",
+  "documentNamespace": "https://github.com/GodsQuantum/Rusty-Home-Open/spdx/source-lock/c63bafbca3428832ae6e055fcab878b46885565022c3affbeffb97ba500c6b5d",
   "creationInfo": {
     "creators": [
       "Tool: RustyHome-Cargo-SPDX-source-inventory"
@@ -5976,6 +5976,11 @@
     {
       "spdxElementId": "SPDXRef-Package-40394cedb9c1f801105f3a7e",
       "relatedSpdxElement": "SPDXRef-Package-ee3e4d88b5ff6f76654bc6e5",
+      "relationshipType": "DEPENDS_ON"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-40394cedb9c1f801105f3a7e",
+      "relatedSpdxElement": "SPDXRef-Package-f161a22720bfffe3849c7a28",
       "relationshipType": "DEPENDS_ON"
     },
     {

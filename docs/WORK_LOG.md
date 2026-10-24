@@ -1,5 +1,14 @@
 # Rusty Home — journal de développement et de certification
 
+## 2026-10-25 — P8r, entités Core mappées dans le vrai Hub Moli/Rust
+
+- **Pré-existants :** PR #89 export de vrais identifiants Core→redb Rust, et restauration HAOS→HAOS déjà acquise. Aucun replay de ces certifications.
+- **Nouvelle fonction :** module native-kernel/ha_registry_shadow, driver Moli sans aucune écriture, points à état inconnu, contrôle anti-collision, vérification de la propriété d'identité et refus réel des commandes Moli.
+- **Tests :** 2 entrées puis 1 232 entrées de divers fournisseurs dans un véritable Hub Moli, refus de toute écriture. Validation réelle dans le conteneur Home Assistant Core attendue de la CI GitHub.
+- **Prochain manque :** flux des états Core et automatismes vers la machine d'états Moli ; aucune validation production, release reste 0/15.
+- **Documentation :** docs/NATIVE_MOLI_HA_REGISTRY_SHADOW_2026-10-25.md.
+
+
 ## 2026-10-25 — P8q, import d'identités HA dans Rust avec rollback durable
 
 - **Anti-redondance :** réutilise la projection HA→Moli existante, et conserve les anciennes restaurations HAOS (17/17 même VM, 6/6 seconde VM) sans les refaire.

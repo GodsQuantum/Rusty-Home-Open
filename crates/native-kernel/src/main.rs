@@ -13,6 +13,15 @@ fn lab_registry_dir(raw: &str) -> anyhow::Result<std::path::PathBuf> {
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     let args: Vec<_> = std::env::args().collect();
+    if args.len() == 3 && args[1] == "--lab-ha-registry-shadow-readonly" {
+        if nix::unistd::Uid::effective().is_root() {
+            anyhow::bail!("no root execution for Core identity shadow");
+        }
+        let proof =
+            hars_native_kernel::ha_registry_shadow::observe(std::path::Path::new(&args[2])).await?;
+        println!("{}", serde_json::to_string(&proof)?);
+        return Ok(());
+    }
     if args.len() == 2 && args[1] == "--lab-ha-automation-moli" {
         if nix::unistd::Uid::effective().is_root() {
             anyhow::bail!("P3b Moli YAML lab must run unprivileged");

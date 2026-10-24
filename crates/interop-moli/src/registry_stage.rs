@@ -125,6 +125,59 @@ fn is_digest(s: &str) -> bool {
         && s.bytes()
             .all(|b| b.is_ascii_hexdigit() && !b.is_ascii_uppercase())
 }
+/// Revalidate persisted stage before it can become active in an actual Moli Hub.
+/// A private redb record is not assumed trustworthy after an interrupted write,
+/// manual file modification or future importer schema change.
+fn verify_stage(s: &Stage) -> Result<()> {
+    if s.version != 1
+        || !is_digest(&s.batch_sha256)
+        || !s.read_only
+        || !s.no_device_commands
+        || !s.no_live_states
+        || s.entity_count != s.entities.len()
+        || s.entity_count > MAX_ENTITIES
+        || s.stable_count != s.entities.iter().filter(|e| e.stable).count()
+    {
+        bail!("untrusted persisted registry batch")
+    }
+    let serialized = serde_json::to_vec(&s.entities)?;
+    if hex::encode(Sha256::digest(&serialized)) != s.batch_sha256 {
+        bail!("registry batch checksum mismatch")
+    }
+    let mut previous: Option<&str> = None;
+    let mut native = BTreeSet::new();
+    for e in &s.entities {
+        if e.entity_id.len() > 255
+            || e.entity_id.is_empty()
+            || e.entity_id
+                .bytes()
+                .any(|b| b.is_ascii_control() || b == b'/' || b == b'\\')
+            || e.platform.len() > 128
+            || e.platform.is_empty()
+            || e.unique_id.len() > 4096
+            || e.unique_id.is_empty()
+            || e.state_known
+            || previous.is_some_and(|p| p >= e.entity_id.as_str())
+            || !native.insert(e.native_point.as_str())
+        {
+            bail!("invalid or duplicate persisted registry identity")
+        }
+        previous = Some(&e.entity_id);
+        let mapped = project(&HaEntity {
+            entity_id: e.entity_id.clone(),
+            platform: e.platform.clone(),
+            config_entry_id: e.config_entry_id.clone(),
+            unique_id: Some(e.unique_id.clone()),
+            state: Value::Null,
+            attributes: Map::new(),
+        })
+        .map_err(|_| anyhow::anyhow!("cannot verify persisted identity"))?;
+        if mapped.point_id.as_str() != e.native_point || mapped.stable_identity != e.stable {
+            bail!("native identity differs from its original Core mapping")
+        }
+    }
+    Ok(())
+}
 fn read_string<'a>(v: &'a Value, k: &str) -> Result<&'a str> {
     v.get(k)
         .and_then(Value::as_str)
@@ -295,10 +348,10 @@ impl RegistryStager {
                 bail!("batch has not been staged")
             };
             let s: Stage = serde_json::from_str(saved.value())?;
-            if s.batch_sha256 != batch || !s.read_only || !s.no_device_commands || !s.no_live_states
-            {
-                bail!("untrusted stage record")
+            if s.batch_sha256 != batch {
+                bail!("wrong staged batch")
             }
+            verify_stage(&s)?;
             drop(saved);
             drop(table);
             let mut control = tx.open_table(CONTROL)?;
@@ -361,14 +414,10 @@ impl RegistryStager {
             .get(digest.as_str())?
             .ok_or_else(|| anyhow::anyhow!("orphan active pointer"))?;
         let s: Stage = serde_json::from_str(stage.value())?;
-        if s.batch_sha256 != digest
-            || !s.read_only
-            || !s.no_device_commands
-            || !s.no_live_states
-            || s.entity_count != s.entities.len()
-        {
-            bail!("untrusted persisted shadow")
+        if s.batch_sha256 != digest {
+            bail!("active pointer mismatch")
         }
+        verify_stage(&s)?;
         Ok(Some(s))
     }
 }
@@ -499,6 +548,43 @@ mod tests {
         assert!(parse_export(&other).is_err());
         assert!(parse_export(&vec![b' '; MAX_EXPORT + 1]).is_err());
     }
+    #[test]
+    fn tampered_private_database_cannot_publish_or_activate_wrong_mapping() {
+        let dir = tempfile::tempdir().unwrap();
+        let private = dir.path().join("private");
+        fs::create_dir(&private).unwrap();
+        fs::set_permissions(&private, fs::Permissions::from_mode(0o700)).unwrap();
+        let raw = registry(vec![entity("sensor.original", "serial/1")]);
+        let db = RegistryStager::open(&private).unwrap();
+        let original = db.stage(&raw).unwrap();
+        db.activate(&original.batch_sha256, None).unwrap();
+        drop(db);
+        let path = private.join("registry-shadow.redb");
+        let disk = Database::create(&path).unwrap();
+        let mut tx = disk.begin_write().unwrap();
+        tx.set_two_phase_commit(true);
+        {
+            let mut stages = tx.open_table(BATCHES).unwrap();
+            let mut corrupt = original.clone();
+            corrupt.entities[0].native_point = "different:forged/state".into();
+            let json = serde_json::to_string(&corrupt).unwrap();
+            stages
+                .insert(original.batch_sha256.as_str(), json.as_str())
+                .unwrap();
+        }
+        tx.commit().unwrap();
+        drop(disk);
+        let db = RegistryStager::open(&private).unwrap();
+        assert!(
+            db.active().is_err(),
+            "checksum mismatch could publish a forged device"
+        );
+        assert!(
+            db.activate(&original.batch_sha256, Some(&original.batch_sha256))
+                .is_err()
+        );
+    }
+
     #[test]
     fn deny_unsafe_state_directory_and_links() {
         let dir = tempfile::tempdir().unwrap();
