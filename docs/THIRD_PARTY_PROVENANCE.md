@@ -7,9 +7,9 @@ Do not claim distribution license clearance yet.
 
 ## Six crates without a bundled source LICENSE file (2026-10-23)
 
-The exact locked Rust workspace currently resolves **217 packages**:
-**209 external** and eight workspace packages. Of the external packages,
-203 bundle a file whose name begins LICENSE, LICENCE, COPYING, or NOTICE.
+The exact locked Rust workspace currently resolves **226 packages**:
+**218 external** and eight workspace packages. Of the external packages,
+212 bundle a file whose name begins LICENSE, LICENCE, COPYING, or NOTICE.
 The remaining six are four rumqttc-next family crates 0.34.0 and
 r-efi 5.3.0 / 6.0.0.
 

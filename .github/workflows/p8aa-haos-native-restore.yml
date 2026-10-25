@@ -1,0 +1,79 @@
+name: P8aa Genuine HAOS Backup to Native Rust Staging
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - ".github/workflows/p8aa-haos-native-restore.yml"
+      - "crates/interop-moli/**"
+      - "scripts/p8aa_native_backup_source_qemu_pytest.py"
+      - "scripts/test_p8aa_genuine_archive_qemu.py"
+      - "scripts/test_p8aa_qemu_contract.py"
+      - "scripts/test_p8aa_backup_to_native_stage.py"
+      - "Cargo.lock"
+permissions:
+  contents: read
+jobs:
+  genuine-supervisor-backup-to-rust:
+    name: Genuine disposable HAOS 18.3 Supervisor backup into private native Rust and rollback
+    runs-on: ubuntu-24.04
+    timeout-minutes: 55
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Safe QEMU evidence and no household data contract
+        run: |
+          python3 scripts/test_p8aa_qemu_contract.py
+          python3 scripts/test_public_redaction.py
+          cargo fmt --all -- --check
+          cargo build --locked -p hars-interop-moli --bin ha_registry_stager
+          python3 scripts/test_p8aa_backup_to_native_stage.py --binary target/debug/ha_registry_stager
+      - name: Prepare pinned official HAOS QEMU harness
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends qemu-system-x86 qemu-utils ovmf xz-utils jq
+          git clone -q --depth 1 --filter=blob:none --sparse https://github.com/home-assistant/operating-system.git "$RUNNER_TEMP/haos-upstream"
+          git -C "$RUNNER_TEMP/haos-upstream" fetch -q --depth 1 origin 90fa213c3441e585d5a60387e9244d0ed38efaf8
+          git -C "$RUNNER_TEMP/haos-upstream" checkout -q 90fa213c3441e585d5a60387e9244d0ed38efaf8
+          git -C "$RUNNER_TEMP/haos-upstream" sparse-checkout set tests
+          test "$(git -C "$RUNNER_TEMP/haos-upstream" rev-parse HEAD)" = 90fa213c3441e585d5a60387e9244d0ed38efaf8
+          python3 -m venv "$RUNNER_TEMP/haos-venv"
+          "$RUNNER_TEMP/haos-venv/bin/python" -m pip install -r "$RUNNER_TEMP/haos-upstream/tests/requirements.txt"
+          test -c /dev/kvm
+          sudo chmod 0666 /dev/kvm
+          test -r /usr/share/ovmf/OVMF.fd
+      - name: Verify immutable Home Assistant OS image
+        run: |
+          curl -fLSs --retry 3 --retry-delay 5 -o "$RUNNER_TEMP/haos_ova-18.3.qcow2.xz" https://github.com/home-assistant/operating-system/releases/download/18.3/haos_ova-18.3.qcow2.xz
+          cd "$RUNNER_TEMP"
+          echo "fae6a728768cc10aff60d4820bfcd40d64cd77fab82c8bd92af13b3d9d414090  haos_ova-18.3.qcow2.xz" | sha256sum -c
+          xz -T2 -dc haos_ova-18.3.qcow2.xz > haos-upstream/tests/haos.qcow2
+          rm haos_ova-18.3.qcow2.xz
+          qemu-img resize -f qcow2 haos-upstream/tests/haos.qcow2 64G
+          qemu-img info --output=json haos-upstream/tests/haos.qcow2 | jq -e '.[ "virtual-size" ] >= 68719476736'
+      - name: New genuine Supervisor full archive to Rust identity stage and durable rollback
+        timeout-minutes: 40
+        run: |
+          set -euo pipefail
+          grep -q -- '-snapshot -accel kvm' "$RUNNER_TEMP/haos-upstream/tests/qemu-strategy.yaml"
+          sed -i 's/memory: 1G/memory: 3G/' "$RUNNER_TEMP/haos-upstream/tests/qemu-strategy.yaml"
+          cat "$GITHUB_WORKSPACE/scripts/p8aa_native_backup_source_qemu_pytest.py" >> "$RUNNER_TEMP/haos-upstream/tests/supervisor_test/test_supervisor.py"
+          mkdir -p "$RUNNER_TEMP/hars-p8aa-native"
+          python3 "$GITHUB_WORKSPACE/scripts/p8p_cross_vm_backup_relay.py" --output-dir "$RUNNER_TEMP/hars-p8aa-native" > "$RUNNER_TEMP/p8aa-relay.log" 2>&1 &
+          RELAY_PID=$!
+          trap 'kill "$RELAY_PID" 2>/dev/null || true' EXIT
+          source "$RUNNER_TEMP/haos-venv/bin/activate"
+          cd "$RUNNER_TEMP/haos-upstream/tests"
+          ./run_tests.sh supervisor_test/test_supervisor.py::test_start_supervisor supervisor_test/test_supervisor.py::test_check_supervisor supervisor_test/test_supervisor.py::test_hars_native_backup_source
+          python3 "$GITHUB_WORKSPACE/scripts/test_p8aa_qemu_contract.py" --junit junit_reports/tests.xml
+          test -s "$RUNNER_TEMP/hars-p8aa-native/archive.tar"
+          test -s "$RUNNER_TEMP/hars-p8aa-native/manifest.json"
+          cd "$GITHUB_WORKSPACE"
+          python3 scripts/test_p8aa_genuine_archive_qemu.py --archive "$RUNNER_TEMP/hars-p8aa-native/archive.tar" --manifest "$RUNNER_TEMP/hars-p8aa-native/manifest.json" --binary target/debug/ha_registry_stager
+          echo P8AA_ACTUAL_SUPERVISOR_ARCHIVE_TO_NATIVE_RUST_LAB_CERTIFIED
+      - name: Refuse persistent VM or archive exposure
+        if: always()
+        run: |
+          test ! -e "$GITHUB_WORKSPACE/archive.tar"
+          test ! -e "$GITHUB_WORKSPACE/registry-shadow.redb"

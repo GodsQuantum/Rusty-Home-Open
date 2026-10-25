@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "source": "immutable_git_commit",
-  "cargo_lock_sha256": "93f061d775df4411c82317e3340468c055ab10f31446a0cf2fe21298d9208d66",
+  "cargo_lock_sha256": "1c3300573727ee5265ffd91b39e8e47f263b84c509e92a4204b5d14fbee89fd6",
   "archives_without_license_file": 6,
   "pinned_upstream_source_texts_verified": 6,
   "review_complete": false,

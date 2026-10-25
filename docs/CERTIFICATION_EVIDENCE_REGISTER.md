@@ -45,6 +45,10 @@ Ces sept résultats indépendants sont désormais consignés dans le [registre d
 
 La présence d'un chemin Core→WebSocket→Rust→Moli **ne valide PAS** le remplacement de Home Assistant Core, les services ou automatisations, les contrôleurs radios, la migration des données de foyer, les intégrations tierces au complet, une reconnexion durable ou une restauration HAOS→Rust→HAOS. Ce sont des preuves de laboratoire bornées avec de vraies images Core ; le compteur reste **NOT_PRODUCTION_READY — 0/15**.
 
+## P8aa — preuve nouvelle en attente GitHub CI (non certifiée)
+
+Le nouveau Rust lit un tar full Supervisor non chiffré et importe uniquement core.entity_registry vers redb, avec rollback. CI prévue : vrai Core 2026.10.2 dans un tar synthétique et, séparément, vrai Supervisor HAOS 18.3 en VM jetable produisant un tar avec identités fictives, importées en Rust. La source, le test et leurs limites sont consignés dans docs/HAOS_TO_NATIVE_BACKUP_STAGE_2026-10-25.md. Aucun SHA ni run de succès revendiqué ici avant son exécution et contrôle. Les sept preuves Core→Rust historiques et HAOS→HAOS restent acquises, production 0/15.
+
 ## Protocole obligatoire pour toute nouvelle session
 
 1. Lire **ce registre**, [le journal](WORK_LOG.md), [les gates](CERTIFICATION_LEDGER.md), `scripts/check_p8d_junit.py`, puis contrôler les statuts et commits GitHub actuels.

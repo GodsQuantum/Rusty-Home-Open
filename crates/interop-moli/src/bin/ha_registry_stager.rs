@@ -57,6 +57,24 @@ fn run() -> Result<()> {
                 "unstable_identities":stage.entity_count-stage.stable_count,
                 "read_only":true,"live_states_migrated":false,"production_ready":false})
         }
+        "import-unprotected-backup" => {
+            let path = args
+                .next()
+                .ok_or_else(|| anyhow::anyhow!("missing full backup archive"))?;
+            if args.next().is_some() {
+                bail!("unexpected arguments")
+            }
+            let source = hars_interop_moli::ha_backup_import::registry_from_unprotected_backup(
+                Path::new(&path),
+            )?;
+            let stage = db.stage(&source.raw)?;
+            serde_json::json!({"action":"stage_official_style_unprotected_backup",
+                "sha256":stage.batch_sha256,"archive_sha256":source.archive_sha256,
+                "entities":stage.entity_count,"stable_identities":stage.stable_count,
+                "read_only":true,"activated":false,"integrations_migrated":false,
+                "automations_migrated":false,"apps_migrated":false,
+                "production_ready":false})
+        }
         "activate" => {
             let sha = args
                 .next()

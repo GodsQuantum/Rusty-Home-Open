@@ -64,6 +64,10 @@ jobs:
         run: |
           python3 scripts/test_p8q_core_registry_contract.py
           python3 scripts/test_ha_registry_stager.py
+      - name: Unprotected HAOS-format archive to private native Rust staging, with hostile input denial
+        run: |
+          cargo build --locked -p hars-interop-moli --bin ha_registry_stager
+          python3 scripts/test_p8aa_backup_to_native_stage.py --binary target/debug/ha_registry_stager
       - name: Genuine loopback WebSocket change events to read-only Moli Hub with disconnect revocation
         run: |
           cargo test --locked -p hars-native-kernel --lib ha_event_convergence

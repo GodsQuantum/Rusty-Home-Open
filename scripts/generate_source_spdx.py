@@ -124,9 +124,9 @@ def validate(output):
     lock_digest=hashlib.sha256((ROOT/"Cargo.lock").read_bytes()).hexdigest()
     assert output["documentNamespace"].endswith("/"+lock_digest)
     packages=output["packages"]
-    assert len(packages)==217
-    assert len({x["SPDXID"] for x in packages})==217
-    assert sum(x["downloadLocation"]!="NOASSERTION" for x in packages)==205
+    assert len(packages)==226
+    assert len({x["SPDXID"] for x in packages})==226
+    assert sum(x["downloadLocation"]!="NOASSERTION" for x in packages)==214
     assert sum(x["downloadLocation"]=="NOASSERTION" for x in packages)==12
     assert all(x["licenseConcluded"]=="NOASSERTION" for x in packages)
     assert all(x["filesAnalyzed"] is False for x in packages)

@@ -1,9 +1,9 @@
 # Rusty Home deterministic source dependency SBOM (23 October 2026)
 
 This public artifact is an SPDX 2.3 **source dependency graph**, generated
-deterministically from locked Cargo metadata. It enumerates **217 packages**
-including eight workspace packages, 205 registry crates, four Git sources,
-and their 495 dependency/DESCRIBES relationships across all targets.
+deterministically from locked Cargo metadata. It enumerates **226 packages**
+including eight workspace packages, 214 registry crates, four Git sources,
+and their 522 dependency/DESCRIBES relationships across all targets.
 
 Artifact: [SPDX 2.3 JSON](../audits/CARGO_SOURCE_SPDX_2026-10-23.json).
 
@@ -13,7 +13,7 @@ SPDX-compatible licensing expression if available. Invalid or legacy
 license expressions are represented as **NOASSERTION**, not silently
 replaced by a more permissive license. All eight first-party workspace crates
 now explicitly declare MIT, including the native ha-rust-bridge package.
-Six legacy third-party slash license declarations remain unresolved.
+Seven declared-license expressions remain unresolved in the strict SPDX source inventory (including the newly added filetime 0.2.29 crate). These are NOASSERTION pending review, not assumed redistributable.
 
 Git checkout paths and host file system paths are absent. Download URLs are
 recorded only for registry packages. This artifact is NOT an inventory of
@@ -38,3 +38,5 @@ pinned to their upstream license texts under the P11 license provenance
 audit. Remaining work includes attribution and NOTICE obligations, asset and
 firmware licenses, and an externally reviewed signed SBOM for actual release
 binaries. Rusty Home remains NOT_PRODUCTION_READY.
+
+**Inventory refreshed 25 October 2026** after adding the native read-only official-format HAOS backup parser (tar/flate2 dependency closure). Source SPDX metadata is deterministic; signed binary SBOM and legal clearance remain pending.
