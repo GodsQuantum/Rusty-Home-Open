@@ -24,9 +24,17 @@ const MAX_MANIFEST_BYTES: u64 = 1_048_576;
 const MAX_OUTER_ENTRIES: usize = 25_000;
 const MAX_INNER_ENTRIES: usize = 50_000;
 
-fn canonical_name(raw: &Path) -> Result<String> {
+fn canonical_name(raw: &Path, is_dir: bool) -> Result<String> {
     let display = raw.to_str().context("nonutf8 archive name")?;
-    let value = display.strip_prefix("./").unwrap_or(display);
+    let name = display.strip_prefix("./").unwrap_or(display);
+    // The official Supervisor tar writer includes POSIX directory entries
+    // ending in "/". Drop exactly one terminal slash ONLY for directories.
+    // All remaining empty components, traversal and alias collisions fail.
+    let value = if is_dir {
+        name.strip_suffix('/').unwrap_or(name)
+    } else {
+        name
+    };
     if value.is_empty()
         || value.len() > 512
         || value.starts_with('/')
@@ -100,7 +108,7 @@ pub fn registry_from_unprotected_backup(source: &Path) -> Result<SourceRegistry>
             continue;
         }
         regular_or_directory(kind)?;
-        let name = canonical_name(&entry.path()?)?;
+        let name = canonical_name(&entry.path()?, kind.is_dir())?;
         if !seen.insert(name.clone()) {
             bail!("duplicate outer member")
         }
@@ -159,7 +167,7 @@ pub fn registry_from_unprotected_backup(source: &Path) -> Result<SourceRegistry>
             continue;
         }
         regular_or_directory(kind)?;
-        let name = canonical_name(&entry.path()?)?;
+        let name = canonical_name(&entry.path()?, kind.is_dir())?;
         if !inner_seen.insert(name.clone()) {
             bail!("duplicate Core archive member")
         }

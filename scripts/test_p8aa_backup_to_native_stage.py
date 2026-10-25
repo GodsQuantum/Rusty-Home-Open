@@ -41,6 +41,12 @@ def fixture():
 def part_file(registry, *, member="data/.storage/core.entity_registry",evil=None,ambiguous=False):
     buf=BytesIO()
     with tarfile.open(fileobj=buf,mode="w:gz") as tf:
+        if member.startswith("data/"):
+            for dirname in ("data/", "data/.storage/"):
+                directory=tarfile.TarInfo("./"+dirname)
+                directory.type=tarfile.DIRTYPE
+                directory.size=0
+                tf.addfile(directory)
         rows=[(member,registry)]
         if ambiguous:
             rows.append((".storage/core.entity_registry",registry))

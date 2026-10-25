@@ -20,6 +20,46 @@ assert archive.stat().st_size==manifest["size_bytes"]
 with archive.open("rb") as stream:
     actual_hash=hashlib.file_digest(stream,"sha256").hexdigest()
 assert actual_hash==manifest["sha256"]
+def explain_archive_shape_without_data(source):
+    """Failure-only public CI telemetry: counts and fixed booleans, never names or values."""
+    import tarfile
+    summary={"core_part_found":False,"nested_files":0,"nested_dirs":0,
+             "nested_links":0,"nested_other":0,"official_registry":False,
+             "legacy_registry":False,"registry_at_other_depth":False}
+    try:
+        with tarfile.open(source,mode="r:") as outer:
+            for member in outer:
+                name=member.name.removeprefix("./")
+                if name not in ("homeassistant.tar.gz","homeassistant.tar") or not member.isfile():
+                    continue
+                summary["core_part_found"]=True
+                inner=outer.extractfile(member)
+                assert inner is not None
+                with tarfile.open(fileobj=inner,mode="r|*") as nested:
+                    for pos,item in enumerate(nested):
+                        if pos>=50_000:
+                            summary["member_cap_exceeded"]=True
+                            break
+                        if item.isfile():
+                            summary["nested_files"]+=1
+                        elif item.isdir():
+                            summary["nested_dirs"]+=1
+                        elif item.issym() or item.islnk():
+                            summary["nested_links"]+=1
+                        else:
+                            summary["nested_other"]+=1
+                        name=item.name.removeprefix("./").rstrip("/")
+                        if name=="data/.storage/core.entity_registry":
+                            summary["official_registry"]=True
+                        elif name==".storage/core.entity_registry":
+                            summary["legacy_registry"]=True
+                        elif name.endswith("/core.entity_registry"):
+                            summary["registry_at_other_depth"]=True
+    except (OSError,ValueError,tarfile.TarError):
+        summary["parse_failed"]=True
+    print("P8AA_SANITIZED_ARCHIVE_SHAPE="+json.dumps(summary,sort_keys=True),
+          flush=True)
+
 preflight=inspect_backup(archive)
 assert preflight["protected_metadata_flag"] is False
 # A Supervisor-created FULL archive is not required to include an
@@ -34,6 +74,8 @@ with tempfile.TemporaryDirectory(prefix="hars-p8aa-real-haos-private-") as tmp:
     def invoke(*args):
         res=subprocess.run([str(a.binary),"--lab-readonly",str(root),*map(str,args)],
                            capture_output=True,text=True,timeout=45)
+        if res.returncode:
+            explain_archive_shape_without_data(archive)
         assert res.returncode==0,res.stderr
         return json.loads(res.stdout)
     staged=invoke("import-unprotected-backup",archive)
