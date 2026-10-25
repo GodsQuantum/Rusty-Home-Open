@@ -64,6 +64,11 @@ jobs:
         run: |
           python3 scripts/test_p8q_core_registry_contract.py
           python3 scripts/test_ha_registry_stager.py
+      - name: Native Rust byte-exact full HAOS backup escrow laboratory
+        run: |
+          python3 scripts/test_p8ab_escrow_contract.py
+          cargo build --locked -p hars-interop-moli --bin ha_registry_stager
+          python3 scripts/test_p8ab_backup_escrow.py target/debug/ha_registry_stager
       - name: Unprotected HAOS-format archive to private native Rust staging, with hostile input denial
         run: |
           cargo build --locked -p hars-interop-moli --bin ha_registry_stager

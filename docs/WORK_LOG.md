@@ -1,5 +1,13 @@
 # Rusty Home — journal de développement et de certification
 
+## 2026-10-25 — P8ab, reversible whole-archive escrow between actual HAOS VMs (CI pending)
+
+- New native Rust opaque, content-addressed and fsynced private HAOS archive escrow; never parses secrets, preserves all bytes including encrypted payload, hashes on ingest/export and denies symlinks, corrupt blobs, weak file permissions and overwrite.
+- Reuses existing proven P8p QEMU 18.3 source and separate fresh target; adds an actual durable Rust vault in between. The original guest archive is replaced by Rust-exported bytes before second VM restore.
+- Local synthetic tests positive and hostile PASS. The genuine two-VM run must pass GitHub CI at feature SHA before calling P8ab certified.
+- Core/Apps/radios DO NOT run in Rust, whole product stays 0/15 production, no family HAOS involved.
+
+
 ## 2026-10-25 — P8aa, vrai tar HAOS vers stockage Rust (laboratoire certifié)
 
 - Anti-redondance : réutiliser les preuves HAOS→HAOS 17/17 et 6/6 et les PR Core→Rust/Moli #89–#98, sans les renommer en certification native.

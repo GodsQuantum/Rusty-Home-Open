@@ -75,6 +75,29 @@ fn run() -> Result<()> {
                 "automations_migrated":false,"apps_migrated":false,
                 "production_ready":false})
         }
+        "escrow-ingest" => {
+            let source = args
+                .next()
+                .ok_or_else(|| anyhow::anyhow!("missing full archive source"))?;
+            if args.next().is_some() {
+                bail!("extra arguments")
+            }
+            let escrow = hars_interop_moli::backup_escrow::BackupEscrow::open(Path::new(&dir))?;
+            serde_json::to_value(escrow.ingest(Path::new(&source))?)?
+        }
+        "escrow-export" => {
+            let key = args
+                .next()
+                .ok_or_else(|| anyhow::anyhow!("missing escrow digest"))?;
+            let dest = args
+                .next()
+                .ok_or_else(|| anyhow::anyhow!("missing private export directory"))?;
+            if args.next().is_some() {
+                bail!("extra arguments")
+            }
+            let escrow = hars_interop_moli::backup_escrow::BackupEscrow::open(Path::new(&dir))?;
+            serde_json::to_value(escrow.export(&key, Path::new(&dest))?)?
+        }
         "activate" => {
             let sha = args
                 .next()
