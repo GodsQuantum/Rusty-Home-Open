@@ -1,0 +1,47 @@
+{
+  "schema_version": 1,
+  "case_id": "p8aa-genuine-haos-supervisor-backup-native-registry-stage",
+  "result": "verified_disposable_qemu_lab_only",
+  "head_sha": "9c6e3220f433153c0dc28ef0d2549bd52a345a8f",
+  "merge_sha": "d297bbbd29ac313723b54794ad27aceaf0636166",
+  "pull_request": 99,
+  "github_run": 40238122942,
+  "run_url": "https://github.com/GodsQuantum/Rusty-Home-Open/actions/runs/40238122942",
+  "github_result": "success",
+  "successful_pr_checks": 17,
+  "skipped_pr_checks": 1,
+  "environment": "official HAOS 18.3 disposable KVM/QEMU with synthetic entity identities, official Supervisor full unprotected backup, separate private Rust/redb importer on ephemeral CI runner",
+  "junit_tests": {
+    "selected": 3,
+    "passed": 3,
+    "failed": 0,
+    "skipped": 0
+  },
+  "markers": [
+    "P8AA_GENUINE_HAOS_JUNIT_3_OF_3_PASS",
+    "P8AA_REAL_SUPERVISOR_BACKUP_TO_RUST_DURABLE_ROLLBACK_PASS",
+    "P8AA_ACTUAL_SUPERVISOR_ARCHIVE_TO_NATIVE_RUST_LAB_CERTIFIED"
+  ],
+  "tested": [
+    "official backup created in isolated genuine HAOS guest",
+    "backup SHA256 confirmed after localhost transfer",
+    "official data-prefixed Core entity registry imported in native Rust",
+    "two synthetic vendor entities staged durably in private redb",
+    "compare-and-swap activation then durable native rollback",
+    "no household or physical radio access"
+  ],
+  "not_tested": [
+    "entire Home Assistant Core runtime migration",
+    "automations and scripts",
+    "third-party integrations or Supervisor Apps state",
+    "credentials and SecureTar encrypted backup import",
+    "full Rust OS boot and replacement of HAOS",
+    "physical radios and whole-machine disaster rollback",
+    "72-hour production stress"
+  ],
+  "gate": "haos_backup_restore",
+  "gate_status": "lab_partial",
+  "production_release": "NOT_PRODUCTION_READY",
+  "certified_release_gates": 0,
+  "required_release_gates": 15
+}

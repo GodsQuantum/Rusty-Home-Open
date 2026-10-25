@@ -1,11 +1,11 @@
 # Rusty Home — journal de développement et de certification
 
-## 2026-10-25 — P8aa, vrai tar HAOS vers stockage Rust (qualification en cours)
+## 2026-10-25 — P8aa, vrai tar HAOS vers stockage Rust (laboratoire certifié)
 
 - Anti-redondance : réutiliser les preuves HAOS→HAOS 17/17 et 6/6 et les PR Core→Rust/Moli #89–#98, sans les renommer en certification native.
 - Fonction nouvelle : Rust ouvre le tar complet non chiffré, vérifie les en-têtes, le hash, les chemins, les limites, le CRC gzip, récupère seulement core.entity_registry, stocke les identités en redb durable et offre activation CAS / rollback.
 - Tests locaux : archives factices valides/hostiles, refus chiffrement, liens et gzip tronqués, aucun service du domicile.
-- Test CI distinct : vrai Core 2026.10.2 emballé dans un tar synthétique, plus vraie sauvegarde Supervisor HAOS 18.3 créée dans une VM jetable et importée vers Rust (preuve en attente du GitHub run exact).
+- Test CI distinct : vrai Core 2026.10.2 emballé dans un tar synthétique, plus vraie sauvegarde Supervisor HAOS 18.3 créée dans une VM jetable et importée vers Rust (preuve RÉUSSIE au run 40238122942, SHA 9c6e3220f433153c0dc28ef0d2549bd52a345a8f, merge d297bbbd29ac313723b54794ad27aceaf0636166).
 - Dépendances contrôlées : Cargo.lock +9 crates, source SPDX 226 paquets / 522 relations ; pas de clearance légale. Production 0/15.
 - Dossier : docs/HAOS_TO_NATIVE_BACKUP_STAGE_2026-10-25.md.
 
