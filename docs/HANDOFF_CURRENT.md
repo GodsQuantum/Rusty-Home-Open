@@ -50,6 +50,14 @@ Les PR #89 à #95 sont fusionnées. Consulter obligatoirement config/native-migr
 
 Après #96, une comparaison Core/WS/Moli seulement sur le texte d'état peut laisser passer un state_changed d'attribut manqué. La branche fix/ha-core-same-state-gap-20261025 impose last_updated et les attributs JSON identiques pour les deux lectures authentifiées et invalide tout le Hub sinon. Test dédié ajouté. **Périmètre laboratoire, CI à vérifier ; reconnexion automatique, vrais attributs et migration HAOS→Rust restent ouverts. Production 0/15.** Voir docs/HA_CORE_WS_STATE_CONSISTENCY_2026-10-25.md et le journal.
 
+## P8y — sécurité d'attributs fusionnée et vérifiée
+
+La PR [#97](https://github.com/GodsQuantum/Rusty-Home-Open/pull/97) est fusionnée dans main au commit c8c6a7362f500517dfe2516bcb223d7839176f44. Le SHA de feature 141bf49f44cfb72e8ab36d0a6b47e2140033c78b a réussi les **9/9 contrôles GitHub**, dont vrai Core WS→Moli et Rust/sécurité. Ne pas répéter ce correctif ni l'import historique #89–#96. La certification de production reste 0/15.
+
+## P8z — lecture cohérente malgré une course Core/WebSocket (laboratoire)
+
+Le contrôle P8y peut révoquer une session saine lorsque l'événement Core arrive dans la file durant get_states. La branche fix/ha-core-ws-read-probe-race-20261025 draine avant et après chaque snapshot, puis ne retente qu'au plus deux fois. Elle n'autorise aucune lecture sans égalité d'état, d'attributs JSON et de last_updated entre Core, miroir authentifié et Hub Moli. Une perte permanente est révoquée; le nombre d'événements consommés par les sondes demeure comptabilisé par le runner de laboratoire. Test WebSocket loopback pour les deux trajectoires : événement retardé livré, événement véritablement perdu. Aucun support de reconnexion illimitée ou basculement du domicile; CI SHA exact obligatoire. Documentation : HA_CORE_WS_STATE_CONSISTENCY_2026-10-25.md.
+
 ## Reprise obligatoire
 
 1. Lire ces sources, vérifier le SHA actuel de GitHub, les PR ouvertes, les preuves et la CI avant de relancer des travaux.

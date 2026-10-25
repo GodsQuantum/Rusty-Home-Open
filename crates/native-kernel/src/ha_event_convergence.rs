@@ -360,6 +360,42 @@ impl EventConverger {
         self.validate_authoritative_response(&response).await
     }
 
+    /// Read-only, bounded Core/WS/Moli reconciliation for a live event relay.
+    /// A get_states response can overtake its corresponding state_changed
+    /// event in our bounded relay. Consume events on BOTH sides of the
+    /// official snapshot, then retry at most twice without exposing states.
+    /// Persistent disagreement (including a genuinely missed event) revokes
+    /// the whole shadow. No silent reconnect or write authority.
+    pub async fn probe_transport_reconciled(
+        &mut self,
+        client: &mut SandboxHaReader,
+        relay: &mut ShadowEvents,
+    ) -> Result<usize> {
+        if !self.valid {
+            bail!("already revoked")
+        }
+        let mut handled = 0usize;
+        for attempt in 0..3 {
+            handled = handled.saturating_add(self.drain_events(relay).await?);
+            let response = match client.states().await {
+                Ok(response) => response,
+                Err(e) => {
+                    self.invalidate().await?;
+                    return Err(e);
+                }
+            };
+            handled = handled.saturating_add(self.drain_events(relay).await?);
+            if self.verify_core_consistency(&response).is_ok() {
+                return Ok(handled);
+            }
+            if attempt < 2 {
+                tokio::time::sleep(Duration::from_millis(30)).await;
+            }
+        }
+        self.invalidate().await?;
+        bail!("Core/WS/Moli reconciliation failed after three bounded reads; resnapshot required")
+    }
+
     /// Bounded incremental drain of the ALREADY EXISTING hass-rs event relay.
     /// Stream closure/overflow revokes all values; no transparent retry.
     pub async fn drain_events(&mut self, relay: &mut ShadowEvents) -> Result<usize> {
@@ -413,11 +449,10 @@ impl EventConverger {
         relay: &mut ShadowEvents,
         id: &str,
     ) -> Result<Option<String>> {
-        // First consume changes delivered before our authenticated request.
-        // Then verify the authoritative Core view agrees with native Moli.
-        self.drain_events(relay).await?;
-        self.probe_transport(client).await?;
-        self.drain_events(relay).await?;
+        // Never present a value before the genuine Core, authenticated event
+        // mirror and Moli Hub agree on text, attributes and update timestamp.
+        // The relay is drained before and after each authoritative snapshot.
+        self.probe_transport_reconciled(client, relay).await?;
         self.observed_state(id)
     }
     #[cfg(test)]
@@ -879,5 +914,106 @@ mod tests {
         );
         assert_eq!(converger.device_count(), 0);
         assert!(converger.observed_state("sensor.any_vendor_0").is_err());
+    }
+    #[tokio::test]
+    async fn live_snapshot_event_race_recovers_but_persistent_loss_revokes_all_moli_devices() {
+        use futures_util::{SinkExt, StreamExt};
+        use tokio::net::TcpListener;
+        use tokio_tungstenite::{accept_async, tungstenite::Message};
+        for deliver_event in [true, false] {
+            let (_temp, dir) = prepare();
+            let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+            let addr = listener.local_addr().unwrap();
+            let (stop_tx, mut stop_rx) = oneshot::channel::<()>();
+            let server = tokio::spawn(async move {
+                let (socket, _) = listener.accept().await.unwrap();
+                let mut ws = accept_async(socket).await.unwrap();
+                let send = |value: serde_json::Value| Message::Text(value.to_string().into());
+                ws.send(send(
+                    json!({"type":"auth_required","ha_version":"2026.10.2"}),
+                ))
+                .await
+                .unwrap();
+                let mut sub_id = None;
+                let mut snapshots = 0usize;
+                loop {
+                    tokio::select! {
+                        _ = &mut stop_rx => break,
+                        msg = ws.next() => {
+                            let Some(msg) = msg else { break };
+                            let v: serde_json::Value =
+                                serde_json::from_str(&msg.unwrap().into_text().unwrap()).unwrap();
+                            match v["type"].as_str().unwrap() {
+                                "auth" => ws.send(send(json!({
+                                    "type":"auth_ok","ha_version":"2026.10.2"
+                                }))).await.unwrap(),
+                                "subscribe_events" => {
+                                    sub_id = v["id"].as_u64();
+                                    ws.send(send(json!({
+                                        "type":"result","id":v["id"],"success":true,"result":null
+                                    }))).await.unwrap();
+                                }
+                                "get_states" => {
+                                    snapshots += 1;
+                                    let state = if snapshots == 1 {
+                                        entity("sensor.any_vendor_0","on",T0)
+                                    } else {
+                                        let mut changed = entity("sensor.any_vendor_0","on",T0);
+                                        changed.last_updated = T1.into();
+                                        changed.attributes = json!({"seq":1});
+                                        changed
+                                    };
+                                    if snapshots == 2 && deliver_event {
+                                        ws.send(send(json!({
+                                            "type":"event","id":sub_id.unwrap(),
+                                            "event":{
+                                                "event_type":"state_changed","time_fired":T1,
+                                                "origin":"LOCAL",
+                                                "context":{"id":"test","parent_id":null,"user_id":null},
+                                                "data":{"entity_id":"sensor.any_vendor_0",
+                                                    "old_state":null,"new_state":state}
+                                            }
+                                        }))).await.unwrap();
+                                    }
+                                    ws.send(send(json!({
+                                        "type":"result","id":v["id"],"success":true,
+                                        "result":[state]
+                                    }))).await.unwrap();
+                                }
+                                other => panic!("read-only fixture saw write: {other}")
+                            }
+                        }
+                    }
+                }
+                snapshots
+            });
+            let mut session = ShadowSession::new();
+            let (mut client, mut relay, epoch) = session
+                .resync_loopback(
+                    &format!("ws://{addr}/api/websocket"),
+                    "fake-readonly-lab-token",
+                )
+                .await
+                .unwrap();
+            let mut hub = EventConverger::start(&dir, session, epoch).await.unwrap();
+            let result = hub
+                .read_verified(&mut client, &mut relay, "sensor.any_vendor_0")
+                .await;
+            if deliver_event {
+                assert_eq!(result.unwrap().as_deref(), Some("on"));
+                assert_eq!(hub.device_count(), 2);
+                hub.prove_write_denied().await.unwrap();
+            } else {
+                assert!(
+                    result.is_err(),
+                    "missing Core event must never authenticate a read"
+                );
+                assert_eq!(hub.device_count(), 0);
+                assert!(hub.observed_state("sensor.any_vendor_0").is_err());
+            }
+            stop_tx.send(()).unwrap();
+            let snapshots = server.await.unwrap();
+            assert_eq!(snapshots, if deliver_event { 2 } else { 4 });
+        }
     }
 }
