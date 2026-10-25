@@ -17,7 +17,7 @@ SHA-256 of the opened outer tar (1GiB cap), strict duplicate-key manifest,
 required full/unprotected source, no mixed Core payload ambiguities, no tar
 symlinks/devices/path traversal/duplicates, 128MiB compressed Core part,
 512MiB decompressed cap and gzip CRC/trailer, 24MiB registry cap.
-Only .storage/core.entity_registry is parsed into the existing durable redb.
+Only data/.storage/core.entity_registry (or the legacy direct path) is parsed into the existing durable redb.
 It persists identity fields (potentially sensitive unique IDs) in a private
 0700 directory / 0600 DB, so treat that state as **sensitive**. No other
 Core config, authentication secret, add-on DB or payload is extracted.
@@ -53,3 +53,5 @@ multi-user permissions, 72-hour performance soak, independent security and
 legal reviews remain unresolved. This is an isolated partial restore path;
 haos_backup_restore remains lab_partial, rollback_verified remains blocked,
 and the product is NOT_PRODUCTION_READY (0/15).
+
+**Confirmed upstream archive format:** official Supervisor writes Core config under data/ within homeassistant.tar.gz; old direct-root archives are supported but an archive containing both registry paths is rejected. Upstream: https://github.com/home-assistant/supervisor/blob/main/supervisor/homeassistant/module.py

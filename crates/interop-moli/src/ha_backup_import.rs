@@ -169,7 +169,15 @@ pub fn registry_from_unprotected_backup(source: &Path) -> Result<SourceRegistry>
         if declared_total > MAX_INNER_TOTAL {
             bail!("Core archive too large")
         }
-        if name == ".storage/core.entity_registry" && kind.is_file() {
+        if (name == "data/.storage/core.entity_registry" || name == ".storage/core.entity_registry")
+            && kind.is_file()
+        {
+            // Official Supervisor backs up Core config as "data/".
+            // Legacy archives may have direct config entries. Never allow
+            // both forms: ambiguous identities must fail closed.
+            if registry.is_some() {
+                bail!("conflicting Core registry paths in backup")
+            }
             registry = Some(bounded_read(&mut entry, MAX_REGISTRY_BYTES)?);
         }
     }

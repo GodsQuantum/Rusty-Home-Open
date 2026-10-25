@@ -38,10 +38,13 @@ def fixture():
          "unique_id":"fixture_b","config_entry_id":"fictional-uuid"}
     ]}}).encode()
 
-def part_file(registry, *, member=".storage/core.entity_registry",evil=None):
+def part_file(registry, *, member="data/.storage/core.entity_registry",evil=None,ambiguous=False):
     buf=BytesIO()
     with tarfile.open(fileobj=buf,mode="w:gz") as tf:
-        for path,data in ((member,registry),):
+        rows=[(member,registry)]
+        if ambiguous:
+            rows.append((".storage/core.entity_registry",registry))
+        for path,data in rows:
             e=tarfile.TarInfo("./"+path)
             e.size=len(data)
             if evil=="symlink":
@@ -93,6 +96,12 @@ with tempfile.TemporaryDirectory(prefix="p8aa-native-backup-") as tmp:
     outer(src,plain,extra=[("backup.json",b"{}")])
     run("import-unprotected-backup",src,ok=False)
     outer(src,plain,extra=[("homeassistant.tar",plain)])
+    run("import-unprotected-backup",src,ok=False)
+    # Old format has Core files directly at archive root. Both old and
+    # modern "data/" prefixes must work, but never simultaneously.
+    outer(src,part_file(raw,member=".storage/core.entity_registry"))
+    assert run("import-unprotected-backup",src)["sha256"]==staged
+    outer(src,part_file(raw,ambiguous=True))
     run("import-unprotected-backup",src,ok=False)
     outer(src,part_file(raw,member="../etc/passwd"))
     run("import-unprotected-backup",src,ok=False)
