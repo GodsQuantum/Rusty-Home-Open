@@ -1,5 +1,13 @@
 # Rusty Home — journal de développement et de certification
 
+## 2026-10-25 — P8u : runner WS→Moli utilisable en ligne de commande
+
+- **Réutilise :** PR #89 registre Core, #90 Moli, #91 états Core, #92 événements WebSocket en lecture seule ; restaurations HAOS déjà certifiées inchangées.
+- **Nouvelle fonction :** binaire natif avec entrée --lab-ha-ws-to-moli, durée/événements bornés, authentification WebSocket exclusivement loopback, jeton par environnement, accès aux seuls lots Core redb déjà activés, événement réel confirmé par le Hub Moli avant résultat JSON.
+- **Tests :** vrai serveur WebSocket fictif authentifié, ordre souscription avant get_states, événement plus récent et roundtrip de vérification, vérification du rejet des commandes et des identifiants non enregistrés. CI et strict Clippy à vérifier au SHA exact.
+- **Périmètre :** outil de laboratoire sans service continu, sans droits d'écriture, sans installation familiale ; release 0/15. Documentation : docs/HA_WS_LAB_RUNNER_2026-10-25.md.
+
+
 ## 2026-10-25 — P8t : événements WebSocket authentifiés en laboratoire vers Moli
 
 - Travaux réutilisés : PR #89 registre Core persistant, #90 périphériques Moli, #91 états du Core, miroir et gestion d'époques hass-rs préexistants.

@@ -473,3 +473,6 @@ pub mod ha_registry_shadow;
 
 /// Reuses generation-aware hass-rs WebSocket session to drive a genuine read-only Moli Hub.
 pub mod ha_event_convergence;
+
+/// Bounded standalone lab runner on genuine Moli Hub and existing hass-rs.
+pub mod ha_ws_runtime_lab;

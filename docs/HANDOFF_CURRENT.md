@@ -30,6 +30,10 @@ Après #89 et #90, l'étape suivante importe un instantané officiel State.as_di
 
 Nouvelle branche feat/ha-core-event-convergence-20261025. Module crates/native-kernel/src/ha_event_convergence.rs, documentation HA_WS_TO_MOLI_EVENT_CONVERGENCE_2026-10-25.md. Réutilise les PR #89/#90/#91 et le client hass-rs déjà présent ; vérifie changements d'états, timestamps, générations, pertes et révocation. Une fermeture silencieuse peut laisser une file apparemment ouverte : la sonde active get_states est indispensable. Preuve réseau : véritable socket loopback synthétique, PAS le serveur WebSocket du Core familial. Vérifier RustSec, CI complète et l'état de la PR avant fusion. Toujours 0/15 gates certifiés ; prochaines étapes : TLS/auth, surveillance périodique, automatisations et services, restauration complète HAOS→Rust→HAOS.
 
+## P8u — exécutable de laboratoire Core WS → Moli
+
+Après la PR #92, le module crates/native-kernel/src/ha_ws_runtime_lab.rs et le flag natif --lab-ha-ws-to-moli fournissent un runner à durée bornée : jeton via HARS_LAB_WS_TOKEN (jamais argv), URL loopback uniquement, entité Core déjà présente dans le registre, valeur attendue et nombre limité d'événements. Réutilise EventConverger, hass-rs et le vrai Moli Hub. Test serveur WebSocket réel mais fictif et commande lecture seule. Voir docs/HA_WS_LAB_RUNNER_2026-10-25.md. Pas de connexion au vrai WebSocket Home Assistant Core, ni de certification de service HAOS, production toujours 0/15.
+
 ## Reprise obligatoire
 
 1. Lire ces sources, vérifier le SHA actuel de GitHub, les PR ouvertes, les preuves et la CI avant de relancer des travaux.
