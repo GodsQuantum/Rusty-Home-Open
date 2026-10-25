@@ -46,6 +46,23 @@ async fn main() -> anyhow::Result<()> {
         println!("{}", serde_json::to_string(&proof)?);
         return Ok(());
     }
+    if args.len() == 7 && args[1] == "--lab-ha-ws-to-moli" {
+        if nix::unistd::Uid::effective().is_root() {
+            anyhow::bail!("read-only WS lab forbids root");
+        }
+        let dir = lab_registry_dir(&args[2])?;
+        let required: usize = args[6].parse()?;
+        // Sandbox token comes only from environment, not argv, URL,
+        // subprocess flags or public output. Never log its contents.
+        let token = std::env::var("HARS_LAB_WS_TOKEN")
+            .map_err(|_| anyhow::anyhow!("lab WS token unavailable"))?;
+        let proof = hars_native_kernel::ha_ws_runtime_lab::run(
+            &dir, &args[3], &token, &args[4], &args[5], required,
+        )
+        .await?;
+        println!("{}", serde_json::to_string(&proof)?);
+        return Ok(());
+    }
     if args.len() == 3 && args[1] == "--lab-ha-registry-shadow-readonly" {
         if nix::unistd::Uid::effective().is_root() {
             anyhow::bail!("no root execution for Core identity shadow");

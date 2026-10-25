@@ -68,6 +68,10 @@ jobs:
         run: |
           cargo test --locked -p hars-native-kernel --lib ha_event_convergence
           cargo clippy --locked -p hars-native-kernel --all-targets -- -D warnings
+      - name: Bounded standalone WebSocket to Moli lab binary and credential privacy
+        run: |
+          cargo test --locked -p hars-native-kernel --lib ha_ws_runtime_lab
+          python3 scripts/test_p8u_ws_runner_cli.py
       - name: Vendor-neutral migration preflight over variable App inventories
         run: python3 scripts/test_app_migration_policy.py
       - name: Offline HAOS backup archive nofollow and duplicate-manifest negative tests
