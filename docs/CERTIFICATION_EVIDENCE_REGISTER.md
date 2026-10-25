@@ -45,9 +45,9 @@ Ces sept résultats indépendants sont désormais consignés dans le [registre d
 
 La présence d'un chemin Core→WebSocket→Rust→Moli **ne valide PAS** le remplacement de Home Assistant Core, les services ou automatisations, les contrôleurs radios, la migration des données de foyer, les intégrations tierces au complet, une reconnexion durable ou une restauration HAOS→Rust→HAOS. Ce sont des preuves de laboratoire bornées avec de vraies images Core ; le compteur reste **NOT_PRODUCTION_READY — 0/15**.
 
-## P8aa — preuve nouvelle en attente GitHub CI (non certifiée)
+## P8aa — véritable archive Supervisor HAOS vers identités Rust certifiée en laboratoire
 
-Le nouveau Rust lit un tar full Supervisor non chiffré et importe uniquement core.entity_registry vers redb, avec rollback. CI prévue : vrai Core 2026.10.2 dans un tar synthétique et, séparément, vrai Supervisor HAOS 18.3 en VM jetable produisant un tar avec identités fictives, importées en Rust. La source, le test et leurs limites sont consignés dans docs/HAOS_TO_NATIVE_BACKUP_STAGE_2026-10-25.md. Aucun SHA ni run de succès revendiqué ici avant son exécution et contrôle. Les sept preuves Core→Rust historiques et HAOS→HAOS restent acquises, production 0/15.
+Le nouveau Rust lit un tar full Supervisor non chiffré et importe uniquement core.entity_registry vers redb, avec rollback. CI prévue : vrai Core 2026.10.2 dans un tar synthétique et, séparément, vrai Supervisor HAOS 18.3 en VM jetable produisant un tar avec identités fictives, importées en Rust. La source, le test et leurs limites sont consignés dans docs/HAOS_TO_NATIVE_BACKUP_STAGE_2026-10-25.md. Résultat VÉRIFIÉ : run https://github.com/GodsQuantum/Rusty-Home-Open/actions/runs/40238122942, SHA PR #99 9c6e3220f433153c0dc28ef0d2549bd52a345a8f, merge d297bbbd29ac313723b54794ad27aceaf0636166 ; 3/3 tests sélectionnés dans HAOS 18.3 QEMU, archive officielle full non chiffrée, import du registre (2 identités fictives) dans redb, activation CAS et rollback. Preuve durable dans config/haos-native-backup-evidence.json. Ceci ne prouve ni restauration complète Core, ni Apps, ni automatisations, ni secrets. Les sept preuves Core→Rust historiques et HAOS→HAOS restent acquises, production 0/15.
 
 ## Protocole obligatoire pour toute nouvelle session
 

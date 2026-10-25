@@ -1,6 +1,6 @@
 # P8aa — genuine HAOS backup archive to private Rust identity staging
 
-**25 October 2026 — laboratory ONLY, 0/15 certified production gates.**
+**25 October 2026 — genuine HAOS-to-Rust registry-stage laboratory proof VERIFIED; 0/15 production gates certified.**
 
 ## Distinct work, no redundant certification
 
@@ -37,7 +37,7 @@ remain explicit and independent.
    Supervisor archive with explicitly fictional two-vendor Core registry
    identities injected into the throwaway guest. It transfers via a
    bounded localhost relay, validates SHA-256, stages in Rust and rolls back.
-   **Do not count this proof until GitHub CI is green at the exact SHA.**
+   **VERIFIED:** GitHub run 40238122942 succeeded on PR #99 head 9c6e3220f433153c0dc28ef0d2549bd52a345a8f (3/3 KVM cases); squash merge d297bbbd29ac313723b54794ad27aceaf0636166. This certifies only the limited native identity-stage and rollback test, not a full HAOS migration.
 
 Reference:
 https://contributors.home-assistant.io/os/supervisor/architecture/
@@ -55,3 +55,11 @@ haos_backup_restore remains lab_partial, rollback_verified remains blocked,
 and the product is NOT_PRODUCTION_READY (0/15).
 
 **Confirmed upstream archive format:** official Supervisor writes Core config under data/ within homeassistant.tar.gz; old direct-root archives are supported but an archive containing both registry paths is rejected. Upstream: https://github.com/home-assistant/supervisor/blob/main/supervisor/homeassistant/module.py
+
+## Immutable successful evidence
+
+- PR #99: https://github.com/GodsQuantum/Rusty-Home-Open/pull/99 (MERGED)
+- CI: https://github.com/GodsQuantum/Rusty-Home-Open/actions/runs/40238122942 (success, exact head 9c6e3220f433153c0dc28ef0d2549bd52a345a8f)
+- Merge on main: d297bbbd29ac313723b54794ad27aceaf0636166
+- 3/3 genuine HAOS 18.3 Supervisor QEMU tests, SHA256 transfer, native Rust/redb registry activation and rollback; 17 successful checks and one intentionally skipped PR-only signing step.
+- Machine-readable evidence: config/haos-native-backup-evidence.json, locked production gate status lab_partial, rollback_verified blocked.

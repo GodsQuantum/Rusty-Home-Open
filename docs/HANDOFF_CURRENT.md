@@ -58,9 +58,9 @@ La PR [#97](https://github.com/GodsQuantum/Rusty-Home-Open/pull/97) est fusionn�
 
 Le contrôle P8y peut révoquer une session saine lorsque l'événement Core arrive dans la file durant get_states. La branche fix/ha-core-ws-read-probe-race-20261025 draine avant et après chaque snapshot, puis ne retente qu'au plus deux fois. Elle n'autorise aucune lecture sans égalité d'état, d'attributs JSON et de last_updated entre Core, miroir authentifié et Hub Moli. Une perte permanente est révoquée; le nombre d'événements consommés par les sondes demeure comptabilisé par le runner de laboratoire. Test WebSocket loopback pour les deux trajectoires : événement retardé livré, événement véritablement perdu. Aucun support de reconnexion illimitée ou basculement du domicile; CI SHA exact obligatoire. Documentation : HA_CORE_WS_STATE_CONSISTENCY_2026-10-25.md.
 
-## P8aa — voie HAOS full archive vers Rust (25 octobre, CI encore à prouver)
+## P8aa — voie HAOS full archive vers Rust CERTIFIÉE EN LABORATOIRE (25 octobre)
 
-Main avant intervention a45e9d6 (PR #97/#98 fusionnées), nouveau worktree Rusty-Home-Certification-20261025. Nouveaux modules Rust d'import tar non chiffré vers registre durable, tests hostiles et workflow officiel HAOS 18.3 QEMU source→Rust sans VM cible et sans foyer. Préserver les preuves HAOS→HAOS et Core→Moli déjà acquises. Lire docs/HAOS_TO_NATIVE_BACKUP_STAGE_2026-10-25.md. Ne pas affirmer la CI QEMU tant que le run du SHA exact n'a pas réussi. Les Apps, automations, secrets et réversibilité système restent hors scope, 0/15 production.
+Main avant intervention a45e9d6 (PR #97/#98 fusionnées), nouveau worktree Rusty-Home-Certification-20261025. Nouveaux modules Rust d'import tar non chiffré vers registre durable, tests hostiles et workflow officiel HAOS 18.3 QEMU source→Rust sans VM cible et sans foyer. Préserver les preuves HAOS→HAOS et Core→Moli déjà acquises. Lire docs/HAOS_TO_NATIVE_BACKUP_STAGE_2026-10-25.md. CI QEMU RÉUSSIE : run 40238122942, 3/3 tests au SHA 9c6e3220f433153c0dc28ef0d2549bd52a345a8f, PR #99 fusionnée d297bbbd29ac313723b54794ad27aceaf0636166. Ne pas retester ces preuves déjà acquises ; reprendre les lacunes de migration réelle. Les Apps, automations, secrets et réversibilité système restent hors scope, 0/15 production.
 
 ## Reprise obligatoire
 
