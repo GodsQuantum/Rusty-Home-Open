@@ -1,5 +1,13 @@
 # Rusty Home — journal de développement et de certification
 
+## 2026-10-25 — P8v : vrai Core 2026.10.2 + WebSocket authentifié vers Rust/Moli
+
+- **Sans redondance :** PR #89–#91 réelles Core→Moli (registre/états), #92–#93 WebSocket synthétique et runner CLI déjà fusionnées ; restaurations HAOS→HAOS inchangées.
+- **Nouveaux scripts :** véritable Core officiel containerisé, compte utilisateur et jeton éphémères, registre et état Core réels, WebSocket Core authentifié ; second conteneur Ubuntu exécute Rust dans l'espace réseau Core – aucun port hôte ni réseau sortant. L'isolement Docker internal avec publication 127.0.0.1 a échoué au test local et a été remplacé par network none + container namespace.
+- **CI réelle exigée :** workflow Core dédié + preuve P8V_GENUINE_OFFICIAL_CORE_WEBSOCKET_AUTH_TO_ACTUAL_RUST_MOLI_PASS, export et rollback redb, tests statiques de non-exposition du jeton. Ne pas annoncer de réussite avant CI SHA exact.
+- **Limites :** aucun matériel réel, aucune action de service, aucun réseau de foyer, aucun HAOS productif ; 0/15 production. Voir docs/GENUINE_CORE_WS_TO_MOLI_2026-10-25.md.
+
+
 ## 2026-10-25 — P8u : runner WS→Moli utilisable en ligne de commande
 
 - **Réutilise :** PR #89 registre Core, #90 Moli, #91 états Core, #92 événements WebSocket en lecture seule ; restaurations HAOS déjà certifiées inchangées.
