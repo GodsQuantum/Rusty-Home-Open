@@ -246,8 +246,12 @@ fn make_overlay(spec: &GuestSpec, dir: &Path) -> Result<PathBuf, GuestError> {
     }
     private_owner_dir(dir)?;
     let out = dir.join("guest-overlay.qcow2");
-    if out.exists() {
-        return Err(GuestError::UnsafeImage);
+    // symlink_metadata also catches dangling symlinks that Path::exists()
+    // would incorrectly treat as absent.
+    match std::fs::symlink_metadata(&out) {
+        Ok(_) => return Err(GuestError::UnsafeImage),
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => {}
+        Err(_) => return Err(GuestError::UnsafeImage),
     }
     let source = spec.source_image.to_string_lossy().to_string();
     let exit = Command::new("/usr/bin/qemu-img")
@@ -318,6 +322,7 @@ fn session_verify_guest_marker(
     let mut stage = 0u8;
     let mut recent = Vec::<u8>::new();
     let begun = Instant::now();
+    let mut sent = Instant::now();
     let expected = expected_digest.as_bytes();
     let outcome = loop {
         match child.try_wait() {
@@ -343,6 +348,19 @@ fn session_verify_guest_marker(
                 recent.clear();
             }
             1 if has_marker(&recent, SHELL_PROMPT) => {
+                // Do not write before HAOS Supervisor has mounted /mnt/data.
+                if let Err(e) = send_guest_line(
+                    &mut stdin,
+                    b"ha supervisor info --no-progress --raw-json
+",
+                ) {
+                    break Err(e);
+                }
+                stage = 2;
+                recent.clear();
+                sent = Instant::now();
+            }
+            2 if cli_ok(&recent) => {
                 let path = "/mnt/data/supervisor/share/hars_p8ae_guest_state";
                 let command = if write {
                     format!(
@@ -355,10 +373,21 @@ fn session_verify_guest_marker(
                 if let Err(e) = send_guest_line(&mut stdin, command.as_bytes()) {
                     break Err(e);
                 }
-                stage = 2;
+                stage = 3;
                 recent.clear();
             }
-            2 if has_marker(&recent, expected) => break Ok(()),
+            2 if sent.elapsed() > Duration::from_secs(20) => {
+                if let Err(e) = send_guest_line(
+                    &mut stdin,
+                    b"ha supervisor info --no-progress --raw-json
+",
+                ) {
+                    break Err(e);
+                }
+                recent.clear();
+                sent = Instant::now();
+            }
+            3 if has_marker(&recent, expected) => break Ok(()),
             _ => {}
         }
     };
