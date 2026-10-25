@@ -42,6 +42,10 @@ Nouvelle branche feat/real-core-websocket-to-moli-20261025 : scripts/test_p8v_ge
 
 Nouvelle branche feat/ha-ws-state-consistency-20261025, dossier Rusty-Home-WS-Consistency-QA-20261025. Les PR #89–#94 sont déjà fusionnées : ne pas reconstruire le chemin réel Core→WebSocket→Rust→Moli. Le nouveau contrôle compare les valeurs issues du get_states officiel, du miroir authentifié et du Hub Moli. Une divergence efface tout et exige une reconnexion/re-snapshot. L'essai CI réel doit valider 8 événements consécutifs et le rejet auth_invalid par Core d'un jeton fictif erroné. Voir docs/HA_CORE_WS_STATE_CONSISTENCY_2026-10-25.md. La synchronisation des attributs, la reconnexion permanente, les automations et services, ainsi que HAOS→Rust→HAOS restent hors preuve. Release 0/15.
 
+## P8x — historique de sept vraies preuves Core→Rust/Moli à préserver
+
+Les PR #89 à #95 sont fusionnées. Consulter obligatoirement config/native-migration-evidence.json et docs/CERTIFICATION_EVIDENCE_REGISTER.md : leurs HEAD SHA, commits de fusion, runs CI exacts, scénarios et limites y figurent. Un nouveau contrôle scripts/test_native_migration_evidence.py empêche d'effacer ces preuves par accident. Les restaurations HAOS→HAOS (même VM et deuxième VM) sont dans un autre registre et NE SONT PAS à refaire. La réussite de vrais tests de laboratoire Core, WS, Rust et Moli ne valide pas encore la migration du foyer ni l'automatisation/services. Toujours 0/15 gates production ; ne pas annoncer la production.
+
 ## Reprise obligatoire
 
 1. Lire ces sources, vérifier le SHA actuel de GitHub, les PR ouvertes, les preuves et la CI avant de relancer des travaux.

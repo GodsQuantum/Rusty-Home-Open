@@ -1,5 +1,13 @@
 # Rusty Home — journal de développement et de certification
 
+## 2026-10-25 — P8x, registre canonique pour sept certifications Core→Rust/Moli sans répétition
+
+- Après fusion des PR #89–#95, preuves exactes vérifiées : commits de tête et commits fusionnés, runs GitHub terminés en succès, marqueurs de tests et limites de chaque preuve.
+- Nouveau registre `config/native-migration-evidence.json` pour les étapes Core→Rust (distinct du registre HAOS→HAOS existant), index docs/CERTIFICATION_EVIDENCE_REGISTER.md et contrat strict scripts/test_native_migration_evidence.py intégré dans CI.
+- Le contrat rejette les preuves dupliquées, les marqueurs disparus, les liens non conformes et tout glissement de certification de laboratoire en production. Aucune restauration antérieure n'est rejouée.
+- La production demeure NOT_PRODUCTION_READY, 0/15 ; les prochains chantiers doivent faire progresser vraie migration HAOS→Rust→HAOS, supervision durable WebSocket, intégrations universelles, services et automatismes.
+
+
 ## 2026-10-25 — P8w, vérification autoritative de la cohérence Core/WS/Moli
 
 - **Anti-redondance :** les PR #89–#94 sont déjà fusionnées et valident l'identité, les états, l'abonnement WS, l'exécutable borné et le vrai Core 2026.10.2 ; les anciennes restaurations HAOS→HAOS restent acquises.
