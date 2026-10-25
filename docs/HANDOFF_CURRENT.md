@@ -46,6 +46,10 @@ Nouvelle branche feat/ha-ws-state-consistency-20261025, dossier Rusty-Home-WS-Co
 
 Les PR #89 à #95 sont fusionnées. Consulter obligatoirement config/native-migration-evidence.json et docs/CERTIFICATION_EVIDENCE_REGISTER.md : leurs HEAD SHA, commits de fusion, runs CI exacts, scénarios et limites y figurent. Un nouveau contrôle scripts/test_native_migration_evidence.py empêche d'effacer ces preuves par accident. Les restaurations HAOS→HAOS (même VM et deuxième VM) sont dans un autre registre et NE SONT PAS à refaire. La réussite de vrais tests de laboratoire Core, WS, Rust et Moli ne valide pas encore la migration du foyer ni l'automatisation/services. Toujours 0/15 gates production ; ne pas annoncer la production.
 
+## P8y — trou détecté sur mises à jour d'attributs (25 octobre)
+
+Après #96, une comparaison Core/WS/Moli seulement sur le texte d'état peut laisser passer un state_changed d'attribut manqué. La branche fix/ha-core-same-state-gap-20261025 impose last_updated et les attributs JSON identiques pour les deux lectures authentifiées et invalide tout le Hub sinon. Test dédié ajouté. **Périmètre laboratoire, CI à vérifier ; reconnexion automatique, vrais attributs et migration HAOS→Rust restent ouverts. Production 0/15.** Voir docs/HA_CORE_WS_STATE_CONSISTENCY_2026-10-25.md et le journal.
+
 ## Reprise obligatoire
 
 1. Lire ces sources, vérifier le SHA actuel de GitHub, les PR ouvertes, les preuves et la CI avant de relancer des travaux.
