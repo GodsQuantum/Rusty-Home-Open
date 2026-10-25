@@ -29,6 +29,22 @@ La VM source produit une vraie archive complète Supervisor, l'envoie à un rela
 
 **Ce qui reste NON prouvé :** la migration d'un foyer HAOS vers le moteur **Rusty Home**, les bases de toutes les applications tierces, le remplacement de Core et du Supervisor, les contrôleurs physiques, comptes réels, réseau et rollback d'un matériel entier. La seconde VM prouve HAOS→HAOS, pas HAOS→Rusty Home.
 
+## Preuves nouvelles — Core officiel vers Rust/Moli (#89–#95)
+
+Ces sept résultats indépendants sont désormais consignés dans le [registre de migration native structuré](../config/native-migration-evidence.json). Les run GitHub cités ont été vérifiés en `success` au **SHA source exact** le 25 octobre 2026, et les sept PR sont fusionnées. Les scénarios sont différents de la restauration HAOS→HAOS documentée ci-dessus.
+
+| Identifiant stable | Preuve et portée maximale | Source vérifiée |
+| --- | --- | --- |
+| `core-registry-stage` | #89 : véritable Core 2026.10.2, identités vers redb Rust et rollback, sans états ni action | [GitHub 40140787860](https://github.com/GodsQuantum/Rusty-Home-Open/actions/runs/40140787860) |
+| `core-registry-real-moli-hub` | #90 : vrais identifiants Core dans le véritable Hub Moli, lecture seule | [GitHub 40141864751](https://github.com/GodsQuantum/Rusty-Home-Open/actions/runs/40141864751) |
+| `core-real-state-snapshot` | #91 : états synthétiques générés par le vrai Core vers Moli, instantané borné | [GitHub 40142758906](https://github.com/GodsQuantum/Rusty-Home-Open/actions/runs/40142758906) |
+| `loopback-event-convergence` | #92 : événements WebSocket fictifs authentifiés vers Moli, déconnexion et révocation | [GitHub 40144794037](https://github.com/GodsQuantum/Rusty-Home-Open/actions/runs/40144794037) |
+| `bounded-ws-moli-runner` | #93 : binaire Rust invocable, WebSocket loopback fictif, sortie bornée | [GitHub 40145513687](https://github.com/GodsQuantum/Rusty-Home-Open/actions/runs/40145513687) |
+| `official-core-ws-to-moli` | #94 : authentification et vrais événements WebSocket Core officiel→Moli sur réseau Docker inexistant, avec rollback | [GitHub 40211747111](https://github.com/GodsQuantum/Rusty-Home-Open/actions/runs/40211747111) |
+| `official-core-ws-moli-consistency` | #95 : huit événements Core, refus de mauvais token, cohérence des états et révocation fail-closed | [GitHub 40213008548](https://github.com/GodsQuantum/Rusty-Home-Open/actions/runs/40213008548) |
+
+La présence d'un chemin Core→WebSocket→Rust→Moli **ne valide PAS** le remplacement de Home Assistant Core, les services ou automatisations, les contrôleurs radios, la migration des données de foyer, les intégrations tierces au complet, une reconnexion durable ou une restauration HAOS→Rust→HAOS. Ce sont des preuves de laboratoire bornées avec de vraies images Core ; le compteur reste **NOT_PRODUCTION_READY — 0/15**.
+
 ## Protocole obligatoire pour toute nouvelle session
 
 1. Lire **ce registre**, [le journal](WORK_LOG.md), [les gates](CERTIFICATION_LEDGER.md), `scripts/check_p8d_junit.py`, puis contrôler les statuts et commits GitHub actuels.

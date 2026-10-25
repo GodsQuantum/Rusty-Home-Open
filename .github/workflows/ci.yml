@@ -122,6 +122,8 @@ jobs:
         run: python3 scripts/test_certification_masterplan_contract.py
       - name: Previously executed HAOS restoration evidence and duplicate-work prevention
         run: python3 scripts/test_certification_evidence_registry.py
+      - name: Preserve exact Core-to-Rust lab evidence and nonproduction boundaries
+        run: python3 scripts/test_native_migration_evidence.py
       - name: Verify public certification gate ledger
         run: python3 scripts/test_public_certification_ledger.py
       - name: Review-signed, non-forgeable release evidence only (synthetic test keys)

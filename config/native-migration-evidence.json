@@ -1,0 +1,96 @@
+{
+  "schema_version": 1,
+  "updated_date": "2026-10-25",
+  "release": {
+    "status": "NOT_PRODUCTION_READY",
+    "certified_gates": 0,
+    "required_gates": 15
+  },
+  "distinction": "Core-to-native-Rust lab proofs only; HAOS-to-HAOS restoration evidence is separately recorded in config/certification-evidence-registry.json; no complete HAOS replacement or household cutover was certified.",
+  "proofs": [
+    {
+      "id": "core-registry-stage",
+      "pr": 89,
+      "head_sha": "6fb675ed40acaa685bbd44817ed860488e45b2ba",
+      "merge_sha": "5db87c6335814038f2277906c7e8146e31a3850a",
+      "run_url": "https://github.com/GodsQuantum/Rusty-Home-Open/actions/runs/40140787860",
+      "source_file": "scripts/run_p8q_real_core_to_native_registry.sh",
+      "marker": "P8Q_REAL_CORE_ENTITY_REGISTRY_TO_RUST_PERSIST_ROLLBACK_PASS",
+      "status": "verified_in_pinned_offline_core",
+      "claim": "Official Core 2026.10.2 emitted an entity registry, staged by Rust with persistent rollback.",
+      "scope_limit": "Read-only IDs from disposable Core only; no values, service commands, secrets, or end-user migration."
+    },
+    {
+      "id": "core-registry-real-moli-hub",
+      "pr": 90,
+      "head_sha": "6be28677402ab8515cc8ff24ac5880cdc8c9df36",
+      "merge_sha": "21d522cd7425e9754169a500193f740a76c0ff91",
+      "run_url": "https://github.com/GodsQuantum/Rusty-Home-Open/actions/runs/40141864751",
+      "source_file": "scripts/run_p8q_real_core_to_native_registry.sh",
+      "marker": "P8R_REAL_CORE_REGISTRY_INSIDE_ACTUAL_MOLI_HUB_READONLY_PASS",
+      "status": "verified_in_pinned_offline_core",
+      "claim": "Official Core registry identities instantiated as read-only devices in actual upstream Moli Hub.",
+      "scope_limit": "No live sensor state or actuation and no physical device ownership transfer."
+    },
+    {
+      "id": "core-real-state-snapshot",
+      "pr": 91,
+      "head_sha": "9213ab2430450e6431d4a38fd2417e9ffd6183a3",
+      "merge_sha": "275fea2935b209b250eb100e18253175f6769cff",
+      "run_url": "https://github.com/GodsQuantum/Rusty-Home-Open/actions/runs/40142758906",
+      "source_file": "scripts/run_p8q_real_core_to_native_registry.sh",
+      "marker": "P8S_REAL_CORE_STATES_OBSERVED_IN_NATIVE_MOLI_READONLY_PASS",
+      "status": "verified_in_pinned_offline_core",
+      "claim": "Actual Core synthetic state values observed inside native Moli read-only points.",
+      "scope_limit": "A bounded snapshot is not a continuous Core WebSocket subscription nor state restoration."
+    },
+    {
+      "id": "loopback-event-convergence",
+      "pr": 92,
+      "head_sha": "aa1deb2cf14f914ebe6ba5671e82cd4eac880172",
+      "merge_sha": "83553add854a70fef93f2641ce0a0a9b881a8fa2",
+      "run_url": "https://github.com/GodsQuantum/Rusty-Home-Open/actions/runs/40144794037",
+      "source_file": "crates/native-kernel/src/ha_event_convergence.rs",
+      "marker": "actual_loopback_websocket_drives_moli_and_disconnect_revokes_everything",
+      "status": "verified_in_synthetic_loopback_ws",
+      "claim": "hass-rs state events converged in actual Moli Hub; active probe revokes devices upon socket close.",
+      "scope_limit": "A synthetic WebSocket service, not a genuine Core producer or a supervised production transport."
+    },
+    {
+      "id": "bounded-ws-moli-runner",
+      "pr": 93,
+      "head_sha": "0ddc58f833600b4bbe34cc34f298e24737b66e45",
+      "merge_sha": "c4c17e62033af80bf2e805223f4bafd3b8868b10",
+      "run_url": "https://github.com/GodsQuantum/Rusty-Home-Open/actions/runs/40145513687",
+      "source_file": "crates/native-kernel/src/ha_ws_runtime_lab.rs",
+      "marker": "real_network_frames_end_in_real_readonly_moli_and_no_write_commands",
+      "status": "verified_in_synthetic_loopback_ws",
+      "claim": "Bounded real Rust CLI authenticated to synthetic local WS and confirmed Moli point state.",
+      "scope_limit": "No real Core WS server, long-running service, permissions integration, or production access."
+    },
+    {
+      "id": "official-core-ws-to-moli",
+      "pr": 94,
+      "head_sha": "b244a689f2263f9512d4f0a1e3220b49d3499fe8",
+      "merge_sha": "853a93db00eeb3687d6abee6217dc8b22a57a5ff",
+      "run_url": "https://github.com/GodsQuantum/Rusty-Home-Open/actions/runs/40211747111",
+      "source_file": "scripts/run_p8v_genuine_core_ws_to_moli.sh",
+      "marker": "P8V_GENUINE_OFFICIAL_CORE_WEBSOCKET_AUTH_TO_ACTUAL_RUST_MOLI_PASS",
+      "status": "verified_in_pinned_offline_core",
+      "claim": "Pinned genuine Core produced authenticated WebSocket events received inside actual Moli Hub.",
+      "scope_limit": "Disposable network-none containers only; one read-only data flow, no HAOS host service replacement."
+    },
+    {
+      "id": "official-core-ws-moli-consistency",
+      "pr": 95,
+      "head_sha": "878684c58146f940eeb17bec6325564209dc4cc0",
+      "merge_sha": "a16886aaf1db4322ed078355524d49fe8687b6c6",
+      "run_url": "https://github.com/GodsQuantum/Rusty-Home-Open/actions/runs/40213008548",
+      "source_file": "scripts/run_p8v_genuine_core_ws_to_moli.sh",
+      "marker": "P8W_CORE_AUTHENTICATED_WS_8_UPDATES_AND_INVALID_LOGIN_DENIED_PASS",
+      "status": "verified_in_pinned_offline_core",
+      "claim": "Pinned Core transmitted at least 8 WS events and rejected a bad token; Rust invalidates divergent Moli state.",
+      "scope_limit": "Checks current text-state consistency only; no attribute-event exactly-once proof, durable production supervision, or cutover."
+    }
+  ]
+}
