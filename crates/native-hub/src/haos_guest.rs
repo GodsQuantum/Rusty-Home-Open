@@ -6,7 +6,7 @@
 use sha2::{Digest, Sha256};
 use std::{
     fs::OpenOptions,
-    io::Read,
+    io::{Read, Write},
     os::unix::fs::{FileTypeExt, MetadataExt, OpenOptionsExt, PermissionsExt},
     path::{Path, PathBuf},
     process::{Child, Command, Stdio},
@@ -28,6 +28,7 @@ pub enum GuestError {
     QemuStart,
     EarlyExit,
     BootTimeout,
+    GuestHealthTimeout,
 }
 impl std::fmt::Display for GuestError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -181,6 +182,138 @@ fn watch_console(mut stream: impl Read + Send + 'static, tx: mpsc::Sender<()>) {
         }
     });
 }
+
+const CLI_OK: &[u8] = b"\"result\":\"ok\"";
+const CLI_OK_SPACED: &[u8] = b"\"result\": \"ok\"";
+const SHELL_PROMPT: &[u8] = b"# ";
+/// Security: only boolean results. Never persist raw guest console output,
+/// tokens, config, Supervisor health response or shell transcript.
+fn has_marker(buffer: &[u8], mark: &[u8]) -> bool {
+    buffer.windows(mark.len()).any(|v| v == mark)
+}
+fn cli_ok(buffer: &[u8]) -> bool {
+    has_marker(buffer, CLI_OK) || has_marker(buffer, CLI_OK_SPACED)
+}
+fn collect_console(mut stream: impl Read + Send + 'static, tx: mpsc::Sender<Vec<u8>>) {
+    thread::spawn(move || {
+        let mut buf = [0u8; 2048];
+        while let Ok(n) = stream.read(&mut buf) {
+            if n == 0 {
+                break;
+            }
+            if tx.send(buf[..n].to_vec()).is_err() {
+                break;
+            }
+        }
+    });
+}
+fn send_guest_line(stdin: &mut impl Write, value: &[u8]) -> Result<(), GuestError> {
+    stdin.write_all(value).map_err(|_| GuestError::EarlyExit)?;
+    stdin.flush().map_err(|_| GuestError::EarlyExit)
+}
+/// Actual Rust-owned official HAOS guest. Must prove both CLI Supervisor
+/// and Core "result=ok" from the guest serial console, not merely kernel boot.
+pub fn verify_supervisor_and_core_in_isolated_lab(spec: &GuestSpec) -> Result<(), GuestError> {
+    if std::env::var("HARS_DISPOSABLE_KVM_LAB").as_deref() != Ok("1") {
+        return Err(GuestError::InvalidArguments);
+    }
+    spec.validate()?;
+    let mut child = Command::new(&spec.emulator)
+        .args(spec.qemu_args())
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::null())
+        .spawn()
+        .map_err(|_| GuestError::QemuStart)?;
+    let mut stdin = child.stdin.take().ok_or(GuestError::QemuStart)?;
+    let (tx, rx) = mpsc::channel();
+    if let Some(console) = child.stdout.take() {
+        collect_console(console, tx)
+    } else {
+        stop_guest(&mut child);
+        return Err(GuestError::QemuStart);
+    }
+    let mut stage = 0u8;
+    let mut recent = Vec::<u8>::new();
+    let mut sent = Instant::now();
+    let started = Instant::now();
+    let outcome = loop {
+        if child
+            .try_wait()
+            .map_err(|_| GuestError::EarlyExit)?
+            .is_some()
+        {
+            break Err(GuestError::EarlyExit);
+        }
+        if started.elapsed() > BOOT_MAX {
+            break Err(GuestError::GuestHealthTimeout);
+        }
+        if let Ok(part) = rx.recv_timeout(Duration::from_millis(200)) {
+            recent.extend_from_slice(&part);
+            if recent.len() > 65536 {
+                let drop = recent.len() - 8192;
+                recent.drain(..drop);
+            }
+        }
+        match stage {
+            0 if has_marker(&recent, PROMPT) => {
+                if let Err(e) = send_guest_line(&mut stdin, b"root\n") {
+                    break Err(e);
+                }
+                stage = 1;
+                recent.clear();
+                sent = Instant::now();
+            }
+            1 if has_marker(&recent, SHELL_PROMPT) => {
+                if let Err(e) =
+                    send_guest_line(&mut stdin, b"ha supervisor info --no-progress --raw-json\n")
+                {
+                    break Err(e);
+                }
+                stage = 2;
+                recent.clear();
+                sent = Instant::now();
+            }
+            2 if cli_ok(&recent) => {
+                if let Err(e) =
+                    send_guest_line(&mut stdin, b"ha core info --no-progress --raw-json\n")
+                {
+                    break Err(e);
+                }
+                stage = 3;
+                recent.clear();
+                sent = Instant::now();
+            }
+            2 if sent.elapsed() > Duration::from_secs(20) => {
+                if let Err(e) =
+                    send_guest_line(&mut stdin, b"ha supervisor info --no-progress --raw-json\n")
+                {
+                    break Err(e);
+                }
+                recent.clear();
+                sent = Instant::now();
+            }
+            3 if cli_ok(&recent) => break Ok(()),
+            3 if sent.elapsed() > Duration::from_secs(20) => {
+                if let Err(e) =
+                    send_guest_line(&mut stdin, b"ha core info --no-progress --raw-json\n")
+                {
+                    break Err(e);
+                }
+                recent.clear();
+                sent = Instant::now();
+            }
+            _ => {}
+        }
+    };
+    stop_guest(&mut child);
+    let digest = sha256_file(&spec.source_image).map_err(|_| GuestError::UnsafeImage)?;
+    if digest != spec.image_sha256 {
+        return Err(GuestError::UnsafeImage);
+    }
+    outcome
+}
+
 fn stop_guest(child: &mut Child) {
     let _ = child.kill();
     let _ = child.wait();
@@ -235,6 +368,14 @@ pub fn boot_guest_in_isolated_lab(spec: &GuestSpec) -> Result<(), GuestError> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn supervisor_and_core_health_requires_real_cli_ok_marker() {
+        assert!(cli_ok(br#"{"result":"ok","data":{}}"#));
+        assert!(cli_ok(br#"{"result": "ok", "data": {}}"#));
+        assert!(!cli_ok(br#"{"result":"error","message":"not ready"}"#));
+        assert!(!cli_ok(b"homeassistant login:"));
+        assert!(!cli_ok(b"ha supervisor info --raw-json"));
+    }
     #[test]
     fn immutable_guest_arguments_prevent_host_and_radio_takeover() {
         let spec = GuestSpec {

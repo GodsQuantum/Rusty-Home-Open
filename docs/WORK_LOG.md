@@ -1,5 +1,11 @@
 # Rusty Home — journal de développement et de certification
 
+## 2026-10-25 — P8ad real Supervisor/Core response under Rust-owned HAOS VM (CI pending)
+
+- Follow-on from merged P8ac #103 (KVM serial boot), not repetition of its boot test. Native Rust now drives official guest serial console, authenticates local root in disposable HAOS, independently requests official Supervisor and Core CLI info (read-only) and refuses success unless both return result=ok.
+- Negative unit cases, structured redacted booleans, bounded retry/timeout and no image mutations. New genuine HAOS 18.3 KVM workflow; verify its exact CI SHA before claiming healthy Core or Supervisor. Persistent guest/App service running and production RBAC/radio ownership are still unproved; 0/15 production.
+
+
 ## 2026-10-25 — P8ac official HAOS guest from native Rust (CI pending)
 
 - New capability: a real Rust process orchestrates official HAOS QEMU KVM boot with pinned image digest, no original image writes, fixed machine args, no radio passthrough, bounded cleanup. Guest still runs original Core/Supervisor/Apps; this is not a native Rust replacement of their functions.

@@ -37,3 +37,7 @@ https://contributors.home-assistant.io/architecture/platform/supervisor/
 https://github.com/home-assistant/operating-system
 
 0/15 production gates cleared, no household HAOS, radios or credentials touched.
+
+## P8ad — real guest Supervisor/Core CLI readiness probe (CI pending)
+
+Native Rust now keeps a bounded QEMU guest process and drives its actual HAOS serial shell. The driver sends root login then the official 'ha supervisor info --no-progress --raw-json' and 'ha core info --no-progress --raw-json' read-only CLI calls. Both must return explicit result=ok independently, with retries and a strict boot deadline. The complete console transcript and tokens are neither printed nor persisted; only two boolean proof fields are exposed. Command and image verification are lab-only and cannot create an authorization for production. It validates CLI API responsiveness, not Core HTTP event streaming, Apps running, persistent disk or USB/radio cutover. The pinned KVM workflow p8ad-rust-health.yml must pass at the exact SHA before this scope is marked verified.

@@ -70,6 +70,10 @@ New P8ab worktree Rusty-Home-P8ab-20261025 from origin/main e7235f7. See crates/
 
 New branch feat/real-haos-guest-supervisor-20261025 and separate DEV worktree Rusty-Home-Guest-Supervisor-20261025. Module crates/native-hub/src/haos_guest.rs, binary haos_guest_lab and official KVM workflow .github/workflows/p8ac-rust-guest.yml. Await exact GitHub CI SHA. This only proves authentic guest OS boot from a native Rust launcher, not healthy Core/Apps or production. Read docs/HAOS_RUST_GUEST_COMPAT_2026-10-25.md. All earlier #99-#102 data recovery proofs remain acquired. 0/15 production; do not touch family HAOS or pass-through radios.
 
+## P8ad — real Supervisor and Core CLI health in Rust-managed HAOS
+
+P8ac native Rust HAOS KVM serial boot was proven in GitHub run 40243098816, feature 29f9a45db72e4ef69aa0abed00dda17483d7133e, merged as ac76a85dbeadc1456968e5912eb7ddf32c9ba2a3 (PR #103, 18/18 checks PASS). The next P8ad branch feat/haos-rust-supervisor-health-20261025 and worktree Rusty-Home-Guest-Health-20261025 extend the Rust launcher to probe official Supervisor and Core via real HAOS guest shell, not merely serial OS boot. New CI .github/workflows/p8ad-rust-health.yml; wait for exact SHA result before merging. No household service or radios, 0/15 production.
+
 ## Reprise obligatoire
 
 1. Lire ces sources, vérifier le SHA actuel de GitHub, les PR ouvertes, les preuves et la CI avant de relancer des travaux.
