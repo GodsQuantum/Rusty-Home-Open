@@ -127,6 +127,8 @@ jobs:
         run: python3 scripts/test_public_redaction.py
       - name: Independent fresh HAOS recovery proof and bounded relay contract
         run: python3 scripts/test_p8p_cross_vm_contract.py
+      - name: Immutable genuine HAOS to Rust escrow to fresh HAOS rollback proof, never production
+        run: python3 scripts/test_p8ab_evidence_contract.py
       - name: Immutable genuine HAOS to native Rust staged-registry laboratory proof, never production
         run: python3 scripts/test_p8aa_evidence_contract.py
       - name: Current production gap inventory and durable handoff coherence

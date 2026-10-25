@@ -58,3 +58,7 @@ Le nouveau Rust lit un tar full Supervisor non chiffré et importe uniquement co
 5. Attendre les CI GitHub **du SHA exact**, fusionner après tous les checks requis verts et écrire l'issue dans le journal. Ne déclarer un gate de production certifié qu'avec la procédure de qualification indépendante dédiée.
 
 **Production : NOT_PRODUCTION_READY, 0/15 gates certifiés.** Un test réussi ne transforme pas automatiquement un gate en certification de production.
+
+## P8ab — Native Rust archive custody and genuine second HAOS guest
+
+New distinct proof (not old direct HAOS->HAOS): PR #101 at 58cbfe3023532b7acca68123641a58692fab541d, merged 4757377d5d773844f6e278af4712597d50cd799a, GitHub https://github.com/GodsQuantum/Rusty-Home-Open/actions/runs/40240344194 SUCCESS. Both independent genuine HAOS 18.3 QEMU source 3/3 and target 3/3 pass, with opaque byte-exact private native Rust escrow in the middle, file replaced by native Rust reexport and verified before target restore. This does not qualify actual host takeover or real Apps/radios; production 0/15. Machine evidence in config/native-backup-escrow-evidence.json.

@@ -48,7 +48,8 @@
       "status": "lab_partial",
       "blocked_reason": [
         "Actual HAOS 18.3 QEMU verified source full backup transferred with SHA256 to a SECOND fresh HAOS VM with distinct boot ID, restored exact share marker bytes and matching Core version (6/6 run 40135221183). Previously verified SAME-VM full and encrypted restore, wrong-password refusal and real File Editor App data SHA256 roundtrip (17/17 run 40127707580). This is HAOS->HAOS laboratory recovery, NOT HAOS->Rusty Home Core replacement, generic third-party App databases, live secrets, radio ownership, or complete production migration.",
-        "P8aa further verifies that a real full unprotected Supervisor backup made in isolated genuine HAOS 18.3 QEMU can transfer with SHA256 into private native Rust/redb, stage two fictional Core entity registry identities, activate with CAS and roll back (3/3 selected KVM tests, GitHub run 40238122942, exact PR #99 head 9c6e3220f433153c0dc28ef0d2549bd52a345a8f, merged as d297bbbd29ac313723b54794ad27aceaf0636166). This does not recover an entire Core installation, automations, Apps, credentials, radios or host ownership; production remains not certified."
+        "P8aa further verifies that a real full unprotected Supervisor backup made in isolated genuine HAOS 18.3 QEMU can transfer with SHA256 into private native Rust/redb, stage two fictional Core entity registry identities, activate with CAS and roll back (3/3 selected KVM tests, GitHub run 40238122942, exact PR #99 head 9c6e3220f433153c0dc28ef0d2549bd52a345a8f, merged as d297bbbd29ac313723b54794ad27aceaf0636166). This does not recover an entire Core installation, automations, Apps, credentials, radios or host ownership; production remains not certified.",
+        "P8ab: genuine HAOS 18.3 Supervisor full backup through Rust private byte-exact escrow to a separate fresh HAOS 18.3 guest, 3/3 source + 3/3 target passed (GitHub run 40240344194; PR #101 head 58cbfe3023532b7acca68123641a58692fab541d; merge 4757377d5d773844f6e278af4712597d50cd799a). Real Core/Apps never executed on Rust host; no full migration signoff."
       ],
       "certification_artifact": null
     },
@@ -57,7 +58,8 @@
       "status": "blocked",
       "blocked_reason": [
         "A real QEMU disposable local App v1 to v2 downgrade after manager SIGKILL did restore exact v1 bytes and version (run 40127707580). Full host migration rollback across independent machines, complete Core states, real App DBs, user accounts, physical radios and network ownership remain NOT verified.",
-        "P8aa verified native redb entity-identity staging rollback in an isolated HAOS->Rust handoff (GitHub 40238122942), but whole-host Rust->HAOS rollback and all actual App/automation data remain unproved."
+        "P8aa verified native redb entity-identity staging rollback in an isolated HAOS->Rust handoff (GitHub 40238122942), but whole-host Rust->HAOS rollback and all actual App/automation data remain unproved.",
+        "P8ab full archive recovery via Rust escrow (run 40240344194) does not prove reverse takeover of physical devices and third-party Apps from a running Rust Home host."
       ],
       "certification_artifact": null
     },

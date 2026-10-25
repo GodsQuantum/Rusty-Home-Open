@@ -1,0 +1,21 @@
+{
+  "schema": 1,
+  "case": "p8ab_real_haos_rust_escrow_to_fresh_haos",
+  "status": "lab_verified_only",
+  "pr": 101,
+  "head": "58cbfe3023532b7acca68123641a58692fab541d",
+  "merged": "4757377d5d773844f6e278af4712597d50cd799a",
+  "run": 40240344194,
+  "result": "success",
+  "source_passed": 3,
+  "target_passed": 3,
+  "checks_passed": 12,
+  "scope": "original HAOS Supervisor full archive passed through native Rust byte-exact private escrow, then restored into a fresh independent official HAOS 18.3 QEMU guest",
+  "unproven": [
+    "Core running natively in Rust",
+    "Apps automation services and physical radios",
+    "production host rollback and field endurance"
+  ],
+  "production_gates_passed": 0,
+  "total_gates": 15
+}
