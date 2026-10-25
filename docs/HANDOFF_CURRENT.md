@@ -66,6 +66,10 @@ Main avant intervention a45e9d6 (PR #97/#98 fusionnées), nouveau worktree Rusty
 
 New P8ab worktree Rusty-Home-P8ab-20261025 from origin/main e7235f7. See crates/interop-moli/src/backup_escrow.rs, scripts/test_p8ab_backup_escrow.py and .github/workflows/p8ab-native-escrow-rollback.yml. P8ab is VERIFIED: PR #101 merged as 4757377d5d773844f6e278af4712597d50cd799a after 12/12 checks, exact head 58cbfe3023532b7acca68123641a58692fab541d, real QEMU run 40240344194, source 3/3 and target 3/3. Machine evidence config/native-backup-escrow-evidence.json. The distinct P8ab test inserts a native, private, durable Rust archive vault between the already proven two official HAOS QEMU guest boots. Crucial: must await the exact P8ab CI success, no production 15 gate signoff, no actual Core or App execution. Preserve all earlier QEMU, Core and Moli proof IDs.
 
+## P8ac — Rust orchestrates official HAOS guest (25 Oct)
+
+New branch feat/real-haos-guest-supervisor-20261025 and separate DEV worktree Rusty-Home-Guest-Supervisor-20261025. Module crates/native-hub/src/haos_guest.rs, binary haos_guest_lab and official KVM workflow .github/workflows/p8ac-rust-guest.yml. Await exact GitHub CI SHA. This only proves authentic guest OS boot from a native Rust launcher, not healthy Core/Apps or production. Read docs/HAOS_RUST_GUEST_COMPAT_2026-10-25.md. All earlier #99-#102 data recovery proofs remain acquired. 0/15 production; do not touch family HAOS or pass-through radios.
+
 ## Reprise obligatoire
 
 1. Lire ces sources, vérifier le SHA actuel de GitHub, les PR ouvertes, les preuves et la CI avant de relancer des travaux.

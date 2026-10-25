@@ -1,6 +1,7 @@
 //! Experimental integration of the upstream Moli OS hub as a laboratory-only
 //! Rust-native state authority. Zero network listeners, no production devices.
 //! This is not a Home Assistant replacement or a release-ready service.
+pub mod haos_guest;
 use moli_core::{DeviceId, PointId, Sample};
 use moli_runtime::{Hub, HubOptions, Snapshot};
 use std::collections::{BTreeMap, HashMap};
