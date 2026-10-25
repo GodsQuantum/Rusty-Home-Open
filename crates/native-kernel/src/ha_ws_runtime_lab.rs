@@ -78,7 +78,12 @@ pub async fn run(
             bail!("bounded lab run timed out without sufficient state changes")
         }
         if since_probe.elapsed() >= Duration::from_secs(2) {
-            hub.probe_transport(&mut client).await?;
+            // Count events consumed by a reconciliation probe, otherwise the
+            // bounded scenario could lose events before reaching its target.
+            changed = changed.saturating_add(
+                hub.probe_transport_reconciled(&mut client, &mut relay)
+                    .await?,
+            );
             since_probe = Instant::now();
         }
         tokio::time::sleep(Duration::from_millis(20)).await;

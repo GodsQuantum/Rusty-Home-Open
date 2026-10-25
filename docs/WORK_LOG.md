@@ -1,5 +1,14 @@
 # Rusty Home — journal de développement et de certification
 
+## 2026-10-25 — P8z, sondes Core/WS/Moli et course de livraison
+
+- **Anti-redondance :** PR #97 fusionnée (c8c6a73) après 9/9 CI au SHA feature 141bf49, preuve P8y durable ; anciennes restaurations HAOS→HAOS conservées.
+- **Lacune :** sans drainage après get_states, une mise à jour seulement d'attributs peut arriver dans le relais avant le retour du snapshot et entraîner une révocation intempestive.
+- **Correction :** lecture en boucle strictement bornée (trois snapshots max, deux intervalles 30 ms), drainage avant/après chaque snapshot, vérification structurale Core/WS/Moli et purge à la troisième divergence. Pas de reconnexion ni de write.
+- **Compteur :** les événements consommés pendant la sonde sont comptés dans le runner de laboratoire.
+- **Preuves :** nouveau test WS loopback des deux cas livré/perdu et checks de l'espace Rust ; CI exacte à vérifier ; production toujours 0/15.
+
+
 ## 2026-10-25 — P8y, audit du cas attribut-seul WebSocket
 
 - **Réutilisation :** main au commit 2fdcb77, PR #89–#96 déjà intégrées ; preuves de migration et restaurations HAOS conservées.
