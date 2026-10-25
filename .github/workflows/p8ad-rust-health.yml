@@ -1,0 +1,58 @@
+name: P8ad Native Rust verifies official HAOS Supervisor and Core guest health
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - ".github/workflows/p8ad-rust-health.yml"
+      - "crates/native-hub/**"
+      - "scripts/test_p8ad_guest_health_contract.py"
+      - "Cargo.lock"
+permissions:
+  contents: read
+jobs:
+  rust-launches-official-haos:
+    name: Native Rust gets genuine Supervisor and Core CLI health in official HAOS 18.3 KVM
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Rust type-safe guest launch and negative path certification
+        run: |
+          python3 scripts/test_p8ad_guest_health_contract.py
+          cargo fmt --all -- --check
+          cargo test --locked -p hars-native-hub --all-targets
+          cargo clippy --locked -p hars-native-hub --all-targets -- -D warnings
+          cargo build --locked -p hars-native-hub --bin haos_guest_lab
+      - name: Official pinned HAOS 18.3 x86_64 image and KVM
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends qemu-system-x86 qemu-utils ovmf xz-utils
+          test -c /dev/kvm
+          sudo chmod 0666 /dev/kvm
+          test -r /usr/share/ovmf/OVMF.fd
+          curl -fLSs --retry 3 --retry-delay 5 -o "$RUNNER_TEMP/haos_ova-18.3.qcow2.xz" https://github.com/home-assistant/operating-system/releases/download/18.3/haos_ova-18.3.qcow2.xz
+          cd "$RUNNER_TEMP"
+          echo "fae6a728768cc10aff60d4820bfcd40d64cd77fab82c8bd92af13b3d9d414090  haos_ova-18.3.qcow2.xz" | sha256sum -c
+          xz -T2 -dc haos_ova-18.3.qcow2.xz > haos-native-rust.qcow2
+          rm haos_ova-18.3.qcow2.xz
+          qemu-img resize -f qcow2 haos-native-rust.qcow2 64G
+          chmod 0600 haos-native-rust.qcow2
+          qemu-img info --output=json haos-native-rust.qcow2 | jq -e '.[ "virtual-size" ] >= 68719476736'
+      - name: Rust launches HAOS guest and verifies real Supervisor plus Core CLI health
+        timeout-minutes: 16
+        run: |
+          set -euo pipefail
+          SHA="$(sha256sum "$RUNNER_TEMP/haos-native-rust.qcow2" | cut -d' ' -f1)"
+          HARS_DISPOSABLE_KVM_LAB=1 timeout -k 15s 720s target/debug/haos_guest_lab --lab-supervisor-core-health \
+            /usr/bin/qemu-system-x86_64 /usr/share/ovmf/OVMF.fd "$RUNNER_TEMP/haos-native-rust.qcow2" "$SHA" \
+            | tee "$RUNNER_TEMP/haos-native-rust-proof.json"
+          python3 -c 'import json,os; d=json.load(open(os.environ["RUNNER_TEMP"]+"/haos-native-rust-proof.json")); assert d["official_supervisor_cli_ok"] and d["official_core_cli_ok"] and d["native_rust_qemu_process"] and d["read_only_ephemeral"] and not d["production_ready"]; print("P8AD_NATIVE_RUST_OFFICIAL_SUPERVISOR_AND_CORE_LIVE_HEALTH_PASS")'
+          echo "$SHA  $RUNNER_TEMP/haos-native-rust.qcow2" | sha256sum -c
+      - name: No persistent QEMU or disk artifacts in repository
+        if: always()
+        run: |
+          test ! -e "$GITHUB_WORKSPACE/haos-native-rust.qcow2"
+          test ! -e "$GITHUB_WORKSPACE/haos-native-rust-proof.json"
