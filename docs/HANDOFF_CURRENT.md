@@ -62,6 +62,10 @@ Le contrôle P8y peut révoquer une session saine lorsque l'événement Core arr
 
 Main avant intervention a45e9d6 (PR #97/#98 fusionnées), nouveau worktree Rusty-Home-Certification-20261025. Nouveaux modules Rust d'import tar non chiffré vers registre durable, tests hostiles et workflow officiel HAOS 18.3 QEMU source→Rust sans VM cible et sans foyer. Préserver les preuves HAOS→HAOS et Core→Moli déjà acquises. Lire docs/HAOS_TO_NATIVE_BACKUP_STAGE_2026-10-25.md. CI QEMU RÉUSSIE : run 40238122942, 3/3 tests au SHA 9c6e3220f433153c0dc28ef0d2549bd52a345a8f, PR #99 fusionnée d297bbbd29ac313723b54794ad27aceaf0636166. Ne pas retester ces preuves déjà acquises ; reprendre les lacunes de migration réelle. Les Apps, automations, secrets et réversibilité système restent hors scope, 0/15 production.
 
+## P8ab — opaque reversible Rust escrow (source HAOS->Rust->fresh HAOS)
+
+New P8ab worktree Rusty-Home-P8ab-20261025 from origin/main e7235f7. See crates/interop-moli/src/backup_escrow.rs, scripts/test_p8ab_backup_escrow.py and .github/workflows/p8ab-native-escrow-rollback.yml. The distinct P8ab test inserts a native, private, durable Rust archive vault between the already proven two official HAOS QEMU guest boots. Crucial: must await the exact P8ab CI success, no production 15 gate signoff, no actual Core or App execution. Preserve all earlier QEMU, Core and Moli proof IDs.
+
 ## Reprise obligatoire
 
 1. Lire ces sources, vérifier le SHA actuel de GitHub, les PR ouvertes, les preuves et la CI avant de relancer des travaux.

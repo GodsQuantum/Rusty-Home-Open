@@ -63,3 +63,7 @@ and the product is NOT_PRODUCTION_READY (0/15).
 - Merge on main: d297bbbd29ac313723b54794ad27aceaf0636166
 - 3/3 genuine HAOS 18.3 Supervisor QEMU tests, SHA256 transfer, native Rust/redb registry activation and rollback; 17 successful checks and one intentionally skipped PR-only signing step.
 - Machine-readable evidence: config/haos-native-backup-evidence.json, locked production gate status lab_partial, rollback_verified blocked.
+
+## P8ab follow-on (NOT PART OF P8aa)
+
+New native Rust opaque full-archive content-addressed vault can safely retain and export byte-identical source archives (including encrypted ones) without processing plaintext secrets. Its new two-VM QEMU workflow tests official HAOS source -> Rust vault -> different fresh official HAOS target with real Supervisor restore. This proves backup escrow reversibility only, **not** Rust execution of Core/Apps/automation/radios; do not count until exact P8ab CI passes.
