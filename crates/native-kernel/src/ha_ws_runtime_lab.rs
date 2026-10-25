@@ -155,7 +155,8 @@ mod tests {
                             })
                         };
                         ws.send(out(json!({"type":"result","id":j["id"],"success":true,
-                            "result":[snapshot(if seen_snapshots==1{"off"}else{"on"},t)]})))
+                            "result":[snapshot(if seen_snapshots==1{"off"}else{"on"},
+                               if seen_snapshots==1{t}else{"2026-10-25T00:00:01+00:00"})]})))
                             .await
                             .unwrap();
                         if seen_snapshots == 1 {

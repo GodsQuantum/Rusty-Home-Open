@@ -3,6 +3,7 @@
 //! Event source MUST be a fully authenticated ShadowSession epoch. An upstream
 //! relay failure, invalid timestamp, or disconnected session revokes visibility.
 use anyhow::{Context, Result, bail};
+use chrono::DateTime;
 use hars_ha_compat::{SandboxHaReader, ShadowEvents, session::ShadowSession};
 use hars_interop_moli::registry_stage::RegistryStager;
 #[cfg(test)]
@@ -11,6 +12,7 @@ use hass_rs::WSEvent;
 use moli_core::Origin;
 use moli_core::{Access, Device, InstanceId, Kind, PointId, PointSpec, Semantic, Value};
 use moli_runtime::{BoxFuture, Driver, DriverCtx, Hub, HubOptions, spawn_driver};
+use std::collections::{BTreeMap, BTreeSet};
 use std::{path::Path, sync::Arc, time::Duration};
 use tokio::{
     sync::{mpsc, oneshot},
@@ -253,22 +255,99 @@ impl EventConverger {
         }
         Ok(())
     }
-    /// Active WebSocket transport probe. hass-rs 0.5.0 does not guarantee
-    /// that a closed TCP connection immediately closes its subscription
-    /// receiver; therefore an empty event queue is NOT proof of liveness.
-    /// A bounded official get_states request checks the authenticated client.
-    /// An error/timeout revokes all Moli devices before reporting failure.
-    /// This is a liveness probe, NOT a gap-free change stream.
-    pub async fn probe_transport(&mut self, client: &mut SandboxHaReader) -> Result<()> {
-        if !self.valid {
-            bail!("already revoked")
+    /// Check current authenticated Core values against *both* the generation-
+    /// bound event mirror AND what upstream Moli actually published. An
+    /// authenticated get_states round-trip alone only proves TCP liveness:
+    /// it cannot prove that we didn't silently miss state_changed events.
+    ///
+    /// Reject all collisions, missing known entities with still cached state,
+    /// older authoritative snapshots and text mismatches. On any mismatch
+    /// the caller revokes the whole Hub and must re-subscribe + re-snapshot.
+    /// This covers visible text-state divergence, NOT attribute-only gaps.
+    fn verify_core_consistency(&self, latest: &[hass_rs::HassEntity]) -> Result<()> {
+        if latest.len() > 50_000 {
+            bail!("oversize Core state response")
         }
-        if let Err(e) = client.states().await {
+        self.session.len()?;
+        let registered: BTreeSet<&str> = self.entries.iter().map(|e| e.entity.as_str()).collect();
+        let mut seen = BTreeSet::new();
+        let mut current = BTreeMap::new();
+        for entry in latest {
+            if entry.entity_id.is_empty()
+                || entry.entity_id.len() > 512
+                || entry.state.len() > 4096
+                || entry.state.chars().any(char::is_control)
+                || !seen.insert(entry.entity_id.as_str())
+            {
+                bail!("invalid or duplicate authoritative Core state")
+            }
+            let updated = DateTime::parse_from_rfc3339(&entry.last_updated)
+                .context("invalid authoritative Core state timestamp")?;
+            if registered.contains(entry.entity_id.as_str()) {
+                current.insert(entry.entity_id.as_str(), (entry, updated));
+            }
+        }
+        for entry in &self.entries {
+            let ws = self.session.get(&entry.entity)?;
+            let latest = current.get(entry.entity.as_str());
+            fn normalize(s: &str) -> Option<&str> {
+                (!matches!(s, "unknown" | "unavailable")).then_some(s)
+            }
+            let authoritative = latest.and_then(|(x, _)| normalize(&x.state));
+            let mirrored = ws.and_then(|x| normalize(&x.state));
+            if authoritative != mirrored {
+                bail!("Core authoritative state diverges from WebSocket mirror")
+            }
+            if let (Some(mirror), Some((_, timestamp))) = (ws, latest) {
+                let mirror_time = DateTime::parse_from_rfc3339(&mirror.last_updated)
+                    .context("invalid WebSocket mirror timestamp")?;
+                if *timestamp < mirror_time {
+                    bail!("Core returned an older snapshot than the WebSocket mirror")
+                }
+            }
+            let point = PointId::from(entry.point.as_str());
+            let published = self
+                .hub
+                .state(&point)
+                .and_then(|sample| match sample.value {
+                    Value::Text(v) => Some(v.to_string()),
+                    _ => None,
+                });
+            if authoritative.map(str::to_owned) != published {
+                bail!("Moli published state diverges from authoritative Core")
+            }
+        }
+        Ok(())
+    }
+
+    async fn validate_authoritative_response(
+        &mut self,
+        latest: &[hass_rs::HassEntity],
+    ) -> Result<()> {
+        if let Err(e) = self.verify_core_consistency(latest) {
             self.invalidate().await?;
             return Err(e);
         }
         Ok(())
     }
+
+    /// Probe authentic Core transport AND compare current visible state.
+    /// A successful websocket response alone is not sufficient. Any silent
+    /// disagreement revokes Moli devices and requires a new Core snapshot.
+    pub async fn probe_transport(&mut self, client: &mut SandboxHaReader) -> Result<()> {
+        if !self.valid {
+            bail!("already revoked")
+        }
+        let response = match client.states().await {
+            Ok(response) => response,
+            Err(e) => {
+                self.invalidate().await?;
+                return Err(e);
+            }
+        };
+        self.validate_authoritative_response(&response).await
+    }
+
     /// Bounded incremental drain of the ALREADY EXISTING hass-rs event relay.
     /// Stream closure/overflow revokes all values; no transparent retry.
     pub async fn drain_events(&mut self, relay: &mut ShadowEvents) -> Result<usize> {
@@ -322,6 +401,9 @@ impl EventConverger {
         relay: &mut ShadowEvents,
         id: &str,
     ) -> Result<Option<String>> {
+        // First consume changes delivered before our authenticated request.
+        // Then verify the authoritative Core view agrees with native Moli.
+        self.drain_events(relay).await?;
         self.probe_transport(client).await?;
         self.drain_events(relay).await?;
         self.observed_state(id)
@@ -530,6 +612,66 @@ mod tests {
         assert_eq!(hub.device_count(), 2);
         assert!(hub.observed_state("sensor.unregistered").unwrap().is_none());
         hub.prove_write_denied().await.unwrap();
+    }
+
+    #[tokio::test]
+    async fn authenticated_core_state_divergence_revokes_every_native_moli_device() {
+        let (_temp, dir) = prepare();
+        let mut session = ShadowSession::new();
+        let epoch = session.reconnecting().unwrap();
+        session
+            .install_snapshot(
+                epoch,
+                vec![
+                    entity("sensor.any_vendor_0", "off", T0),
+                    entity("sensor.any_vendor_1", "21.0", T0),
+                ],
+            )
+            .unwrap();
+        let mut hub = EventConverger::start(&dir, session, epoch).await.unwrap();
+        let correct = vec![
+            entity("sensor.any_vendor_0", "off", T0),
+            entity("sensor.any_vendor_1", "21.0", T0),
+        ];
+        hub.validate_authoritative_response(&correct).await.unwrap();
+        assert_eq!(hub.device_count(), 2);
+        // Authenticated get_states says 22.0 but the websocket feed
+        // delivered only 21.0: no stale value may remain accessible.
+        let divergent = vec![
+            entity("sensor.any_vendor_0", "off", T1),
+            entity("sensor.any_vendor_1", "22.0", T1),
+        ];
+        assert!(
+            hub.validate_authoritative_response(&divergent)
+                .await
+                .is_err()
+        );
+        assert_eq!(hub.device_count(), 0);
+        assert!(hub.observed_state("sensor.any_vendor_1").is_err());
+    }
+
+    #[tokio::test]
+    async fn stale_authoritative_timestamp_and_missing_state_fail_closed() {
+        let (_temp, dir) = prepare();
+        for mode in 0..2 {
+            let mut session = ShadowSession::new();
+            let epoch = session.reconnecting().unwrap();
+            session
+                .install_snapshot(epoch, vec![entity("sensor.any_vendor_0", "on", T1)])
+                .unwrap();
+            let mut hub = EventConverger::start(&dir, session, epoch).await.unwrap();
+            let authoritative = if mode == 0 {
+                vec![entity("sensor.any_vendor_0", "on", T0)]
+            } else {
+                vec![]
+            };
+            assert!(
+                hub.validate_authoritative_response(&authoritative)
+                    .await
+                    .is_err()
+            );
+            assert_eq!(hub.device_count(), 0);
+        }
     }
 
     #[tokio::test]

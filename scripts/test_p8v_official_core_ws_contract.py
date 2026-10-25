@@ -13,6 +13,11 @@ assert "docker run -d --rm --name" in script and "--network none" in script
 assert "--network \"container:$CONTAINER\"" in script, "no host routing or published port needed"
 assert "-p \"127.0.0.1" not in script and "docker network create" not in script
 assert "HostPort" in script and ".HostConfig.NetworkMode" in script
+assert "P8W_CORE_AUTHENTICATED_WS_8_UPDATES_AND_INVALID_LOGIN_DENIED_PASS" in script
+assert "ws://127.0.0.1:8123/api/websocket \"$ENTITY\" on 8" in script
+assert "d[\"changes_observed\"]>=8" in script
+assert "p8w-auth-denied" in core and "p8w-auth-denied" in script
+assert "auth_invalid" in core and "p8w-invalid-fictional-token" in core
 assert "HARS_LAB_WS_TOKEN" in script and "p8v-token" in script
 assert 'HARS_LAB_WS_TOKEN="$TOKEN"' not in script
 assert "--lab-ha-ws-to-moli" in script

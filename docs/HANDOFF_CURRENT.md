@@ -38,6 +38,10 @@ Après la PR #92, le module crates/native-kernel/src/ha_ws_runtime_lab.rs et le 
 
 Nouvelle branche feat/real-core-websocket-to-moli-20261025 : scripts/test_p8v_genuine_core_ws.py (vrai Core 2026.10.2, auth utilisateur, registre, états), scripts/run_p8v_genuine_core_ws_to_moli.sh (Core Docker --network none, runner Rust dans le même namespace uniquement, aucun port hôte), scripts/test_p8v_official_core_ws_contract.py et job CI officiel. Lire docs/GENUINE_CORE_WS_TO_MOLI_2026-10-25.md. Réutiliser les PR #89–#93 et ne pas reconstruire leurs preuves. **À vérifier : CI réelle au SHA exact**. Compteur release 0/15 ; pas encore de migration HAOS productive.
 
+## P8w — cohérence autoritative get_states/ShadowSession/Moli (25 octobre)
+
+Nouvelle branche feat/ha-ws-state-consistency-20261025, dossier Rusty-Home-WS-Consistency-QA-20261025. Les PR #89–#94 sont déjà fusionnées : ne pas reconstruire le chemin réel Core→WebSocket→Rust→Moli. Le nouveau contrôle compare les valeurs issues du get_states officiel, du miroir authentifié et du Hub Moli. Une divergence efface tout et exige une reconnexion/re-snapshot. L'essai CI réel doit valider 8 événements consécutifs et le rejet auth_invalid par Core d'un jeton fictif erroné. Voir docs/HA_CORE_WS_STATE_CONSISTENCY_2026-10-25.md. La synchronisation des attributs, la reconnexion permanente, les automations et services, ainsi que HAOS→Rust→HAOS restent hors preuve. Release 0/15.
+
 ## Reprise obligatoire
 
 1. Lire ces sources, vérifier le SHA actuel de GitHub, les PR ouvertes, les preuves et la CI avant de relancer des travaux.

@@ -1,5 +1,14 @@
 # Rusty Home — journal de développement et de certification
 
+## 2026-10-25 — P8w, vérification autoritative de la cohérence Core/WS/Moli
+
+- **Anti-redondance :** les PR #89–#94 sont déjà fusionnées et valident l'identité, les états, l'abonnement WS, l'exécutable borné et le vrai Core 2026.10.2 ; les anciennes restaurations HAOS→HAOS restent acquises.
+- **Correction :** une réponse get_states réussie ne prouve pas que les événements ont été reçus. Elle est désormais comparée à la ShadowSession et aux états réellement publiés par le Hub Moli. Divergence, horodatage périmé ou état manquant => invalidation globale, suppression des appareils et nouveau snapshot obligatoire.
+- **Preuve Core renforcée :** 8 événements successifs attendus, vrai refus auth_invalid d'un jeton fictif erroné. CI GitHub du SHA exact nécessaire avant toute certification du scénario.
+- **Tests locaux :** nouveaux tests de divergences et suppression fail-closed, aucune commande physique ; release toujours 0/15.
+- **Référence :** docs/HA_CORE_WS_STATE_CONSISTENCY_2026-10-25.md.
+
+
 ## 2026-10-25 — P8v : vrai Core 2026.10.2 + WebSocket authentifié vers Rust/Moli
 
 - **Sans redondance :** PR #89–#91 réelles Core→Moli (registre/états), #92–#93 WebSocket synthétique et runner CLI déjà fusionnées ; restaurations HAOS→HAOS inchangées.
