@@ -25,7 +25,7 @@ const MAX_ENTITIES: usize = 50000;
 /// Reject duplicate keys at *every* level, including inside per-entity data.
 /// serde_json::Value alone silently lets last-wins keys forge unique_id/slug.
 #[derive(Debug)]
-struct StrictValue(Value);
+pub(crate) struct StrictValue(pub(crate) Value);
 impl<'de> Deserialize<'de> for StrictValue {
     fn deserialize<D: Deserializer<'de>>(deserializer: D) -> std::result::Result<Self, D::Error> {
         struct StrictVisitor;

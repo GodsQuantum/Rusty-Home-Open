@@ -6,9 +6,9 @@ sys.path.insert(0,str(Path(__file__).resolve().parent))
 from generate_source_spdx import OUTPUT,validate
 d=json.loads(OUTPUT.read_text())
 validate(d)
-assert len(d["packages"])==217
+assert len(d["packages"])==226
 assert len(d["relationships"])>=400
-assert sum(pkg["licenseDeclared"]=="NOASSERTION" for pkg in d["packages"])==6
+assert sum(pkg["licenseDeclared"]=="NOASSERTION" for pkg in d["packages"])==7
 assert next(x for x in d["packages"] if x["name"]=="ha-rust-bridge")["licenseDeclared"]=="MIT"
 assert all(pkg["licenseConcluded"]=="NOASSERTION" for pkg in d["packages"])
 for bad in (
@@ -59,4 +59,4 @@ relocated=build(portable)
 assert actual==relocated,"SBOM depends on absolute workstation checkout path"
 assert actual==d,"Pinned SBOM not reproducible at current lock"
 
-print("SOURCE_SPDX_217_PACKAGES_NO_FALSE_COMPLIANCE_PASS")
+print("SOURCE_SPDX_226_PACKAGES_NO_FALSE_COMPLIANCE_PASS")

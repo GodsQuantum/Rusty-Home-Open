@@ -19,9 +19,9 @@ class SourceTextEvidence(unittest.TestCase):
         path=Path(os.environ.get("HARS_CARGO_LICENSE_METADATA","/tmp/hars-p11b-verify-metadata.json"))
         self.assertTrue(path.is_file())
         r=audit.report(json.loads(path.read_text()))
-        self.assertEqual(r["packages_total"],207)
-        self.assertEqual(r["external_packages"],199)
-        self.assertEqual(r["external_with_source_license_files"],193)
+        self.assertEqual(r["packages_total"],226)
+        self.assertEqual(r["external_packages"],218)
+        self.assertEqual(r["external_with_source_license_files"],212)
         self.assertFalse(r["third_party_licenses_gate_certified"])
     def test_actual_license_sha256_and_no_absolute_paths(self):
         with tempfile.TemporaryDirectory() as t:
