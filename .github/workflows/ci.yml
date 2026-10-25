@@ -64,6 +64,10 @@ jobs:
         run: |
           python3 scripts/test_p8q_core_registry_contract.py
           python3 scripts/test_ha_registry_stager.py
+      - name: Genuine loopback WebSocket change events to read-only Moli Hub with disconnect revocation
+        run: |
+          cargo test --locked -p hars-native-kernel --lib ha_event_convergence
+          cargo clippy --locked -p hars-native-kernel --all-targets -- -D warnings
       - name: Vendor-neutral migration preflight over variable App inventories
         run: python3 scripts/test_app_migration_policy.py
       - name: Offline HAOS backup archive nofollow and duplicate-manifest negative tests

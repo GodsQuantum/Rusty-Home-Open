@@ -81,7 +81,7 @@ pub struct ShadowReport {
     pub production_ready: bool,
 }
 
-fn validated(stage: &Stage) -> Result<Vec<(String, String)>> {
+pub(crate) fn validated(stage: &Stage) -> Result<Vec<(String, String)>> {
     if stage.version != 1
         || !stage.read_only
         || !stage.no_device_commands

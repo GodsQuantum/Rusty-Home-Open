@@ -26,6 +26,10 @@ Le module native-kernel/ha_registry_shadow utilise le lot d'identités Core déj
 
 Après #89 et #90, l'étape suivante importe un instantané officiel State.as_dict() dans les mêmes identités Moli, sans inventer les états manquants ni autoriser des commandes ; voir docs/HA_CORE_STATES_TO_MOLI_SNAPSHOT_2026-10-25.md. Ne pas présenter cette nouvelle étape comme un abonnement WebSocket continu : il reste à faire la convergence temporelle, les sessions, les automatisations et la migration des données complètes. CI du vrai Core obligatoire avant certification.
 
+## P8t — événements WebSocket vers le Hub Moli (25 octobre)
+
+Nouvelle branche feat/ha-core-event-convergence-20261025. Module crates/native-kernel/src/ha_event_convergence.rs, documentation HA_WS_TO_MOLI_EVENT_CONVERGENCE_2026-10-25.md. Réutilise les PR #89/#90/#91 et le client hass-rs déjà présent ; vérifie changements d'états, timestamps, générations, pertes et révocation. Une fermeture silencieuse peut laisser une file apparemment ouverte : la sonde active get_states est indispensable. Preuve réseau : véritable socket loopback synthétique, PAS le serveur WebSocket du Core familial. Vérifier RustSec, CI complète et l'état de la PR avant fusion. Toujours 0/15 gates certifiés ; prochaines étapes : TLS/auth, surveillance périodique, automatisations et services, restauration complète HAOS→Rust→HAOS.
+
 ## Reprise obligatoire
 
 1. Lire ces sources, vérifier le SHA actuel de GitHub, les PR ouvertes, les preuves et la CI avant de relancer des travaux.

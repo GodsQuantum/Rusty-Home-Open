@@ -470,3 +470,6 @@ mod tests {
 
 /// Actual Moli Hub staging of Home Assistant registry identities, NO states/commands.
 pub mod ha_registry_shadow;
+
+/// Reuses generation-aware hass-rs WebSocket session to drive a genuine read-only Moli Hub.
+pub mod ha_event_convergence;
