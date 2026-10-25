@@ -1,5 +1,12 @@
 # Rusty Home — journal de développement et de certification
 
+## 2026-10-25 — P8ae persistent HAOS guest under Rust (CI pending)
+
+- New Rust stateful guest orchestration: atomic/private fixed qcow2 COW overlay from immutable official HAOS backing image, flock exclusive single owner, repeated KVM guests without ephemeral -snapshot, same real official HAOS guest data disk.
+- End-to-end new failure scenario: fake HAOS share marker written/synced by serial root in first guest, SIGKILL QEMU process, independent new QEMU process verifies sha256sum of persisted marker. Source image unchanged. Real KVM CI required at exact SHA before proof.
+- No real family radio, keys or automations. Core/Supervisor health P8ad remains verified in PR #104 (real HAOS QEMU 40243728521, 11/11 checks); still NOT_PRODUCTION_READY 0/15.
+
+
 ## 2026-10-25 — P8ad real Supervisor/Core response under Rust-owned HAOS VM (CI pending)
 
 - Follow-on from merged P8ac #103 (KVM serial boot), not repetition of its boot test. Native Rust now drives official guest serial console, authenticates local root in disposable HAOS, independently requests official Supervisor and Core CLI info (read-only) and refuses success unless both return result=ok.
