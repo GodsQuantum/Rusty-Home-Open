@@ -64,7 +64,7 @@ Main avant intervention a45e9d6 (PR #97/#98 fusionnées), nouveau worktree Rusty
 
 ## P8ab — opaque reversible Rust escrow (source HAOS->Rust->fresh HAOS)
 
-New P8ab worktree Rusty-Home-P8ab-20261025 from origin/main e7235f7. See crates/interop-moli/src/backup_escrow.rs, scripts/test_p8ab_backup_escrow.py and .github/workflows/p8ab-native-escrow-rollback.yml. The distinct P8ab test inserts a native, private, durable Rust archive vault between the already proven two official HAOS QEMU guest boots. Crucial: must await the exact P8ab CI success, no production 15 gate signoff, no actual Core or App execution. Preserve all earlier QEMU, Core and Moli proof IDs.
+New P8ab worktree Rusty-Home-P8ab-20261025 from origin/main e7235f7. See crates/interop-moli/src/backup_escrow.rs, scripts/test_p8ab_backup_escrow.py and .github/workflows/p8ab-native-escrow-rollback.yml. P8ab is VERIFIED: PR #101 merged as 4757377d5d773844f6e278af4712597d50cd799a after 12/12 checks, exact head 58cbfe3023532b7acca68123641a58692fab541d, real QEMU run 40240344194, source 3/3 and target 3/3. Machine evidence config/native-backup-escrow-evidence.json. The distinct P8ab test inserts a native, private, durable Rust archive vault between the already proven two official HAOS QEMU guest boots. Crucial: must await the exact P8ab CI success, no production 15 gate signoff, no actual Core or App execution. Preserve all earlier QEMU, Core and Moli proof IDs.
 
 ## Reprise obligatoire
 
