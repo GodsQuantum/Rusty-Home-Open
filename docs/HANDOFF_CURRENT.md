@@ -34,6 +34,10 @@ Nouvelle branche feat/ha-core-event-convergence-20261025. Module crates/native-k
 
 Après la PR #92, le module crates/native-kernel/src/ha_ws_runtime_lab.rs et le flag natif --lab-ha-ws-to-moli fournissent un runner à durée bornée : jeton via HARS_LAB_WS_TOKEN (jamais argv), URL loopback uniquement, entité Core déjà présente dans le registre, valeur attendue et nombre limité d'événements. Réutilise EventConverger, hass-rs et le vrai Moli Hub. Test serveur WebSocket réel mais fictif et commande lecture seule. Voir docs/HA_WS_LAB_RUNNER_2026-10-25.md. Pas de connexion au vrai WebSocket Home Assistant Core, ni de certification de service HAOS, production toujours 0/15.
 
+## P8v — vraie authentification WebSocket Core officiel (25 octobre)
+
+Nouvelle branche feat/real-core-websocket-to-moli-20261025 : scripts/test_p8v_genuine_core_ws.py (vrai Core 2026.10.2, auth utilisateur, registre, états), scripts/run_p8v_genuine_core_ws_to_moli.sh (Core Docker --network none, runner Rust dans le même namespace uniquement, aucun port hôte), scripts/test_p8v_official_core_ws_contract.py et job CI officiel. Lire docs/GENUINE_CORE_WS_TO_MOLI_2026-10-25.md. Réutiliser les PR #89–#93 et ne pas reconstruire leurs preuves. **À vérifier : CI réelle au SHA exact**. Compteur release 0/15 ; pas encore de migration HAOS productive.
+
 ## Reprise obligatoire
 
 1. Lire ces sources, vérifier le SHA actuel de GitHub, les PR ouvertes, les preuves et la CI avant de relancer des travaux.

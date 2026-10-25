@@ -39,6 +39,28 @@ jobs:
           if docker ps -a --format '{{.Names}}' | grep '^hars-core-ui-'; then
             echo 'Isolated Core test container leaked'; exit 1
           fi
+  genuine-core-ws-moli:
+    name: Genuine Core authenticated WebSocket to actual Moli Hub (no egress)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Fail-closed isolation, official Core auth and pinned image contracts
+        run: |
+          python3 scripts/test_p8v_official_core_ws_contract.py
+          python3 scripts/test_public_redaction.py
+          python3 scripts/test_ha_core_pins.py
+      - name: Official Home Assistant Core authenticated WS events into native Moli read-only Hub
+        run: bash scripts/run_p8v_genuine_core_ws_to_moli.sh
+      - name: No leaked genuine Core WebSocket sandbox
+        if: always()
+        run: |
+          if docker ps -a --format '{{.Names}}' | grep '^hars-p8v-'; then
+            echo 'Genuine Core WebSocket sandbox leaked'; exit 1
+          fi
   genuine-hacs-components:
     name: Three pinned HACS integrations inside official Core (isolated)
     runs-on: ubuntu-24.04
