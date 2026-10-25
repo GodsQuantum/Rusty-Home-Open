@@ -1,5 +1,13 @@
 # Rusty Home — journal de développement et de certification
 
+## 2026-10-25 — P8y, audit du cas attribut-seul WebSocket
+
+- **Réutilisation :** main au commit 2fdcb77, PR #89–#96 déjà intégrées ; preuves de migration et restaurations HAOS conservées.
+- **Nouveau bug :** get_states Core peut renvoyer un état textuel identique mais last_updated plus récent si un state_changed d'attribut a été perdu.
+- **Correctif laboratoire :** égalité stricte des timestamps ET des attributs JSON officiels Core / miroir WS avant d'autoriser une lecture Moli ; toute divergence révoque le miroir et tous les périphériques.
+- **Qualification :** test de régression dédié, CI au SHA exact à vérifier. Connu : déclenchement fail-closed possible pendant une course entre snapshot et livraison WS ; reconnexion/réconciliation durable encore absente. Production 0/15.
+
+
 ## 2026-10-25 — P8x, registre canonique pour sept certifications Core→Rust/Moli sans répétition
 
 - Après fusion des PR #89–#95, preuves exactes vérifiées : commits de tête et commits fusionnés, runs GitHub terminés en succès, marqueurs de tests et limites de chaque preuve.

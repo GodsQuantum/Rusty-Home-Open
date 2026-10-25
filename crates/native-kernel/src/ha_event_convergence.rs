@@ -298,11 +298,23 @@ impl EventConverger {
             if authoritative != mirrored {
                 bail!("Core authoritative state diverges from WebSocket mirror")
             }
-            if let (Some(mirror), Some((_, timestamp))) = (ws, latest) {
+            if let (Some(mirror), Some((core, timestamp))) = (ws, latest) {
+                // Comparing JSON Values is structural: attribute map order
+                // cannot produce a false mismatch. They are not yet
+                // represented as writable Moli points.
+                if mirror.attributes != core.attributes {
+                    bail!("Core attributes diverge from WebSocket mirror; resnapshot required")
+                }
                 let mirror_time = DateTime::parse_from_rfc3339(&mirror.last_updated)
                     .context("invalid WebSocket mirror timestamp")?;
-                if *timestamp < mirror_time {
-                    bail!("Core returned an older snapshot than the WebSocket mirror")
+                if *timestamp != mirror_time {
+                    // Home Assistant updates last_updated even when only an
+                    // attribute changes and the visible state text stays the
+                    // same. A newer Core timestamp proves the WS mirror missed
+                    // a state_changed event, so do not trust its Moli value.
+                    bail!(
+                        "Core update timestamp diverges from WebSocket mirror; resnapshot required"
+                    )
                 }
             }
             let point = PointId::from(entry.point.as_str());
@@ -648,6 +660,57 @@ mod tests {
         );
         assert_eq!(hub.device_count(), 0);
         assert!(hub.observed_state("sensor.any_vendor_1").is_err());
+    }
+
+    #[tokio::test]
+    async fn same_text_with_newer_core_update_revokes_missing_attribute_only_event() {
+        let (_temp, dir) = prepare();
+        let mut session = ShadowSession::new();
+        let epoch = session.reconnecting().unwrap();
+        session
+            .install_snapshot(
+                epoch,
+                vec![
+                    entity("sensor.any_vendor_0", "on", T0),
+                    entity("sensor.any_vendor_1", "21.0", T0),
+                ],
+            )
+            .unwrap();
+        let mut hub = EventConverger::start(&dir, session, epoch).await.unwrap();
+        // Home Assistant can issue state_changed for an attribute-only update.
+        let authoritative = vec![
+            entity("sensor.any_vendor_0", "on", T1),
+            entity("sensor.any_vendor_1", "21.0", T0),
+        ];
+        assert!(
+            hub.validate_authoritative_response(&authoritative)
+                .await
+                .is_err()
+        );
+        assert_eq!(hub.device_count(), 0);
+        assert!(hub.observed_state("sensor.any_vendor_0").is_err());
+        assert!(hub.observed_state("sensor.any_vendor_1").is_err());
+        assert!(hub.prove_write_denied().await.is_ok());
+    }
+
+    #[tokio::test]
+    async fn same_timestamp_with_different_attributes_revokes_corrupt_mirror() {
+        let (_temp, dir) = prepare();
+        let mut session = ShadowSession::new();
+        let epoch = session.reconnecting().unwrap();
+        session
+            .install_snapshot(epoch, vec![entity("sensor.any_vendor_0", "on", T0)])
+            .unwrap();
+        let mut hub = EventConverger::start(&dir, session, epoch).await.unwrap();
+        let mut altered = entity("sensor.any_vendor_0", "on", T0);
+        altered.attributes = json!({"seq": 2, "vendor": {"nested": true}});
+        assert!(
+            hub.validate_authoritative_response(&[altered])
+                .await
+                .is_err()
+        );
+        assert_eq!(hub.device_count(), 0);
+        assert!(hub.observed_state("sensor.any_vendor_0").is_err());
     }
 
     #[tokio::test]

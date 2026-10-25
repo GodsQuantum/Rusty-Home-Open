@@ -24,3 +24,7 @@ La lecture publique `read_verified()` consomme les événements en attente, obti
 - Certification du SHA final GitHub obligatoire. Tant qu'elle n'est pas verte, les nouveaux scénarios ne sont pas acquis.
 
 **Restant pour production :** supervision permanente et reprise automatique, tokens/permissions durables, TLS en réseau externe, changements d'attributs et registres, migration services/automatisations, compatibilité universelle des intégrations, sauvegarde HAOS→Rust→HAOS, essais matériel radio et endurance. Le release gate demeure 0/15.
+
+## P8y — gap de last_updated sans changement de texte (25 octobre)
+
+L'audit de P8w a décelé un trou : Home Assistant peut envoyer state_changed pour un changement d'attribut alors que la chaîne state demeure inchangée. La comparaison texte seule n'assure donc pas l'exhaustivité. Dans le laboratoire read-only, la vérification autoritative refuse désormais toute différence de last_updated ou d'attributs JSON entre le Core officiel et la session WebSocket authentifiée, même si le texte est identique. Le test de régression contrôle le retrait de tous les périphériques Moli et interdit de traiter une lecture périmée comme fraîche. Cette stratégie est **fail-closed**, pas une synchronisation transactionnelle : en cas de course entre get_states et la livraison d'un événement, une nouvelle souscription et un snapshot sont nécessaires. La publication native des attributs comme points Moli typés et la reconnexion automatique demeurent à développer. Ne pas compter cette étape comme un gate de production sans CI au SHA exact.
