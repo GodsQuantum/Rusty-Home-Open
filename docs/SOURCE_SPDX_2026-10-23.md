@@ -3,7 +3,7 @@
 This public artifact is an SPDX 2.3 **source dependency graph**, generated
 deterministically from locked Cargo metadata. It enumerates **226 packages**
 including eight workspace packages, 214 registry crates, four Git sources,
-and their 522 dependency/DESCRIBES relationships across all targets.
+and their 524 dependency/DESCRIBES relationships across all targets.
 
 Artifact: [SPDX 2.3 JSON](../audits/CARGO_SOURCE_SPDX_2026-10-23.json).
 
@@ -40,3 +40,5 @@ firmware licenses, and an externally reviewed signed SBOM for actual release
 binaries. Rusty Home remains NOT_PRODUCTION_READY.
 
 **Inventory refreshed 25 October 2026** after adding the native read-only official-format HAOS backup parser (tar/flate2 dependency closure). Source SPDX metadata is deterministic; signed binary SBOM and legal clearance remain pending.
+
+**Refreshed 25 October 2026:** P8ac adds existing locked nix/sha2 dependencies to the native Hub; graph +2 edges, package count unchanged. Not a binary SBOM or legal clearance.

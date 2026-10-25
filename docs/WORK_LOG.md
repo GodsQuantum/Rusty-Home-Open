@@ -1,5 +1,12 @@
 # Rusty Home — journal de développement et de certification
 
+## 2026-10-25 — P8ac official HAOS guest from native Rust (CI pending)
+
+- New capability: a real Rust process orchestrates official HAOS QEMU KVM boot with pinned image digest, no original image writes, fixed machine args, no radio passthrough, bounded cleanup. Guest still runs original Core/Supervisor/Apps; this is not a native Rust replacement of their functions.
+- Isolated GitHub QEMU lab needed at exact source SHA. Detecting the official HAOS login console is an OS boot proof, NOT evidence that Core and Apps are healthy.
+- Reuse real HAOS backup/import/rollback P8p-P8ab proofs. Production remains 0/15; no family HAOS touched.
+
+
 ## 2026-10-25 — P8ab, reversible whole-archive escrow between actual HAOS VMs (lab verified)
 
 - New native Rust opaque, content-addressed and fsynced private HAOS archive escrow; never parses secrets, preserves all bytes including encrypted payload, hashes on ingest/export and denies symlinks, corrupt blobs, weak file permissions and overwrite.
