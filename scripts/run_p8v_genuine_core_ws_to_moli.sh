@@ -62,7 +62,7 @@ for _ in $(seq 1 100); do
   sleep 1
 done
 [[ "$READY" == 1 ]] || { echo "Official Core WebSocket readiness timeout" >&2; exit 1; }
-[[ -s "$TMP/config/.storage/core.entity_registry" && -s "$TMP/config/p8v-token" && -s "$TMP/config/p8v-entity-id" ]]
+[[ -s "$TMP/config/.storage/core.entity_registry" && -s "$TMP/config/p8v-token" && -s "$TMP/config/p8v-entity-id" && -s "$TMP/config/p8w-auth-denied" ]]
 REGISTRY="$TMP/config/.storage/core.entity_registry"
 STAGED="$("$ROOT/target/debug/ha_registry_stager" --lab-readonly "$STORE" stage "$REGISTRY")"
 SHA="$(printf '%s' "$STAGED" | python3 -c 'import json,sys; d=json.load(sys.stdin);assert d["entities"]>=1 and d["read_only"] and not d["production_ready"];print(d["sha256"])')"
@@ -86,12 +86,13 @@ RESULT="$(docker run --rm --network "container:$CONTAINER" \
       ENTITY="$(cat /config/p8v-entity-id)"
       exec /lab/hars-native-kernel --lab-ha-ws-to-moli \
         "/lab/runtime/$HARS_LAB_STORE" \
-        ws://127.0.0.1:8123/api/websocket "$ENTITY" on 1
+        ws://127.0.0.1:8123/api/websocket "$ENTITY" on 8
     ')"
-printf '%s' "$RESULT" | python3 -c 'import json,sys; d=json.load(sys.stdin); assert d["source"]=="loopback_hass_rs" and d["states_verified"]==1 and d["changes_observed"]>=1 and d["requested_state_matched"] and d["read_only"] and not d["production_ready"]'
+printf '%s' "$RESULT" | python3 -c 'import json,sys; d=json.load(sys.stdin); assert d["source"]=="loopback_hass_rs" and d["states_verified"]==1 and d["changes_observed"]>=8 and d["requested_state_matched"] and d["read_only"] and not d["production_ready"]'
 "$ROOT/target/debug/ha_registry_stager" --lab-readonly "$STORE" rollback "$SHA" >/dev/null
 STATUS="$("$ROOT/target/debug/ha_registry_stager" --lab-readonly "$STORE" status | python3 -c 'import json,sys; print(int(json.load(sys.stdin)["active"] is None))')"
 test "$STATUS" == 1
 touch "$TMP/config/p8v-stop"
+echo P8W_CORE_AUTHENTICATED_WS_8_UPDATES_AND_INVALID_LOGIN_DENIED_PASS
 echo P8V_GENUINE_OFFICIAL_CORE_WEBSOCKET_AUTH_TO_ACTUAL_RUST_MOLI_PASS
 echo P8V_GENUINE_CORE_TO_RUST_ROLLBACK_PASS

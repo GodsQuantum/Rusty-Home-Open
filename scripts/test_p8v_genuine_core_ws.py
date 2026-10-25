@@ -62,6 +62,18 @@ async def main():
             client_id="http://localhost/p8v-offline-only")
         access=hass.auth.async_create_access_token(refresh)
         assert isinstance(access,str) and len(access)>16
+        # Negative authentication on the REAL Core websocket, not a mock.
+        # No household token and no unauthenticated service permissions.
+        from aiohttp import ClientSession, ClientTimeout
+        async with ClientSession(timeout=ClientTimeout(total=8)) as client:
+            async with client.ws_connect("http://127.0.0.1:8123/api/websocket") as ws:
+                challenge=await asyncio.wait_for(ws.receive_json(),6)
+                assert challenge["type"]=="auth_required",challenge
+                await ws.send_json({"type":"auth","access_token":"p8w-invalid-fictional-token"})
+                denied=await asyncio.wait_for(ws.receive_json(),6)
+                assert denied["type"]=="auth_invalid",denied
+        (ROOT/"p8w-auth-denied").write_text("yes",encoding="utf-8")
+        (ROOT/"p8w-auth-denied").chmod(0o600)
         # Genuine Core Registry Storage schedules a save; do not forge format.
         await asyncio.sleep(12)
         saved=json.loads(ROOT.joinpath(".storage/core.entity_registry").read_bytes())

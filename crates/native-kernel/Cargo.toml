@@ -9,6 +9,7 @@ description = "Standalone Rust-native synthetic home automation integration mile
 [dependencies]
 hars-interop-moli = { path = "../interop-moli" }
 hars-ha-compat = { path = "../ha-compat" }
+chrono = "0.4"
 hass-rs = "=0.5.0"
 moli-core = { git = "https://github.com/rudy-io/moli-os.git", rev = "d54c3de46aa453691f0c96ddc42e853a8a964178" }
 moli-runtime = { git = "https://github.com/rudy-io/moli-os.git", rev = "d54c3de46aa453691f0c96ddc42e853a8a964178" }
