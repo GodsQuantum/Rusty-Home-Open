@@ -12,7 +12,9 @@ BIN="$ROOT/target/debug/oci_app_manager_lab"
 test -x "$BIN"
 QD="$HOME/.config/containers/systemd"
 test ! -e "$QD/rh-oci-registry.container"
+test ! -e "$QD/rh-oci-registry-restore.container"
 cleanup() {
+  HARS_DISPOSABLE_OCI_LAB=1 "$BIN" --remove-lab oci-registry-restore >/dev/null 2>&1 || true
   HARS_DISPOSABLE_OCI_LAB=1 "$BIN" --remove-lab oci-registry >/dev/null 2>&1 || true
 }
 trap cleanup EXIT
@@ -45,6 +47,8 @@ HARS_DISPOSABLE_OCI_LAB=1 "$BIN" --start-lab oci-registry
 python3 scripts/p8aw_registry_http_proof.py --verify
 podman volume exists rh-oci-registry-data
 echo P8AW_ACTUAL_DOCKER_REGISTRY_BLOB_SURVIVES_RUST_APP_RESTART_PASS
+
+source scripts/test_p8ax_registry_independent_restore.sh
 
 # Safety: path traversal and Podman system directory overrides are rejected
 # before application descriptors are created.

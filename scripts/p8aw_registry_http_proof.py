@@ -7,8 +7,16 @@ import urllib.error
 import urllib.parse
 import urllib.request
 
-BASE = "http://127.0.0.1:18884"
-BLOB = b"rusty-home-generic-app-registry-blob-20261026"
+# Operator-selected LOCAL lab ports only. No outbound/external endpoints.
+import os
+PORT = os.environ.get("HARS_REGISTRY_LAB_PORT", "18884")
+assert PORT in ("18884", "18885")
+BASE = "http://127.0.0.1:" + PORT
+BLOB = (
+    b"rusty-home-after-backup-blob-20261026"
+    if sys.argv[1:] in (["--upload-later"], ["--verify-later-absent"])
+    else b"rusty-home-generic-app-registry-blob-20261026"
+)
 DIGEST = "sha256:" + hashlib.sha256(BLOB).hexdigest()
 TARGET = BASE + "/v2/rusty-home-test/blobs/" + DIGEST
 
@@ -34,13 +42,23 @@ for attempt in range(80):
 else:
     raise SystemExit("Official Registry OCI App failed to become ready")
 
-if sys.argv[1:] == ["--upload"]:
+if sys.argv[1:] == ["--verify-later-absent"]:
+    # A volume restored from an older checkpoint MUST NOT contain a blob
+    # committed to the source after export, even if its digest is known.
+    try:
+        with request(TARGET):
+            raise AssertionError("Restored Registry leaked post-backup blob")
+    except urllib.error.HTTPError as exc:
+        assert exc.code == 404, exc.code
+    print("P8AX_RESTORED_REGISTRY_POST_CHECKPOINT_BLOB_ABSENT_PASS")
+    raise SystemExit(0)
+if sys.argv[1:] in (["--upload"], ["--upload-later"]):
     with request(BASE+"/v2/rusty-home-test/blobs/uploads/",method="POST",data=b"") as res:
         assert res.status==202,res.status
         location=res.headers["Location"]
     url=urllib.parse.urljoin(BASE,location)
     parts=urllib.parse.urlsplit(url)
-    assert parts.scheme=="http" and parts.netloc=="127.0.0.1:18884"
+    assert parts.scheme=="http" and parts.netloc=="127.0.0.1:"+PORT
     assert parts.path.startswith("/v2/rusty-home-test/blobs/uploads/")
     sep="&" if parts.query else "?"
     with request(url+sep+urllib.parse.urlencode({"digest":DIGEST}),method="PUT",data=BLOB) as res:
