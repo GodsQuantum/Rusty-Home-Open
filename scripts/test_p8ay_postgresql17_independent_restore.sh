@@ -72,7 +72,8 @@ podman volume export --output "$ARCHIVE" "$orig_vol"
 chmod 0600 "$ARCHIVE"
 test "$(stat -c %a "$ARCHIVE")" = 600
 test -s "$ARCHIVE"
-tar -tf "$ARCHIVE" | grep -Eq '(^|/)PG_VERSION$'
+tar -tf "$ARCHIVE" > "$P8AY_TMP/tar-contents.txt"
+grep -Eq '(^|/)PG_VERSION$' "$P8AY_TMP/tar-contents.txt"
 CHECKSUM="$(sha256sum "$ARCHIVE" | cut -d' ' -f1)"
 [[ "$CHECKSUM" =~ ^[0-9a-f]{64}$ ]]
 echo "$CHECKSUM  $ARCHIVE" | sha256sum -c
