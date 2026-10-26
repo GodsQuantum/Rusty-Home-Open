@@ -67,13 +67,36 @@ fn run() -> Result<()> {
             let source = hars_interop_moli::ha_backup_import::registry_from_unprotected_backup(
                 Path::new(&path),
             )?;
-            let stage = db.stage(&source.raw)?;
+            let (stage, automation) = db.stage_backup_source(
+                &source.raw,
+                source
+                    .automations_yaml
+                    .as_ref()
+                    .map(|_| source.archive_sha256.as_str()),
+                source.automations_yaml.as_deref(),
+            )?;
             serde_json::json!({"action":"stage_official_style_unprotected_backup",
+                "opaque_automations_inactive": automation.is_some(),
+                "automation_source_sha256": automation.as_ref().map(|x| x.automation_sha256.as_str()),
+                "automation_source_bytes": automation.as_ref().map(|x| x.bytes).unwrap_or(0),
                 "sha256":stage.batch_sha256,"archive_sha256":source.archive_sha256,
                 "entities":stage.entity_count,"stable_identities":stage.stable_count,
                 "read_only":true,"activated":false,"integrations_migrated":false,
                 "automations_migrated":false,"apps_migrated":false,
                 "production_ready":false})
+        }
+        "automation-source-status" => {
+            let archive = args
+                .next()
+                .ok_or_else(|| anyhow::anyhow!("missing archive digest"))?;
+            if args.next().is_some() {
+                bail!("unexpected arguments")
+            }
+            let result = db.read_backup_automations(&archive)?;
+            serde_json::json!({"action":"automation_source_status",
+                "source":result.as_ref().map(|x| &x.0),
+                "content_returned":false,
+                "actions_executable":false,"production_ready":false})
         }
         "escrow-ingest" => {
             let source = args

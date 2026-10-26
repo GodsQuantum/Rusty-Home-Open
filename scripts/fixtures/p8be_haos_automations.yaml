@@ -1,0 +1,5 @@
+- id: "p8be_inert_automation"
+  alias: "Synthetic lab automation - not enabled"
+  initial_state: false
+  trigger: []
+  action: []

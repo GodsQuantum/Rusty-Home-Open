@@ -20,6 +20,7 @@ const MAX_OUTER_BYTES: u64 = 1_073_741_824;
 const MAX_PART_BYTES: u64 = 134_217_728;
 const MAX_INNER_TOTAL: u64 = 536_870_912;
 const MAX_REGISTRY_BYTES: u64 = 25_165_824;
+const MAX_AUTOMATIONS_BYTES: u64 = 4 * 1024 * 1024;
 const MAX_MANIFEST_BYTES: u64 = 1_048_576;
 const MAX_OUTER_ENTRIES: usize = 25_000;
 const MAX_INNER_ENTRIES: usize = 50_000;
@@ -66,6 +67,9 @@ fn bounded_read<R: Read>(stream: &mut R, max: u64) -> Result<Vec<u8>> {
 pub struct SourceRegistry {
     pub raw: Vec<u8>,
     pub archive_sha256: String,
+    /// Uninterpreted original HA automations, never compiled or executed.
+    /// May contain sensitive user configuration: never print to stdout/logs.
+    pub automations_yaml: Option<Vec<u8>>,
 }
 
 /// Read a source archive without writing extracted secrets or following links.
@@ -156,6 +160,7 @@ pub fn registry_from_unprotected_backup(source: &Path) -> Result<SourceRegistry>
     let mut nested = Archive::new(bounded);
     let mut inner_seen = BTreeSet::new();
     let mut registry = None;
+    let mut automations = None;
     let mut declared_total = 0u64;
     for (i, entry) in nested.entries()?.enumerate() {
         if i >= MAX_INNER_ENTRIES {
@@ -188,6 +193,17 @@ pub fn registry_from_unprotected_backup(source: &Path) -> Result<SourceRegistry>
             }
             registry = Some(bounded_read(&mut entry, MAX_REGISTRY_BYTES)?);
         }
+        if (name == "data/automations.yaml" || name == "automations.yaml") && kind.is_file() {
+            if automations.is_some() {
+                bail!("conflicting Core automation paths in backup")
+            }
+            let bytes = bounded_read(&mut entry, MAX_AUTOMATIONS_BYTES)?;
+            if bytes.is_empty() || std::str::from_utf8(&bytes).is_err() {
+                bail!("invalid bounded automation source")
+            }
+            // Byte-exact custody only; untrusted YAML is NEVER run or interpreted.
+            automations = Some(bytes);
+        }
     }
     // Reading tar entries stops at the tar end-of-archive marker. Consume
     // the remaining gzip stream to its CRC/footer, while rejecting nonzero
@@ -214,5 +230,6 @@ pub fn registry_from_unprotected_backup(source: &Path) -> Result<SourceRegistry>
     Ok(SourceRegistry {
         raw,
         archive_sha256: hash,
+        automations_yaml: automations,
     })
 }

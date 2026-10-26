@@ -19,6 +19,12 @@ use std::{
 };
 const BATCHES: TableDefinition<&str, &str> = TableDefinition::new("registry_stage_batches_v1");
 const CONTROL: TableDefinition<&str, &str> = TableDefinition::new("registry_stage_control_v1");
+const AUTOMATION_SOURCE: TableDefinition<&str, &[u8]> =
+    TableDefinition::new("ha_automation_opaque_source_v1");
+const AUTOMATION_BINDING: TableDefinition<&str, &str> =
+    TableDefinition::new("ha_automation_source_binding_v1");
+const MAX_AUTOMATION_SOURCE: usize = 4 * 1024 * 1024;
+
 const MAX_EXPORT: usize = 24 * 1024 * 1024;
 const MAX_ENTITIES: usize = 50000;
 
@@ -324,6 +330,16 @@ pub fn parse_export(raw: &[u8]) -> Result<Stage> {
     })
 }
 
+/// Provenance of original, unexecuted Home Assistant automation YAML.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct AutomationSourceReceipt {
+    pub archive_sha256: String,
+    pub registry_sha256: String,
+    pub automation_sha256: String,
+    pub bytes: usize,
+    pub inactive: bool,
+}
+
 pub struct RegistryStager {
     db: Database,
 }
@@ -355,13 +371,50 @@ impl RegistryStager {
         {
             let _ = tx.open_table(BATCHES)?;
             let _ = tx.open_table(CONTROL)?;
+            let _ = tx.open_table(AUTOMATION_SOURCE)?;
+            let _ = tx.open_table(AUTOMATION_BINDING)?;
         }
         tx.commit()?;
         File::open(dir)?.sync_all()?;
         Ok(Self { db })
     }
     pub fn stage(&self, raw: &[u8]) -> Result<Stage> {
-        let proposal = parse_export(raw)?;
+        Ok(self.stage_backup_source(raw, None, None)?.0)
+    }
+
+    /// Atomically stage entity identities and an optional byte-exact YAML
+    /// source in the EXISTING owner-private redb. No automation execution,
+    /// service call, YAML-to-native translation or permission escalation.
+    pub fn stage_backup_source(
+        &self,
+        raw_registry: &[u8],
+        archive_sha256: Option<&str>,
+        automations_yaml: Option<&[u8]>,
+    ) -> Result<(Stage, Option<AutomationSourceReceipt>)> {
+        let proposal = parse_export(raw_registry)?;
+        if archive_sha256.is_some() != automations_yaml.is_some() {
+            bail!("automation archive binding missing");
+        }
+        let receipt = match (archive_sha256, automations_yaml) {
+            (Some(archive), Some(bytes)) => {
+                if !is_digest(archive)
+                    || bytes.is_empty()
+                    || bytes.len() > MAX_AUTOMATION_SOURCE
+                    || std::str::from_utf8(bytes).is_err()
+                {
+                    bail!("invalid automation source or archive identity")
+                }
+                Some(AutomationSourceReceipt {
+                    archive_sha256: archive.to_owned(),
+                    registry_sha256: proposal.batch_sha256.clone(),
+                    automation_sha256: hex::encode(Sha256::digest(bytes)),
+                    bytes: bytes.len(),
+                    inactive: true,
+                })
+            }
+            (None, None) => None,
+            _ => bail!("invalid automation source"),
+        };
         let text = serde_json::to_string(&proposal)?;
         let mut tx = self.db.begin_write()?;
         tx.set_durability(Durability::Immediate)?;
@@ -372,13 +425,85 @@ impl RegistryStager {
                 if old.value() != text {
                     bail!("digest conflicts with an earlier batch")
                 }
-                return Ok(proposal);
+            } else {
+                table.insert(proposal.batch_sha256.as_str(), text.as_str())?;
             }
-            table.insert(proposal.batch_sha256.as_str(), text.as_str())?;
+        }
+        if let (Some(receipt), Some(bytes)) = (receipt.as_ref(), automations_yaml) {
+            let receipt_json = serde_json::to_string(receipt)?;
+            {
+                let mut bindings = tx.open_table(AUTOMATION_BINDING)?;
+                if let Some(prior) = bindings.get(receipt.archive_sha256.as_str())? {
+                    if prior.value() != receipt_json {
+                        bail!("archive automation binding conflict")
+                    }
+                } else {
+                    bindings.insert(receipt.archive_sha256.as_str(), receipt_json.as_str())?;
+                }
+            }
+            {
+                let mut source = tx.open_table(AUTOMATION_SOURCE)?;
+                if let Some(prior) = source.get(receipt.archive_sha256.as_str())? {
+                    if prior.value() != bytes {
+                        bail!("archive automation source mismatch")
+                    }
+                } else {
+                    source.insert(receipt.archive_sha256.as_str(), bytes)?;
+                }
+            }
         }
         tx.commit()?;
-        Ok(proposal)
+        Ok((proposal, receipt))
     }
+
+    /// Exact private readback for future restore/import; no automatic loading.
+    /// The caller MUST protect returned bytes and must not log them.
+    pub fn read_backup_automations(
+        &self,
+        archive_sha256: &str,
+    ) -> Result<Option<(AutomationSourceReceipt, Vec<u8>)>> {
+        if !is_digest(archive_sha256) {
+            bail!("invalid archive digest")
+        }
+        let tx = self.db.begin_read()?;
+        let bindings = tx.open_table(AUTOMATION_BINDING)?;
+        let Some(binding) = bindings.get(archive_sha256)? else {
+            return Ok(None);
+        };
+        let receipt: AutomationSourceReceipt = serde_json::from_str(binding.value())?;
+        if receipt.archive_sha256 != archive_sha256
+            || !is_digest(&receipt.registry_sha256)
+            || !is_digest(&receipt.automation_sha256)
+            || !receipt.inactive
+            || receipt.bytes == 0
+            || receipt.bytes > MAX_AUTOMATION_SOURCE
+        {
+            bail!("tampered automation source binding")
+        }
+        drop(binding);
+        drop(bindings);
+        let batches = tx.open_table(BATCHES)?;
+        let stored = batches
+            .get(receipt.registry_sha256.as_str())?
+            .ok_or_else(|| anyhow::anyhow!("orphan automation registry"))?;
+        let stage: Stage = serde_json::from_str(stored.value())?;
+        verify_stage(&stage)?;
+        drop(stored);
+        drop(batches);
+        let source = tx.open_table(AUTOMATION_SOURCE)?;
+        let bytes = source
+            .get(archive_sha256)?
+            .ok_or_else(|| anyhow::anyhow!("missing original automation source"))?
+            .value()
+            .to_vec();
+        if bytes.len() != receipt.bytes
+            || hex::encode(Sha256::digest(&bytes)) != receipt.automation_sha256
+        {
+            bail!("automation source checksum mismatch")
+        }
+        Ok(Some((receipt, bytes)))
+    }
+
     /// Read-only SHADOW activation. There are NO driver hooks or service actions.
     /// CAS on the previous batch prevents racing independent operators.
     pub fn activate(&self, batch: &str, expected_previous: Option<&str>) -> Result<()> {
@@ -483,6 +608,84 @@ mod tests {
         json!({"entity_id":id,"platform":"mqtt","unique_id":unique,
             "config_entry_id":"synthetic-entry","disabled_by":null,
             "device_id":"sample","name":null})
+    }
+    #[test]
+    fn private_automation_custody_is_atomic_byte_exact_and_bound_to_registry() {
+        let root = tempfile::tempdir().unwrap();
+        let dir = root.path().join("private");
+        fs::create_dir(&dir).unwrap();
+        fs::set_permissions(&dir, fs::Permissions::from_mode(0o700)).unwrap();
+        let registry = registry(vec![entity("binary_sensor.lab_motion", "lab1")]);
+        let archive = "e".repeat(64);
+        let original = b"- id: lab_one\n  alias: 'template: {{ potentially_sensitive }}'\n";
+        let db = RegistryStager::open(&dir).unwrap();
+        let (batch, receipt) = db
+            .stage_backup_source(&registry, Some(&archive), Some(original))
+            .unwrap();
+        let receipt = receipt.unwrap();
+        assert_eq!(receipt.registry_sha256, batch.batch_sha256);
+        assert_eq!(receipt.bytes, original.len());
+        assert!(receipt.inactive);
+        assert_eq!(
+            db.read_backup_automations(&archive).unwrap().unwrap().1,
+            original
+        );
+        assert!(db.active().unwrap().is_none());
+        assert!(
+            db.stage_backup_source(&registry, Some(&archive), Some(b"modified"))
+                .is_err()
+        );
+        assert_eq!(
+            db.read_backup_automations(&archive).unwrap().unwrap().1,
+            original
+        );
+        assert!(
+            db.stage_backup_source(&registry, Some(&archive), Some(original))
+                .is_ok()
+        );
+        assert!(
+            db.stage_backup_source(&registry, Some(&archive), None)
+                .is_err()
+        );
+        assert!(
+            db.stage_backup_source(&registry, None, Some(original))
+                .is_err()
+        );
+        assert!(
+            db.stage_backup_source(
+                &registry,
+                Some(&"f".repeat(64)),
+                Some(&vec![b'X'; MAX_AUTOMATION_SOURCE + 1])
+            )
+            .is_err()
+        );
+        assert!(
+            db.stage_backup_source(&registry, Some(&"f".repeat(64)), Some(b""))
+                .is_err()
+        );
+        assert!(
+            db.stage_backup_source(&registry, Some(&"f".repeat(64)), Some(&[0xff]))
+                .is_err()
+        );
+        assert!(db.read_backup_automations("../../../etc/passwd").is_err());
+        drop(db);
+        let reopened = RegistryStager::open(&dir).unwrap();
+        assert_eq!(
+            reopened
+                .read_backup_automations(&archive)
+                .unwrap()
+                .unwrap()
+                .1,
+            original
+        );
+        assert_eq!(
+            fs::metadata(dir.join("registry-shadow.redb"))
+                .unwrap()
+                .permissions()
+                .mode()
+                & 0o077,
+            0
+        );
     }
     #[test]
     fn identity_stage_native_projection_matches_existing_moli_adapter() {

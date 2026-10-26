@@ -79,6 +79,18 @@ with tempfile.TemporaryDirectory(prefix="hars-p8aa-real-haos-private-") as tmp:
         assert res.returncode==0,res.stderr
         return json.loads(res.stdout)
     staged=invoke("import-unprotected-backup",archive)
+    # Distinct P8be proof: actual Supervisor must include the exact original
+    # source file, Rust must keep it inactive inside its private durable redb.
+    automation_fixture=(Path(__file__).resolve().parent/"fixtures"/"p8be_haos_automations.yaml").read_bytes()
+    automation_sha=hashlib.sha256(automation_fixture).hexdigest()
+    assert staged["opaque_automations_inactive"] is True
+    assert staged["automation_source_sha256"]==automation_sha
+    assert staged["automation_source_bytes"]==len(automation_fixture)
+    detail=invoke("automation-source-status",manifest["sha256"])
+    assert detail["source"]["automation_sha256"]==automation_sha
+    assert detail["source"]["registry_sha256"]==staged["sha256"]
+    assert detail["source"]["inactive"] is True
+    assert detail["content_returned"] is False and detail["actions_executable"] is False
     assert staged["archive_sha256"]==manifest["sha256"]
     assert staged["entities"]==2 and staged["stable_identities"]==2
     assert staged["read_only"] and not staged["production_ready"]
@@ -90,5 +102,7 @@ with tempfile.TemporaryDirectory(prefix="hars-p8aa-real-haos-private-") as tmp:
     assert invoke("status")["entities"]==2
     assert invoke("rollback",digest)["restored"] is None
     assert invoke("status")["active"] is None
+    assert invoke("automation-source-status",manifest["sha256"])["source"]["automation_sha256"]==automation_sha
+    print("P8BE_REAL_HAOS_SUPERVISOR_AUTOMATIONS_BYTE_EXACT_INACTIVE_PERSISTENCE_PASS")
 print("P8AA_REAL_SUPERVISOR_BACKUP_TO_RUST_DURABLE_ROLLBACK_PASS")
 print("P8AA_REAL_HAOS_DATA_PRESERVED_WITHOUT_HOUSEHOLD_OR_DEPLOYMENT_PASS")
