@@ -81,7 +81,8 @@
       "id": "ha_ws_reconnection",
       "status": "lab_partial",
       "blocked_reason": [
-        "Real isolated Core and bounded WebSocket tests exist; multi-day reconnect, authentication renewal, packet loss, back-pressure and stale state convergence have not been certified."
+        "Real isolated Core and bounded WebSocket tests exist; multi-day reconnect, authentication renewal, packet loss, back-pressure and stale state convergence have not been certified.",
+        "P8bh #139 GH 40340882977 proved one forced revocation, denied invalid Core auth, separate authenticated WebSocket epoch and NEW native Moli Hub in offline genuine Core. Still missing 24-72h outages, token rotation, actual network loss and production recovery."
       ],
       "certification_artifact": null
     },
@@ -132,7 +133,8 @@
       "id": "security_stress_fuzz",
       "status": "lab_partial",
       "blocked_reason": [
-        "Four genuine production Rust surfaces, including seven-action App preflight, passed sanitizer-instrumented pinned libFuzzer smoke (run 40026397117); not a complete security audit. Still missing independent penetration tests, cross-service attacker modeling, privilege-escalation review, broad fuzz coverage, prolonged stress and remediation retests."
+        "Four genuine production Rust surfaces, including seven-action App preflight, passed sanitizer-instrumented pinned libFuzzer smoke (run 40026397117); not a complete security audit. Still missing independent penetration tests, cross-service attacker modeling, privilege-escalation review, broad fuzz coverage, prolonged stress and remediation retests.",
+        "P15 #140 GH 40342730820 proved fifth libFuzzer+AddressSanitizer target on actual unprotected HAOS tar importer: 263654 cases/46s, no reported failure. Extended job 40343956190 was dispatched, pending verified completion. Independent pentest, binary/app privilege assessment and multi-day soak remain."
       ],
       "certification_artifact": null
     }

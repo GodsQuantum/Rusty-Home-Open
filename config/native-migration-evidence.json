@@ -91,6 +91,18 @@
       "status": "verified_in_pinned_offline_core",
       "claim": "Pinned Core transmitted at least 8 WS events and rejected a bad token; Rust invalidates divergent Moli state.",
       "scope_limit": "Checks current text-state consistency only; no attribute-event exactly-once proof, durable production supervision, or cutover."
+    },
+    {
+      "id": "official-core-ws-native-reauth",
+      "pr": 139,
+      "head_sha": "83b90ab141ffe79af09e08915281afc44f9078f6",
+      "merge_sha": "282875112efa332fccd440534dd45f7d3c53d163",
+      "run_url": "https://github.com/GodsQuantum/Rusty-Home-Open/actions/runs/40340882977",
+      "source_file": "scripts/run_p8v_genuine_core_ws_to_moli.sh",
+      "marker": "P8BH_REAL_CORE_WS_REVOKE_BAD_AUTH_NEW_EPOCH_NATIVE_HUB_PASS",
+      "status": "verified_in_pinned_offline_core",
+      "claim": "Pinned genuine Core 2026.10.2 authenticated WebSocket native Moli verified, then revoked, refused invalid token, reauthenticated with a new generation and a fresh verified native Hub.",
+      "scope_limit": "Disposable Docker network-none Core only; explicit revocation rather than a prolonged network failure, no credential renewal, household access, physical radio or production certification."
     }
   ]
 }
