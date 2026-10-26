@@ -282,3 +282,14 @@ and uninstalls, without changing the generic Rust manager's implementation.
 This does NOT establish arbitrary third-party App manifest/secret/device
 configuration parity, true HA Supervisor App Store compatibility, whole-home
 rollback or hardware radios. 0/15 production gates.
+
+## P8aw — arbitrary safe OCI app data target, real third workload (CI pending)
+
+Beyond official Redis and Memcached runtime conformance, native Rust can
+compile a generic Podman named volume to a strictly validated absolute
+container destination without mounting arbitrary host paths. A genuine
+CNCF Docker Distribution 3.1.2 rootless HTTP registry must pass artifact
+upload and GET on private 127.0.0.1 with volume target /var/lib/registry
+and data intact after separate systemd stop/start. This is a real workload
+test of native portable storage and HTTP service, not arbitrary HAOS Add-on
+configuration/permissions parity, production signing or security review.
