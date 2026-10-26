@@ -7,6 +7,7 @@ use sha2::{Digest, Sha256};
 use std::{
     fs::{File, OpenOptions},
     io::{Read, Write},
+    net::{SocketAddr, TcpStream},
     os::unix::fs::{FileTypeExt, MetadataExt, OpenOptionsExt, PermissionsExt},
     os::unix::net::UnixStream,
     path::{Path, PathBuf},
@@ -427,6 +428,8 @@ pub struct GuestServiceOutcome {
     pub guest_process_reaped: bool,
     pub base_image_unchanged: bool,
     pub acpi_shutdown_requested: bool,
+    pub loopback_frontend_forward_requested: bool,
+    pub loopback_listener_reached: bool,
 }
 /// The *host-side* service runs until SIGTERM/SIGINT or unexpected QEMU exit.
 /// A genuine OS/systemd manager owns the Rust process. QEMU runs without
@@ -434,6 +437,21 @@ pub struct GuestServiceOutcome {
 pub fn run_guarded_guest_service_lab(
     spec: &GuestSpec,
     private_dir: &Path,
+) -> Result<GuestServiceOutcome, GuestError> {
+    run_guest_service_inner_lab(spec, private_dir, false)
+}
+/// Optional on-host UI visibility, loopback only. HAOS 2026.8+ on HAOS
+/// uses guest TCP/80, not 8123. Core itself owns authentication/OAuth.
+pub fn run_guarded_guest_service_http_loopback_lab(
+    spec: &GuestSpec,
+    private_dir: &Path,
+) -> Result<GuestServiceOutcome, GuestError> {
+    run_guest_service_inner_lab(spec, private_dir, true)
+}
+fn run_guest_service_inner_lab(
+    spec: &GuestSpec,
+    private_dir: &Path,
+    local_core_ui: bool,
 ) -> Result<GuestServiceOutcome, GuestError> {
     if std::env::var("HARS_DISPOSABLE_KVM_LAB").as_deref() != Ok("1") {
         return Err(GuestError::InvalidArguments);
@@ -463,6 +481,15 @@ pub fn run_guarded_guest_service_lab(
         .position(|p| p == "-serial")
         .ok_or(GuestError::InvalidArguments)?;
     args[pos + 1] = "null".into();
+    if local_core_ui {
+        // Official QEMU -nic hostfwd binds ONLY the local IPv4 loopback.
+        // No public listener, host filesystem mapping or guest CLI token.
+        let nic = args
+            .iter()
+            .position(|p| p == "-nic")
+            .ok_or(GuestError::InvalidArguments)?;
+        args[nic + 1] = "user,model=virtio-net-pci,hostfwd=tcp:127.0.0.1:18180-:80".into();
+    }
     args.extend([
         "-qmp".into(),
         format!("unix:{},server=on,wait=off", qmp.display()),
@@ -481,8 +508,14 @@ pub fn run_guarded_guest_service_lab(
         .filter(|n| (1..=120).contains(n))
         .map(Duration::from_secs);
     let service_started = Instant::now();
+    let mut loopback_listener_reached = false;
     let mut unexpectedly_exited = false;
     while !SERVICE_STOP.load(Ordering::SeqCst) {
+        if local_core_ui && !loopback_listener_reached {
+            let local = SocketAddr::from(([127, 0, 0, 1], 18180));
+            loopback_listener_reached =
+                TcpStream::connect_timeout(&local, Duration::from_millis(120)).is_ok();
+        }
         if lab_stop_after.is_some_and(|limit| service_started.elapsed() >= limit) {
             SERVICE_STOP.store(true, Ordering::SeqCst);
         }
@@ -534,6 +567,8 @@ pub fn run_guarded_guest_service_lab(
         guest_process_reaped: true,
         base_image_unchanged: true,
         acpi_shutdown_requested: acpi,
+        loopback_frontend_forward_requested: local_core_ui,
+        loopback_listener_reached,
     })
 }
 
@@ -854,6 +889,13 @@ mod tests {
         assert!(verified_existing_overlay(&spec, &private).is_err());
     }
     #[test]
+    fn haos_core_http_loopback_port_is_fixed_and_not_externally_exposed() {
+        let nic = "user,model=virtio-net-pci,hostfwd=tcp:127.0.0.1:18180-:80";
+        assert!(nic.contains("127.0.0.1:18180-:80"));
+        assert!(!nic.contains("0.0.0.0"));
+        assert!(!nic.contains("hostfwd=tcp::"));
+    }
+    #[test]
     fn service_does_not_accept_external_haos_vm_or_radio_without_lab_opt_in() {
         // Declared lab-only mode prevents silently installing this launcher
         // against a host's existing family HAOS VM.
@@ -861,7 +903,7 @@ mod tests {
             std::env::var("HARS_NONEXISTENT_STRICT_LAB_TEST"),
             Err(std::env::VarError::NotPresent)
         ));
-        assert_eq!(std::mem::size_of::<GuestServiceOutcome>(), 3);
+        assert_eq!(std::mem::size_of::<GuestServiceOutcome>(), 5);
     }
     #[test]
     fn persistent_guest_arg_list_uses_cow_not_unsafe_ephemeral_switches() {

@@ -1,5 +1,10 @@
 # Rusty Home — journal de développement et de certification
 
+## 2026-10-26 — P8ah native Rust HAOS frontend loopback forwarding (CI pending)
+
+Rust guest host now optionally exposes only QEMU localhost 127.0.0.1:18180 forwarding to official HAOS guest TCP/80, with a real host TCP listener probe. The default lab mode still exposes no ports; no public binding, HA Core token or radio. Genuine KVM CI required before certification; login UI health and production are not yet proven.
+
+
 ## 2026-10-26 — P8ag continuous Rust-managed HAOS guest (CI pending)
 
 New Rust guest host process lifecycle, existing COW disk, private QMP, bounded shutdown and QEMU reap. Exact official HAOS KVM CI pending. No installation to the family system, no radio ownership and no production gate certified.

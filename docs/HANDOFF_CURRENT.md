@@ -90,6 +90,10 @@ PR #103 P8ac real serial boot 18/18, run 40243098816; PR #104 P8ad genuine offic
 
 Branch feat/native-guest-service-lifecycle-20261026, isolated worktree Rusty-Home-Lifecycle-20261026 from main 7957fce. New Rust guest host service and executable haos_guest_service_lab; opt-in laboratory QMP and lifecycle CI .github/workflows/p8ag-guest-service.yml. Prior P8ac-P8af proofs pinned and merged; don't repeat. No real home cutover or deployment, 0/15 production. Validate exact SHA in CI before marking verified.
 
+## P8ah — loopback-only Rust guest HAOS frontend transport (26 October)
+
+PR #108 P8ag genuine Rust service lifecycle passed 14/14, merged 0d943526a1e62f91658d92db1b88aea947958a7c. New branch feat/haos-local-core-ui-20261026 in worktree Rusty-Home-Loopback-20261026 exposes only optional fixed loopback QEMU host TCP/18180 to guest HAOS TCP/80, lab-only. Genuine P8ah KVM CI required; its TCP-listener proof does NOT yet demonstrate complete UI/API/Apps availability. No family HAOS deployment, 0/15 gates.
+
 ## Reprise obligatoire
 
 1. Lire ces sources, vérifier le SHA actuel de GitHub, les PR ouvertes, les preuves et la CI avant de relancer des travaux.
