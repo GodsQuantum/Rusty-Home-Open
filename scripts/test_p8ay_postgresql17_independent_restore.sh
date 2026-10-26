@@ -116,6 +116,53 @@ test "$(sql rh-pg-sql-restore 'SELECT payload FROM rusty_p8ay_checkpoint WHERE i
 test "$(sql rh-pg-sql-proof 'SELECT count(*) FROM rusty_p8ay_checkpoint;')" = 2
 echo P8AY_THIRD_DISTINCT_REAL_PG17_APP_SQL_ROLLBACK_POINT_IN_TIME_PASS
 
+
+# P8ca NEW evidence (not another P8ay snapshot): actual SIGKILL during an
+# OPEN PostgreSQL transaction. Native Quadlet systemd must restart the
+# immutable upstream image and PostgreSQL must replay its WAL, preserving
+# committed data and rolling back the unfinished transaction.
+sql rh-pg-sql-proof "INSERT INTO rusty_p8ay_checkpoint VALUES (3,'committed-before-sigkill');"
+test "$(sql rh-pg-sql-proof 'SELECT count(*) FROM rusty_p8ay_checkpoint;')" = 3
+(
+    podman exec rh-pg-sql-proof psql --no-psqlrc -X -q -t -A \
+        --set ON_ERROR_STOP=1 -h /var/run/postgresql -U postgres -d postgres \
+        -c "BEGIN; INSERT INTO rusty_p8ay_checkpoint VALUES (4,'must-never-commit'); SELECT pg_sleep(45); COMMIT;"
+) >"$P8AY_TMP/open-transaction.log" 2>&1 &
+open_txn_pid=$!
+txn_running=0
+for _ in $(seq 1 80); do
+    # Check from a SECOND real PostgreSQL backend; exclude our own query.
+    if [[ "$(sql rh-pg-sql-proof "SELECT count(*) FROM pg_stat_activity WHERE pid <> pg_backend_pid() AND state='active' AND query LIKE '%pg_sleep(45)%';" 2>/dev/null)" == 1 ]]; then
+        txn_running=1
+        break
+    fi
+    sleep 0.1
+done
+test "$txn_running" = 1
+test "$(sql rh-pg-sql-proof "SELECT count(*) FROM rusty_p8ay_checkpoint WHERE id=4;")" = 0
+echo P8CA_REAL_PG17_UNCOMMITTED_TRANSACTION_OPEN_AT_KILL_PASS
+podman kill --signal KILL rh-pg-sql-proof >/dev/null
+if wait "$open_txn_pid"; then
+    echo 'Open transaction unexpectedly completed despite SIGKILL' >&2
+    exit 1
+fi
+echo P8CA_GENUINE_PG17_CONTAINER_SIGKILL_DURING_SQL_TRANSACTION_PASS
+# Quadlet declares Restart=on-failure; this is genuine systemd restart,
+# not an ad-hoc container replacement or a second manually started server.
+ready rh-pg-sql-proof
+test "$(systemctl --user is-active rh-pg-sql-proof.service)" = active
+restart_count="$(systemctl --user show -p NRestarts --value rh-pg-sql-proof.service)"
+[[ "$restart_count" =~ ^[0-9]+$ && "$restart_count" -ge 1 ]]
+test "$(podman inspect rh-pg-sql-proof --format '{{.HostConfig.NetworkMode}}')" = none
+test "$(podman inspect rh-pg-sql-proof --format '{{.HostConfig.ReadonlyRootfs}}')" = true
+test "$(podman inspect rh-pg-sql-proof --format '{{.Config.User}}')" = 70
+test "$(sql rh-pg-sql-proof 'SELECT count(*) FROM rusty_p8ay_checkpoint;')" = 3
+test "$(sql rh-pg-sql-proof 'SELECT payload FROM rusty_p8ay_checkpoint WHERE id=3;')" = committed-before-sigkill
+test "$(sql rh-pg-sql-proof 'SELECT count(*) FROM rusty_p8ay_checkpoint WHERE id=4;')" = 0
+test "$(sql rh-pg-sql-restore 'SELECT count(*) FROM rusty_p8ay_checkpoint;')" = 1
+echo P8CA_REAL_POSTGRESQL_WAL_COMMITTED_DURABLE_UNCOMMITTED_ROLLED_BACK_PASS
+echo P8CA_NATIVE_SYSTEMD_RESTART_OFFLINE_READONLY_ORIGINAL_AND_RESTORE_ISOLATED_PASS
+
 HARS_DISPOSABLE_OCI_LAB=1 "$BIN" --remove-lab "$restore_slug"
 podman volume exists "$restore_vol"
 test "$(sql rh-pg-sql-proof 'SELECT count(*) FROM rusty_p8ay_checkpoint;')" = 2
