@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "verified_as_of": "2026-10-26",
-  "environment": "official pinned HAOS 18.3 QEMU/KVM on isolated disposable GitHub runner; explicitly fictional guest data and no host/USB/radios",
+  "environment": "Official pinned HAOS 18.3 QEMU/KVM on isolated disposable GitHub runners for KVM cases; separate genuine ephemeral Ubuntu Debian/apt packaging tests for P8ak/P8al; never real household/cloud9/radios",
   "cases": [
     {
       "case_id": "p8ac",
@@ -122,7 +122,7 @@
     {
       "case_id": "p8ak",
       "scope": "genuine_native_rust_guest_debian_install_upgrade_downgrade_purge",
-      "status": "VERIFIED_IN_DISPOSABLE_REAL_HAOS_KVM_LAB_ONLY",
+      "status": "VERIFIED_IN_DISPOSABLE_REAL_DEBIAN_SIGNED_APT_LAB_ONLY",
       "pr": 112,
       "feature_head_sha": "e4b14d9206ec273eb5cbde6a5050aff215a5040c",
       "merged_commit_sha": "cae2cde2ce1e08eb86bd5a2b0465212be07845cf",
@@ -137,7 +137,7 @@
     {
       "case_id": "p8al",
       "scope": "genuine_signed_offline_apt_discovers_native_guest_and_denies_tampering",
-      "status": "VERIFIED_IN_DISPOSABLE_REAL_HAOS_KVM_LAB_ONLY",
+      "status": "VERIFIED_IN_DISPOSABLE_REAL_DEBIAN_SIGNED_APT_LAB_ONLY",
       "pr": 113,
       "feature_head_sha": "4cb0c9d946d029c8aee5f95ca583212535a0287a",
       "merged_commit_sha": "a756696b60081d641ad7ec9cf43144f3361a201b",
@@ -148,6 +148,36 @@
       "verified_marker": "P8AL_SIGNED_OFFLINE_APT_DISCOVERS_NATIVE_RUST_GUEST_PASS",
       "github_workflow": ".github/workflows/public-debian-apt.yml",
       "verified_marker_source": "scripts/test_signed_apt_lab.sh"
+    },
+    {
+      "case_id": "p8am",
+      "scope": "real_systemd_qmp_watchdog_and_crash_recovery",
+      "status": "VERIFIED_IN_DISPOSABLE_REAL_HAOS_KVM_LAB_ONLY",
+      "pr": 115,
+      "feature_head_sha": "d5849dd71b4cc36b10f8eefe1a58ab6488a27cdf",
+      "merged_commit_sha": "01265a99a8548274fd454fdc81b5037ff299c60e",
+      "github_actions_run_id": 40261132205,
+      "github_actions_run_url": "https://github.com/GodsQuantum/Rusty-Home-Open/actions/runs/40261132205",
+      "checks_passed": 26,
+      "checks_failed": 0,
+      "verified_marker": "P8AM_GENUINE_SYSTEMD_NOTIFY_QMP_READY_AND_WATCHDOG_BEAT_PASS",
+      "github_workflow": ".github/workflows/p8aj-real-systemd.yml",
+      "verified_marker_source": "scripts/test_p8aj_real_systemd_guest.sh"
+    },
+    {
+      "case_id": "p8an",
+      "scope": "real_systemd_recovers_qemu_sigkill_same_cow",
+      "status": "VERIFIED_IN_DISPOSABLE_REAL_HAOS_KVM_LAB_ONLY",
+      "pr": 116,
+      "feature_head_sha": "092b5dcf5f741ba0e683922476c289ccd3c5cf26",
+      "merged_commit_sha": "ea80ba0e461b4527270b387acd280ef1587b5582",
+      "github_actions_run_id": 40263269849,
+      "github_actions_run_url": "https://github.com/GodsQuantum/Rusty-Home-Open/actions/runs/40263269849",
+      "checks_passed": 11,
+      "checks_failed": 0,
+      "verified_marker": "P8AN_REAL_QEMU_CRASH_SYSTEMD_AUTO_RESTART_SAME_DISK_PASS",
+      "github_workflow": ".github/workflows/p8an-crash-restart.yml",
+      "verified_marker_source": "scripts/test_p8aj_real_systemd_guest.sh"
     }
   ],
   "critical_limits": [
@@ -156,11 +186,11 @@
     "P8ae persistent host guest disk without host service distribution",
     "P8af new Rust manager process reattach but not adoption of a running QEMU process",
     "No real household HAOS migration/cutover, network or radio ownership",
-    "No actual third-party App databases/lifecycle under a Rust host, no 72-hour endurance or independent security review",
     "P8ag-p8aj service lifecycle, localhost frontend and systemd verified only with disposable HAOS/QEMU; not unattended deployment",
     "P8ak native Debian guest package install/update/downgrade/purge verified on disposable Ubuntu, but no cold boot with installed package on persistent physical host",
     "P8al APT metadata signed-by and signature tampering tested with disposable ephemeral GPG key, not a real production signing authority",
-    "No actual generic third-party App orchestration, hardware/radio ownership, real user auth, comprehensive Rust-host cutover, or 72-hour endurance"
+    "P8am/P8an proved systemd watchdog and QEMU SIGKILL recovery only in disposable official HAOS KVM, not persistent physical host boots or HAOS-wide crash-consistent data",
+    "P8ao-P8as limited generic OCI/Podman App labs have actually run Redis, preserved, backed up and independently restored data; no production third-party App catalogue/HA Supervisor parity, no per-user RBAC, hardware radio ownership or 72-hour endurance"
   ],
   "production_release": "NOT_PRODUCTION_READY",
   "total_production_gates": 15,

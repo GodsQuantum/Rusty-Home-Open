@@ -1,0 +1,92 @@
+{
+  "schema_version": 1,
+  "verified_as_of": "2026-10-26",
+  "environment": "disposable Ubuntu 24.04 GitHub runner, genuine rootless Podman 4.9, user systemd and real Redis; no actual household, radios, production secrets or Cloud9",
+  "cases": [
+    {
+      "case_id": "p8ao",
+      "scope": "generic_digest_pinned_rootless_podman_quadlet_generator",
+      "status": "VERIFIED_IN_DISPOSABLE_REAL_ROOTLESS_OCI_APP_LAB_ONLY",
+      "pr": 117,
+      "feature_head_sha": "fe87738ae63b7f7b00f08b0ebe24bab5be7f699c",
+      "merged_commit_sha": "b8d322bc8c37e3c4302f7eb08e45c76dbebccd7b",
+      "github_actions_run_id": 40264974609,
+      "github_actions_run_url": "https://github.com/GodsQuantum/Rusty-Home-Open/actions/runs/40264974609",
+      "checks_passed": 20,
+      "checks_failed": 0,
+      "verified_marker": "P8AO_OFFICIAL_PODMAN_QUADLET_GENERATOR_PASS",
+      "github_workflow": ".github/workflows/p8ao-oci-quadlet.yml",
+      "verified_marker_source": ".github/workflows/p8ao-oci-quadlet.yml"
+    },
+    {
+      "case_id": "p8ap",
+      "scope": "real_rootless_redis_systemd_lifecycle_persistent_data",
+      "status": "VERIFIED_IN_DISPOSABLE_REAL_ROOTLESS_OCI_APP_LAB_ONLY",
+      "pr": 118,
+      "feature_head_sha": "dc5bd1425cdec7c655e96541a34ac04c687e07b5",
+      "merged_commit_sha": "071b85bac4f887843be3a2f47d25e44ddcc03bd1",
+      "github_actions_run_id": 40266019276,
+      "github_actions_run_url": "https://github.com/GodsQuantum/Rusty-Home-Open/actions/runs/40266019276",
+      "checks_passed": 21,
+      "checks_failed": 0,
+      "verified_marker": "P8AP_REAL_ROOTLESS_REDIS_QUADLET_START_STOP_PERSISTENT_DATA_PASS",
+      "github_workflow": ".github/workflows/p8ap-real-oci-app.yml",
+      "verified_marker_source": "scripts/test_p8ap_real_redis_quadlet.sh"
+    },
+    {
+      "case_id": "p8aq",
+      "scope": "real_rootless_redis_volume_backup_tamper_refusal_independent_restore",
+      "status": "VERIFIED_IN_DISPOSABLE_REAL_ROOTLESS_OCI_APP_LAB_ONLY",
+      "pr": 120,
+      "feature_head_sha": "315edc33ae71c172e52ab15bb4c571279f421dd1",
+      "merged_commit_sha": "7cf1d3ad3fb74d9e7d8537f171e500b94d86eac0",
+      "github_actions_run_id": 40290122155,
+      "github_actions_run_url": "https://github.com/GodsQuantum/Rusty-Home-Open/actions/runs/40290122155",
+      "checks_passed": 11,
+      "checks_failed": 0,
+      "verified_marker": "P8AQ_INDEPENDENT_RESTORED_REDIS_DATA_AND_PRIMARY_UNCHANGED_PASS",
+      "github_workflow": ".github/workflows/p8aq-real-oci-restore.yml",
+      "verified_marker_source": "scripts/test_p8ap_real_redis_quadlet.sh"
+    },
+    {
+      "case_id": "p8ar",
+      "scope": "real_native_rust_oci_manager_install_start_stop_remove_preserve_volume",
+      "status": "VERIFIED_IN_DISPOSABLE_REAL_ROOTLESS_OCI_APP_LAB_ONLY",
+      "pr": 121,
+      "feature_head_sha": "44acfc75bd93242622e9d7ebf65deb1385f81283",
+      "merged_commit_sha": "5af8dc1a268c7316bfe99eb50290f94726a57541",
+      "github_actions_run_id": 40291069681,
+      "github_actions_run_url": "https://github.com/GodsQuantum/Rusty-Home-Open/actions/runs/40291069681",
+      "checks_passed": 23,
+      "checks_failed": 0,
+      "verified_marker": "P8AR_RUST_MANAGER_REMOVE_PRESERVES_USER_APP_VOLUME_PASS",
+      "github_workflow": ".github/workflows/p8ar-real-oci-manager.yml",
+      "verified_marker_source": "scripts/test_p8ar_native_oci_manager.sh"
+    },
+    {
+      "case_id": "p8as",
+      "scope": "real_native_rust_oci_manager_explicit_authenticated_localhost_tcp",
+      "status": "VERIFIED_IN_DISPOSABLE_REAL_ROOTLESS_OCI_APP_LAB_ONLY",
+      "pr": 122,
+      "feature_head_sha": "cddcde82764cac38976e0ee7af7c9b9232103797",
+      "merged_commit_sha": "95123e09ac73d63da28e6106fb63794cc2fa85af",
+      "github_actions_run_id": 40292676656,
+      "github_actions_run_url": "https://github.com/GodsQuantum/Rusty-Home-Open/actions/runs/40292676656",
+      "checks_passed": 24,
+      "checks_failed": 0,
+      "verified_marker": "P8AS_REAL_ROOTLESS_REDIS_LOCALHOST_ONLY_TCP_PASS",
+      "github_workflow": ".github/workflows/p8as-oci-localhost-tcp.yml",
+      "verified_marker_source": "scripts/test_p8ar_native_oci_manager.sh"
+    }
+  ],
+  "production_release": "NOT_PRODUCTION_READY",
+  "total_production_gates": 15,
+  "fully_certified_production_gates": 0,
+  "limitations": [
+    "P8ao is only native unit generator and not proof of a running App; P8ap is first actual running App",
+    "P8aq is one Redis independent volume restore, not all Apps nor transactional HAOS migration",
+    "P8ar requires explicit disposable CI environment, not production operator authentication/RBAC",
+    "P8as 127.0.0.1 ingress is not outbound egress isolation or public ingress authentication",
+    "No universal official HA Supervisor App parity, multi-container orchestration, production signed image upgrade/rollback, 72-hour soak or independent audit"
+  ]
+}

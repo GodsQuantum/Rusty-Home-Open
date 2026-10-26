@@ -77,3 +77,30 @@ P8ac PR #103, official HAOS serial boot via Rust process, GitHub 40243098816 (18
 - P8al PR #113: 9/9 exact feature-head GitHub CI, run 40257162323; offline signed APT index and tamper refusal.
 
 All six are MERGED, latest main a756696b60081d641ad7ec9cf43144f3361a201b. Do NOT rerun as newly unproved work. Machine-readable source config/haos-rust-guest-evidence.json keeps each exact original feature SHA, merge SHA and workflow marker source. P8ag–P8aj official HAOS 18.3 QEMU/KVM is an isolated genuine guest; P8ak real Ubuntu dpkg and P8al cryptographic offline APT use disposable CI runners. No household deployment, no signed production trust key, no actual App service parity, no physical radios, no whole-host backwards cutover or endurance qualification. Production remains **0/15** fully certified.
+
+
+## Final merged proof ledger P8am–P8as — 26 October 2026
+
+- P8am PR #115: 26/26 checks green at original feature head, GitHub Actions run 40261132205; real systemd QMP READY and watchdog on official HAOS KVM.
+- P8an PR #116: 11/11 checks green at original feature head, GitHub Actions run 40263269849; real QEMU SIGKILL and automatic systemd service recovery on same HAOS disk.
+- P8ao PR #117: 20/20 checks green at original feature head, GitHub Actions run 40264974609; native Podman Quadlet generator parses two generic digest-pinned OCI Apps.
+- P8ap PR #118: 21/21 checks green at original feature head, GitHub Actions run 40266019276; real rootless Redis OCI App two lifecycle rounds and persistent data.
+- P8aq PR #120: 11/11 checks green at original feature head, GitHub Actions run 40290122155; real Redis volume backup SHA and tampered archive refusal, separate restore.
+- P8ar PR #121: 23/23 checks green at original feature head, GitHub Actions run 40291069681; Rust native manager installs, starts, stops and removes App but retains data.
+- P8as PR #122: 24/24 checks green at original feature head, GitHub Actions run 40292676656; explicit 127.0.0.1 rootless Podman TCP with authenticated Redis PING.
+
+These seven PRs are MERGED, latest base main 95123e09ac73d63da28e6106fb63794cc2fa85af.
+There are now TWO separate machine-readable evidence ledgers:
+config/haos-rust-guest-evidence.json (12 host/packaging cases (10 genuine HAOS/KVM and 2 real Ubuntu DEB/APT cases)
+P8ac–P8an, excluding p8ao onward) and config/native-oci-app-evidence.json
+(5 genuinely running rootless Podman/Redis cases P8ao–P8as). Original PR
+head SHA, GitHub workflow run, merged commit, distinct real marker,
+and exact CI count are pinned and checked on every PR. Do NOT redo
+previous passed stages merely because a later stage is incomplete.
+
+P8as 127.0.0.1-only host INGRESS does not prohibit container outbound
+egress. A real Redis test does not imply general Home Assistant Supervisor
+App/HACS parity, real physical radios, operator-authenticated production
+writes, security/availability endurance, secure signed distribution or a
+complete HAOS→Rust→HAOS household cutover. Product 0/15 fully certified;
+no family HAOS system modified or rebooted.
