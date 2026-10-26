@@ -1,0 +1,47 @@
+# P8aj: opt-in laboratory HAOS host service; NEVER auto-enable on a real HAOS/Cloud9.
+# Requires dedicated rusty-home-lab user + group kvm, pinned source and private qcow2.
+# No [Install] section intentionally. Unit is meant for disposable CI only.
+[Unit]
+Description=Rusty Home supervised official HAOS guest (DISPOSABLE LAB ONLY)
+Documentation=https://github.com/GodsQuantum/Rusty-Home-Open
+ConditionPathExists=/dev/kvm
+ConditionPathExists=/var/lib/rusty-home-lab/haos-base.qcow2
+ConditionPathExists=/var/lib/rusty-home-lab/guest-overlay.qcow2
+After=local-fs.target
+StartLimitIntervalSec=180
+StartLimitBurst=3
+
+[Service]
+Type=exec
+User=rusty-home-lab
+Group=kvm
+Environment=HARS_DISPOSABLE_KVM_LAB=1
+EnvironmentFile=/run/rusty-home-lab/haos-guest.env
+StateDirectory=rusty-home-lab
+StateDirectoryMode=0700
+ExecStart=/usr/local/libexec/rusty-home/haos_guest_service_lab --lab-service-run /usr/bin/qemu-system-x86_64 /usr/share/ovmf/OVMF.fd /var/lib/rusty-home-lab/haos-base.qcow2 ${HAOS_BASE_SHA256} /var/lib/rusty-home-lab
+Restart=on-failure
+RestartSec=10s
+TimeoutStartSec=120s
+TimeoutStopSec=45s
+KillMode=control-group
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+ProtectClock=yes
+ProtectHostname=yes
+RestrictSUIDSGID=yes
+LockPersonality=yes
+PrivateTmp=yes
+UMask=0077
+DevicePolicy=closed
+DeviceAllow=/dev/kvm rw
+ReadWritePaths=/var/lib/rusty-home-lab
+MemoryMax=6G
+TasksMax=256
+
+# No [Install]: intentionally impossible to enable automatically using
+# systemctl enable; explicit CI systemctl start only.

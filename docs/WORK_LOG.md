@@ -1,5 +1,12 @@
 # Rusty Home — journal de développement et de certification
 
+## 2026-10-26 — P8aj genuine systemd start/stop of real HAOS guest (CI pending)
+
+- P8ai #110 genuine Core frontend HTTP 16/16 passed and merged e891401d65d6f954afb809bd7ff9d7312c7b3e7f. Preserve verified proof; don't duplicate.
+- New opt-in sample systemd service, owner-only COW data, dedicated account and KVM sandbox. No Install section, never auto-enable.
+- New real official HAOS 18.3 GitHub workflow tests two actual systemd start/stop cycles, no orphan guest, same disk overlay and pristine pinned backing, no Cloud9 or family touch. Exact SHA CI required. Production 0/15.
+
+
 ## 2026-10-26 — P8ai actual Home Assistant Core frontend through Rust QEMU (CI pending)
 
 Added a native Rust localhost read-only HTTP request to Core through QEMU. New real HAOS 18.3 KVM proof waits up to bounded limit for HTTP success, rather than mistaking P8ah TCP listener availability for Core readiness. Does not authenticate, mutate entities, or expose LAN services. Release 0/15.
