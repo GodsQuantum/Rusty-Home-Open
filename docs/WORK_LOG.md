@@ -409,3 +409,7 @@ New fifth sanitizer target invokes actual bounded Rust HAOS unprotected tar impo
 
 ## 26 October 2026 — P8bh/P15 exact pinned independent lab receipts (0/15 production)
 PR #139 native Core WS authenticated generation recovery, head 83b90ab, merge 2828751, GH real Core run 40340882977, 9/9 CI. PR #140 HAOS full archive import real sanitizer fuzz head 8453d35, merge 016c002, GH run 40342730820, 11/11, 263654 iterations/46s. New fifth fuzz source and immutable fake corpus. Extended five-target 180s GH run 40343956190 started, conclusion pending. Historical proofs kept, no second redundant harness or field machine touched. All production gates stay blocked.
+
+## 26 October — Tokio patch + source/SBOM provenance unblock (independent branch)
+
+Fixed unrelated blocked Dependabot #119 by preserving, not bypassing, its two fail-closed SHA-bound license provenance tests. Tokio 1.54.1 updated Cargo.lock only, and generated SPDX full 227-package graph plus the already pinned six upstream license evidence records were regenerated against exact Cargo.lock bytes. No new external copyright claims; legal compliance and production release still FALSE. Local complete workspace tests, Clippy, public redaction and source license contracts green. Full CI pending on separate branch, concurrent HAOS #142 untouched.
