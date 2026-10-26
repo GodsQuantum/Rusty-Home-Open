@@ -406,3 +406,6 @@ New distinct scenario added to existing official Core (p8v) CI: create authentic
 ## 26 Oct 2026 — P15 archive importer real libFuzzer target in CI
 
 New fifth sanitizer target invokes actual bounded Rust HAOS unprotected tar importer, tests validated original registries and inert automations with five entirely fictional tar seeds (clean, protected, duplicate alias, traversal, malformed UTF-8). Extends existing nightly-2026-10-15 libFuzzer/ASan workflow, 45s PR smoke and 180s scheduled, without touching household or uploading real archives. The root Cargo.lock is unchanged; separate fuzz/Cargo.lock updated. Local compile and corpus checks PASS; awaited GitHub sanitizer CI must be cited before claiming real fuzz pass. Release remains blocked.
+
+## 26 October 2026 — P8bh/P15 exact pinned independent lab receipts (0/15 production)
+PR #139 native Core WS authenticated generation recovery, head 83b90ab, merge 2828751, GH real Core run 40340882977, 9/9 CI. PR #140 HAOS full archive import real sanitizer fuzz head 8453d35, merge 016c002, GH run 40342730820, 11/11, 263654 iterations/46s. New fifth fuzz source and immutable fake corpus. Extended five-target 180s GH run 40343956190 started, conclusion pending. Historical proofs kept, no second redundant harness or field machine touched. All production gates stay blocked.
