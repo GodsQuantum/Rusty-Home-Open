@@ -216,3 +216,11 @@ App/HACS parity, real physical radios, operator-authenticated production
 writes, security/availability endurance, secure signed distribution or a
 complete HAOS→Rust→HAOS household cutover. Product 0/15 fully certified;
 no family HAOS system modified or rebooted.
+
+## 26 October — P8ay OCI lifecycle per-App lock IN PROGRESS
+
+Ownership: SentinelX Cloud9 / LXC700, isolated branch fix/oci-app-lifecycle-lock-20261026, HEAD e5968c2. Last existing P8ar-P8aw genuine Redis/Memcached/Registry lifecycle tests were green; do not repeat them as new certification. New gap found: OCI install, start and stop are not protected by the same existing per-App flock as image switch/rollback/remove, so concurrent commands can race; add install-safe exclusive lock and lock both run-state changes. Preserve App units, data volumes and existing commands; regression test contention on genuine separate processes. No host/HAOS100/production access. Rollback: revert isolated PR; release gates unchanged.
+
+## 26 October P8ay — lifecycle fencing delivered for CI qualification
+
+All native OCI install/start/stop/switch/rollback/remove commands now reuse one persistent owner-private per-App flock. New tests in the existing Redis CI hold that actual inode across separate manager processes and check start/install denial, unchanged unit/data, successful retry, and reuse of same inode after remove/reinstall. DEV: 8/8 targeted Rust binary tests and strict Clippy passed. GitHub independent OCI CI on the new SHA remains required; until then this is NOT production-ready and 0/15 gates.
