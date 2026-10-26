@@ -255,6 +255,18 @@
       "scope": "Rootless official Distribution Registry: stopped private volume SHA backup, tamper rejected, restored second independent App/volume. Original post-backup blob absent in restored HTTP endpoint but present in original. No household.",
       "url": "https://github.com/GodsQuantum/Rusty-Home-Open/actions/runs/40409988909",
       "merged_pr": 164
+    },
+    {
+      "id": "oci_postgresql17_third_sql_app_independent_restore",
+      "release_gate": "supervisor_apps_restore",
+      "status": "verified_lab_only",
+      "run_id": 40413124727,
+      "head_sha": "1fd8101f5658338ae86bdecbb9a0ba8bfb3609f6",
+      "workflow": "Generic rootless OCI Registry and PostgreSQL App persistence and restore",
+      "job": "Real rootless OCI Registry HTTP and PostgreSQL SQL separate-volume restores",
+      "scope": "Third real stateful OCI App: official PostgreSQL 17 Alpine real SQL checkpoint, stopped private volume SHA check, tamper refusal, restored independent PG instance has 1 row while original retains 2 committed rows; rootless and offline.",
+      "url": "https://github.com/GodsQuantum/Rusty-Home-Open/actions/runs/40413124727",
+      "merged_pr": 166
     }
   ]
 }
