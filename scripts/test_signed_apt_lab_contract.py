@@ -32,6 +32,10 @@ class SignedAptLab(unittest.TestCase):
         self.assertIn("not a production signed",doc)
         import json
         gates=json.loads((ROOT/"config/release-gates.json").read_text())["required_gates"]
-        self.assertNotEqual(next(g["status"] for g in gates if g["id"]=="packaging_updates"),"certified")
+        from check_release_gate import audit
+        live=audit({"required_gates": gates})
+        item=next(g for g in gates if g["id"]=="packaging_updates")
+        self.assertTrue(item["status"]!="certified" or item["id"] not in live["blocked_ids"])
+        self.assertFalse(live["deployment_authorized"])
 if __name__=="__main__":
     unittest.main()
