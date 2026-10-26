@@ -243,3 +243,14 @@ The only machine authority for production release gates is
 - This is a read-only product correction, **not** durable actor-bound receipts,
   authorization for App mutations, or end-to-end production certification.
   Independent CI evidence belongs to the matching PR and Issue #12.
+
+## Examen individualisé des 15 critères (26 octobre 2026)
+
+La commande canonique `python3 scripts/check_release_gate.py --matrix` affiche
+pour chaque gate son statut laboratoire, son verdict **production** indépendant,
+les quatre scénarios obligatoires et ses bloqueurs précis déjà présents dans
+`config/release-gates.json`. Aucune CI verte ou test de laboratoire n'autorise
+le passage en production sans preuve indépendante vérifiée, double signature
+Ed25519 puis approbation explicite de publication. Statut actuel : 9 partiels,
+6 bloqués, **0/15 certifié** ; aucune restauration HAOS précédemment prouvée
+n'a été répétée.

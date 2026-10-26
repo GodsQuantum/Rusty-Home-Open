@@ -216,3 +216,7 @@ App/HACS parity, real physical radios, operator-authenticated production
 writes, security/availability endurance, secure signed distribution or a
 complete HAOS→Rust→HAOS household cutover. Product 0/15 fully certified;
 no family HAOS system modified or rebooted.
+
+## 26 October 2026 — individual production gate truth display
+
+The already-existing 15 gates remain the only release authority; `scripts/check_release_gate.py --matrix` adds per-gate laboratory state, production verdict, mandatory independent scenarios and remaining blockers without repeating HAOS restores. Never equate 28/28 CI to 15/15 production. PR #127 merged as b1881a6; PR #128 CI path scoping under review.
