@@ -13,6 +13,7 @@ for marker in (
     'if wait "$open_txn_pid"; then',
     'restart_count="$(systemctl --user show -p NRestarts --value rh-pg-sql-proof.service)"',
     '"$restart_count" -ge 1',
+    'podman exec "$who" cat /proc/1/comm',
     "P8CA_REAL_PG17_UNCOMMITTED_TRANSACTION_OPEN_AT_KILL_PASS",
     "P8CA_GENUINE_PG17_CONTAINER_SIGKILL_DURING_SQL_TRANSACTION_PASS",
     "P8CA_REAL_POSTGRESQL_WAL_COMMITTED_DURABLE_UNCOMMITTED_ROLLED_BACK_PASS",

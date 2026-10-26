@@ -48,7 +48,13 @@ podman run --detach --rm --name pg-sql-bootstrap     --network none --read-only 
 ready() {
     local who="$1"
     for _ in $(seq 1 100); do
-        if podman exec "$who" pg_isready -q -U postgres -h /var/run/postgresql 2>/dev/null; then return 0; fi
+        # Official PostgreSQL entrypoint runs a TRANSIENT bootstrap server
+        # and stops it before exec-ing the final PID1 postgres. pg_isready
+        # alone may return success during that shutdown window.
+        if [[ "$(podman exec "$who" cat /proc/1/comm 2>/dev/null)" == postgres ]] &&
+           podman exec "$who" pg_isready -q -U postgres -h /var/run/postgresql 2>/dev/null; then
+            return 0
+        fi
         sleep 0.2
     done
     return 1
