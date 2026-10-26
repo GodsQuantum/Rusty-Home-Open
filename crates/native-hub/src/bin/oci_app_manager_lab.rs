@@ -11,6 +11,8 @@ use std::{
     },
     path::{Path, PathBuf},
     process::{Command, Stdio},
+    thread,
+    time::Duration,
 };
 
 fn denied() -> io::Error {
@@ -120,7 +122,39 @@ fn require_installed(dir: &Path, slug: &str) -> io::Result<String> {
     installed_file(&b)?;
     Ok(unit)
 }
-fn install(dir: &Path, slug: &str, image: &str, uid: u32, network: AppNetwork) -> io::Result<()> {
+fn checked_health_cmd(cmd: &str) -> io::Result<String> {
+    if cmd.is_empty() || cmd.len() > 128 || cmd.trim() != cmd || cmd.split(' ').count() > 6 {
+        return Err(bad());
+    }
+    for token in cmd.split(' ') {
+        if token.is_empty()
+            || token.contains("..")
+            || !token
+                .bytes()
+                .all(|b| b.is_ascii_alphanumeric() || b"._/-".contains(&b))
+        {
+            return Err(denied());
+        }
+    }
+    Ok(format!(
+        "HealthCmd={cmd}\nHealthInterval=15s\nHealthTimeout=5s\nHealthRetries=2\n"
+    ))
+}
+fn with_health(container: &str, cmd: &str) -> io::Result<String> {
+    let config = checked_health_cmd(cmd)?;
+    if container.matches("Pull=never\n").count() != 1 || container.contains("HealthCmd=") {
+        return Err(denied());
+    }
+    Ok(container.replacen("Pull=never\n", &format!("Pull=never\n{config}"), 1))
+}
+fn install(
+    dir: &Path,
+    slug: &str,
+    image: &str,
+    uid: u32,
+    network: AppNetwork,
+    health: Option<&str>,
+) -> io::Result<()> {
     if uid == 0 || uid > 65533 {
         return Err(bad());
     }
@@ -132,7 +166,10 @@ fn install(dir: &Path, slug: &str, image: &str, uid: u32, network: AppNetwork) -
         run_uid: Some(uid),
         network,
     };
-    let q = decl.render().map_err(|_| bad())?;
+    let mut q = decl.render().map_err(|_| bad())?;
+    if let Some(healthcmd) = health {
+        q.container = with_health(&q.container, healthcmd)?;
+    }
     // Strictly no pull or mutable tags. OCI digest must already be available.
     podman(&["image", "exists", image])?;
     let (a, b, _) = unit_paths(dir, slug)?;
@@ -222,6 +259,23 @@ fn replace_private_atomic(dir: &Path, target: &Path, bytes: &str) -> io::Result<
     }
     File::open(dir)?.sync_all()
 }
+fn require_health(slug: &str, content: &str) -> io::Result<()> {
+    if !content.lines().any(|line| line.starts_with("HealthCmd=")) {
+        return Ok(());
+    }
+    let name = format!("rh-{slug}");
+    // Native Podman application-specific healthcheck, not systemd process
+    // state. Bounded retries permit image startup before checking.
+    for _ in 0..30 {
+        if podman(&["healthcheck", "run", &name]).is_ok() {
+            return Ok(());
+        }
+        thread::sleep(Duration::from_millis(400));
+    }
+    Err(io::Error::other(
+        "application health failed; rollback required",
+    ))
+}
 fn restart_from_unit(unit: &str) -> io::Result<()> {
     systemctl(&["--user", "daemon-reload"])?;
     systemctl(&["--user", "start", unit])?;
@@ -246,8 +300,9 @@ fn switch_image(dir: &Path, slug: &str, expected: &str, new_image: &str) -> io::
     // If stop fails, the old application remains untouched.
     systemctl(&["--user", "stop", &unit])?;
     write_private_new(&rollback, &old)?;
-    if let Err(e) =
-        replace_private_atomic(dir, &path, &updated).and_then(|_| restart_from_unit(&unit))
+    if let Err(e) = replace_private_atomic(dir, &path, &updated)
+        .and_then(|_| restart_from_unit(&unit))
+        .and_then(|_| require_health(slug, &updated))
     {
         // Recover the exact old digest and restart original if the new
         // container fails systemd startup. Keep rollback file for diagnosis.
@@ -313,7 +368,7 @@ fn execute() -> io::Result<()> {
             } else {
                 AppNetwork::Offline
             };
-            install(&dir, &args[2], &args[3], uid, net)
+            install(&dir, &args[2], &args[3], uid, net, None)
         }
         "--start-lab" if args.len() == 3 => {
             let unit = require_installed(&dir, &args[2])?;
@@ -322,6 +377,17 @@ fn execute() -> io::Result<()> {
         "--stop-lab" if args.len() == 3 => {
             let unit = require_installed(&dir, &args[2])?;
             systemctl(&["--user", "stop", &unit])
+        }
+        "--install-health-lab" if args.len() == 6 => {
+            let uid = args[4].parse::<u32>().map_err(|_| bad())?;
+            install(
+                &dir,
+                &args[2],
+                &args[3],
+                uid,
+                AppNetwork::Offline,
+                Some(&args[5]),
+            )
         }
         "--switch-image-lab" if args.len() == 5 => switch_image(&dir, &args[2], &args[3], &args[4]),
         "--rollback-image-lab" if args.len() == 3 => rollback_image(&dir, &args[2]),
@@ -408,6 +474,36 @@ mod tests {
         assert!(newer.contains("Volume=rh-redis-data.volume:/data:U"));
         assert!(replace_image(&newer, &a, &b).is_err());
         assert!(validate_digest("redis", "docker.io/library/redis:latest").is_err());
+    }
+    #[test]
+    fn operator_healthcheck_is_safe_no_shell_and_stays_in_existing_container() {
+        let image = format!("docker.io/library/redis@sha256:{}", "a".repeat(64));
+        let original = OciApp {
+            slug: "redis",
+            image: &image,
+            memory_mib: 256,
+            pids_limit: 128,
+            run_uid: Some(999),
+            network: AppNetwork::Offline,
+        }
+        .render()
+        .unwrap()
+        .container;
+        let healthy = with_health(&original, "redis-cli ping").unwrap();
+        assert!(healthy.contains("HealthCmd=redis-cli ping\n"));
+        assert!(healthy.contains("HealthTimeout=5s"));
+        assert!(healthy.contains("Network=none"));
+        for bad in [
+            "",
+            "redis-cli; rm -rf /data",
+            "redis-cli $(env)",
+            "redis-cli\nping",
+            "redis-cli && false",
+            " ../bin/false",
+            "../../etc/passwd",
+        ] {
+            assert!(with_health(&original, bad).is_err(), "{bad}");
+        }
     }
     #[test]
     fn fake_or_duplicate_image_configuration_fails_closed() {

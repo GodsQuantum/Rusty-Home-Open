@@ -138,6 +138,10 @@ P8ar #121 native Rust App install/start/stop/remove real Redis 23/23 green merge
 
 P8ar native OCI manager #121 23/23 checks merged 5af8dc1 and P8as localhost-only ingress #122 24/24 checks merged 95123e0. DO NOT REDO. Branch feat/native-oci-app-rollback-20261026 and separate worktree Rusty-Home-OCI-Upgrade-20261026 add Rust manager explicit digest upgrade and manual rollback. Only pre-pulled sha256 images; old digest compare-and-swap; per-App private file lock and owner-private copy; atomic manifest swap; systemd restart and automatic previous manifest recovery on startup failure; preserve Podman named volume and refuse uninstall with pending rollback. Genuine Ubuntu CI p8at-image-rollback.yml compares Redis 7.4 Alpine and Bookworm images, image IDs and persistent state after switch and rollback. Exact head CI MANDATORY. NOT a universal application-specific healthcheck, transactional database schema rollback or production release. Family HAOS untouched. 0/15.
 
+## P8au — generic native OCI healthcheck and automatic unhealthy-image rollback (26 Oct)
+
+P8at #124 exact SHA f11a802 genuine Redis image switch and explicit rollback CI run 40295014593 PASSED. Its remaining unrelated HAOS/DEB regression gates must finish before merge. Current branch feat/oci-app-healthcheck-rollback-20261026 isolated worktree Rusty-Home-OCI-Health-20261026 builds on #124, adding operator-configurable safe native Podman Quadlet HealthCmd (non-shell-injected executable+args), HealthInterval/Timeout/Retries, bounded native podman healthcheck run after image swap, and automatic previous image recovery if the new App starts but fails the healthcheck. CI .github/workflows/p8au-app-health-rollback.yml must prove real healthy Redis upgrades and deliberately incompatible BusyBox image rollback with persistent data untouched. Existing OCI App, backups and HAOS proofs must not be repeated as new proof. Do not treat rootless Redis as universal Supervisor/App compatibility. No household HAOS deployment; release 0/15.
+
 ## Reprise obligatoire
 
 1. Lire ces sources, vérifier le SHA actuel de GitHub, les PR ouvertes, les preuves et la CI avant de relancer des travaux.
