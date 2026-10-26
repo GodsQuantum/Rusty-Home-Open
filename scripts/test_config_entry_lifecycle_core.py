@@ -19,7 +19,7 @@ DOMAIN = "hars_lifecycle_probe"
 ENTITY = "sensor.hars_lifecycle_probe"
 
 async def main():
-    from homeassistant import __version__ as actual_core_version
+    from homeassistant.const import __version__ as actual_core_version
     expected_core_version = os.environ.get("HARS_EXPECTED_CORE_VERSION", "2026.10.2")
     assert actual_core_version == expected_core_version, (
         f"wrong official Core runtime {actual_core_version}, expected {expected_core_version}"

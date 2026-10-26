@@ -275,3 +275,5 @@ Owner: SentinelX Cloud9 LXC700, isolated branch test/core-2026-10-4-20261026, ba
 ## 26 Oct P8bd — Core 2026.10.4 candidate implemented, CI mandatory
 
 The independent Core 2026.10.4 GHCR OCI index was verified upstream; new opt-in P8bd GitHub workflow runs actual Core config-entry create/unload/reload/remove and runtime version verification without changing original 2026.10.2 pinned baseline or Marketplace dev. Strict external, network-none, read-only, nonroot fixture continues. GH exact-SHA proof still required; no current 29-integration hardware/API parity, release 0/15.
+
+P8bd CI first exact head 2854e3c failed: the new version assertion incorrectly imported `__version__` from top-level homeassistant (ImportError). Existing already proven Core scripts import from `homeassistant.const`. Corrected to same official API; this is a fixture import error, NOT yet a Core interoperability failure. New head must run real 2026.10.4 again; older 2026.10.2 baseline remains untouched.
