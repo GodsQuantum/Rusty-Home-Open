@@ -317,3 +317,10 @@ Owner SentinelX Cloud9 LXC700 branch docs/p8be-p8bf-immutable-evidence-20261026,
 
 ## P15 HAOS backup importer sanitizer fuzz — 26 October 2026 [ACTIVE]
 Owner SentinelX LXC700, branch test/p15-haos-archive-fuzz-20261026, base 2828751. Existing 4 fuzzed surfaces lack new P8aa/P8be full HAOS unprotected backup tar→registry+opaque YAML parser. Add fifth real libFuzzer target on actual importer, only fabricated archives, bounded inputs, strong anti-panic invariant, official sanitizer CI and independent corpus contract. Never rerun old tests as new proof, no household data/VM100. Release remains 0/15, security gate partial. Rollback revert branch.
+
+## 2026-10-26 P8bi HAOS-origin automation -> native Moli [IN PROGRESS]
+Owner SentinelX, CT700 branch feat/p8bi-haos-native-moli-automation-lab-20261026; base 4d07c1f main. Distinct missing feature: HAOS real Supervisor-created full archive contains synthetically disabled and parser-supported HA YAML plus fictional Core registry identities, preserved in private redb then compiled to actual Moli graph, requiring explicit synthetic test approval; no real integration/device writes, all unmapped YAML rejected. Reuse P8aa real QEMU, add Rust and contract tests; rollback revert feature. Prior P8aa/P8be/P8bf proof immutable, changes to guest fixture justify rerun. Not general automation parity; production 0/15.
+
+## 2026-10-26 P8bi QEMU CI first-head correction
+
+Feature head 65bbcb5 passed new genuine Supervisor source->Rust disabled automation native synthetic Moli (P8BI_REAL_HAOS_BACKUP_DISABLED_AUTOMATION_ACTUAL_SYNTHETIC_MOLI_GRAPH_PASS, job 121660464173, run 40348122985). Separate already-existing HAOS->fresh-HAOS Rust escrow job failed ONLY at old hardcoded fixture guard requiring an empty trigger, prior to creation/export of any backup: fixture intentionally now carries a disabled fictional motion-to-light action. Changed guard to require explicit initial_state false, synthetic endpoints and no shell/real hardware commands. Both real cross-VM workflows must rerun on exact new head and succeed before merge. No VM100 touched, still 0/15.

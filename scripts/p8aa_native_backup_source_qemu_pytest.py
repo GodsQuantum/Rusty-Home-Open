@@ -19,7 +19,11 @@ def test_hars_native_backup_source(shell,shell_json):
         {"entity_id":"sensor.fixture_vendor_one","platform":"fictional_vendor_1",
          "unique_id":"fictional_serial_a","config_entry_id":"fictional_config_1"},
         {"entity_id":"switch.fixture_vendor_two","platform":"fictional_vendor_2",
-         "unique_id":"fictional_serial_b","config_entry_id":"fictional_config_2"}]}},
+         "unique_id":"fictional_serial_b","config_entry_id":"fictional_config_2"},
+        {"entity_id":"binary_sensor.lab_motion","platform":"fictional_lab",
+         "unique_id":"fictional_lab_motion_serial","config_entry_id":"fictional_config_3"},
+        {"entity_id":"light.lab_room","platform":"fictional_lab",
+         "unique_id":"fictional_lab_light_serial","config_entry_id":"fictional_config_4"}]}},
         separators=(",",":"),sort_keys=True).encode()
     encoded=base64.b64encode(fake).decode("ascii")
     home="/mnt/data/supervisor/homeassistant/.storage"

@@ -18,7 +18,15 @@ AUTOMATION_PATH="/mnt/data/supervisor/homeassistant/automations.yaml"
 def inert_automation():
     raw=(Path(os.environ["GITHUB_WORKSPACE"])/"scripts/fixtures/p8be_haos_automations.yaml").read_bytes()
     assert 32 < len(raw) < 4096
-    assert b"initial_state: false" in raw and b"trigger: []" in raw and b"action: []" in raw
+    # P8bi provides one explicitly disabled fake motion-to-light graph.
+    # The old empty action fixture has been replaced, not activated.
+    assert b"initial_state: false" in raw
+    for expected in (b"binary_sensor.lab_motion", b"light.lab_room",
+                     b"light.turn_on", b"triggers:", b"actions:"):
+        assert expected in raw
+    for forbidden in (b"shell_command.", b"initial_state: true",
+                      b"light.real_", b"binary_sensor.real_"):
+        assert forbidden not in raw
     return raw
 def one(shell,command,timeout=45):
     result=shell.run_check(command,timeout=timeout)
