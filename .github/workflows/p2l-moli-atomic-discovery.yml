@@ -4,6 +4,7 @@ on:
     paths:
       - ".github/workflows/p2l-moli-atomic-discovery.yml"
       - "crates/native-kernel/src/mqtt_hub.rs"
+      - "scripts/test_p2m_topic_ownership_contract.py"
       - "Cargo.lock"
   workflow_dispatch:
 permissions:
@@ -23,5 +24,7 @@ jobs:
         run: |
           cargo fmt --all -- --check
           cargo test --locked -p hars-native-kernel --lib p2l_atomic_discovery_tests -- --nocapture
+          python3 scripts/test_p2m_topic_ownership_contract.py
+          cargo test --locked -p hars-native-kernel --lib identical_topic_cannot_publish_state_to_two_unique_ids_or_steal_owner -- --nocapture
           cargo test --locked -p hars-native-kernel --lib
           cargo clippy --locked -p hars-native-kernel --all-targets -- -D warnings

@@ -64,6 +64,10 @@ impl Driver for DiscoveryDriver {
             let mut configs: HashMap<String, Vec<(DeviceId, String, String, String)>> =
                 HashMap::new();
             let mut globally_known: HashSet<String> = HashSet::new();
+            // The parser validates unique_id, but state topics are an
+            // independent ownership boundary: one packet may not silently
+            // mutate two unrelated Core-facing Moli devices.
+            let mut globally_owned_topics: HashSet<String> = HashSet::new();
             while let Some(msg) = rx.recv().await {
                 match msg {
                     DiscoveryEvent::Config(Intent::Preview { id, sensors, .. }) => {
@@ -71,11 +75,13 @@ impl Driver for DiscoveryDriver {
                         // future adapter that bypasses mqtt_discovery::preview.
                         // Reject malformed batches BEFORE any Moli mutation.
                         let mut batch_ids = HashSet::new();
+                        let mut batch_topics = HashSet::new();
                         if sensors.is_empty()
                             || sensors.len() > 32
                             || sensors.iter().any(|s| {
                                 !safe_sensor_id(&s.unique_id)
                                     || !batch_ids.insert(s.unique_id.as_str())
+                                    || !batch_topics.insert(s.state_topic.as_str())
                                     || !matches!(s.platform.as_str(), "sensor" | "binary_sensor")
                                     || !s.state_topic.starts_with("lab/readonly/")
                                     || s.state_topic.len() > 128
@@ -91,10 +97,13 @@ impl Driver for DiscoveryDriver {
                             // fails closed instead of replacing a device.
                             continue;
                         }
-                        if sensors
-                            .iter()
-                            .any(|s| globally_known.contains(&s.unique_id))
-                        {
+                        // Validate the ENTIRE batch before any registration;
+                        // a collision on even one state topic voids the whole
+                        // claim. Never let a second config alias an owner.
+                        if sensors.iter().any(|s| {
+                            globally_known.contains(&s.unique_id)
+                                || globally_owned_topics.contains(&s.state_topic)
+                        }) {
                             continue;
                         }
                         let mut registered = Vec::new();
@@ -127,6 +136,7 @@ impl Driver for DiscoveryDriver {
                                 }],
                             });
                             globally_known.insert(sensor.unique_id.clone());
+                            globally_owned_topics.insert(sensor.state_topic.clone());
                             registered.push((
                                 device_id,
                                 sensor.state_topic,
@@ -138,11 +148,12 @@ impl Driver for DiscoveryDriver {
                     }
                     DiscoveryEvent::Config(Intent::Remove { id } | Intent::Migrate { id }) => {
                         if let Some(devices) = configs.remove(&id) {
-                            for (device, _, _, unique_id) in devices {
-                                // Release only IDs owned by this removed config.
-                                // A fresh retained discovery can re-register them,
-                                // but cannot inherit any of their previous state.
+                            for (device, state_topic, _, unique_id) in devices {
+                                // Rejected and unknown configs own nothing.
+                                // Release only this confirmed owner's ID and
+                                // state topic; never mutate a rival's device.
                                 globally_known.remove(&unique_id);
+                                globally_owned_topics.remove(&state_topic);
                                 ctx.remove_device(&device);
                             }
                         }
@@ -479,6 +490,144 @@ mod p2l_atomic_discovery_tests {
         assert!(
             hub.state(&point).is_none(),
             "new owner inherits no old state"
+        );
+        cancel.cancel();
+        drop(tx);
+        tokio::time::timeout(Duration::from_secs(3), worker)
+            .await
+            .unwrap()
+            .unwrap();
+    }
+}
+
+#[cfg(test)]
+mod p2m_topic_ownership_tests {
+    use super::*;
+    use crate::mqtt_discovery::Sensor;
+    use moli_core::{InstanceId, PointId, Value};
+    use moli_runtime::{Hub, HubOptions, spawn_driver};
+    use std::{sync::Arc, time::Duration};
+    use tokio::sync::mpsc;
+    use tokio_util::sync::CancellationToken;
+
+    fn config(id: &str, sensors: &[(&str, &str)]) -> DiscoveryEvent {
+        DiscoveryEvent::Config(Intent::Preview {
+            id: id.into(),
+            device_id: None,
+            sensors: sensors
+                .iter()
+                .map(|(id, topic)| Sensor {
+                    platform: "sensor".into(),
+                    unique_id: (*id).into(),
+                    state_topic: (*topic).into(),
+                })
+                .collect(),
+        })
+    }
+    async fn count(hub: &Hub, expected: usize) {
+        for _ in 0..150 {
+            if hub.snapshot().devices.len() == expected {
+                return;
+            }
+            tokio::time::sleep(Duration::from_millis(10)).await;
+        }
+        panic!("Moli device count mismatch");
+    }
+    #[tokio::test]
+    async fn identical_topic_cannot_publish_state_to_two_unique_ids_or_steal_owner() {
+        let hub = Hub::new(HubOptions::default()).unwrap();
+        let cancel = CancellationToken::new();
+        let (tx, rx) = mpsc::channel(32);
+        let worker = spawn_driver(
+            &hub,
+            InstanceId::from("hars-p2m-isolated"),
+            Arc::new(DiscoveryDriver::new(rx)),
+            cancel.clone(),
+        );
+        let shared = "lab/readonly/shared";
+        tx.send(config("first", &[("first_id", shared)]))
+            .await
+            .unwrap();
+        count(&hub, 1).await;
+        let original = hub.snapshot().devices[0].device.clone();
+        let point = PointId::new(&original.id, "state");
+        tx.send(config(
+            "duplicate_in_batch",
+            &[
+                ("batch_id_one", "lab/readonly/internal"),
+                ("batch_id_two", "lab/readonly/internal"),
+            ],
+        ))
+        .await
+        .unwrap();
+        tx.send(config("rival", &[("second_id", shared)]))
+            .await
+            .unwrap();
+        // Rival must not be able to drive a second state from the owner's topic.
+        tx.send(DiscoveryEvent::Config(Intent::Remove {
+            id: "rival".into(),
+        }))
+        .await
+        .unwrap();
+        tx.send(DiscoveryEvent::SensorState {
+            topic: shared.into(),
+            payload: b"original-only".to_vec(),
+        })
+        .await
+        .unwrap();
+        for _ in 0..150 {
+            if hub.state(&point).map(|s| s.value) == Some(Value::Text("original-only".into())) {
+                break;
+            }
+            tokio::time::sleep(Duration::from_millis(10)).await;
+        }
+        assert_eq!(
+            hub.snapshot().devices.len(),
+            1,
+            "a shared topic must never create another device implicitly"
+        );
+        assert_eq!(
+            hub.state(&point).unwrap().value,
+            Value::Text("original-only".into())
+        );
+        tx.send(DiscoveryEvent::Config(Intent::Remove {
+            id: "first".into(),
+        }))
+        .await
+        .unwrap();
+        count(&hub, 0).await;
+        tx.send(config("second", &[("second_id", shared)]))
+            .await
+            .unwrap();
+        count(&hub, 1).await;
+        let new_dev = hub.snapshot().devices[0].device.clone();
+        let new_point = PointId::new(&new_dev.id, "state");
+        assert!(
+            hub.state(&new_point).is_none(),
+            "reassigning a topic must not copy old Moli state"
+        );
+        tx.send(DiscoveryEvent::SensorState {
+            topic: shared.into(),
+            payload: b"new-only".to_vec(),
+        })
+        .await
+        .unwrap();
+        for _ in 0..150 {
+            if hub.state(&new_point).map(|s| s.value) == Some(Value::Text("new-only".into())) {
+                break;
+            }
+            tokio::time::sleep(Duration::from_millis(10)).await;
+        }
+        assert_eq!(
+            hub.state(&new_point).unwrap().value,
+            Value::Text("new-only".into())
+        );
+        assert!(
+            hub.snapshot().devices[0]
+                .device
+                .points
+                .iter()
+                .all(|p| !p.access.write)
         );
         cancel.cancel();
         drop(tx);
