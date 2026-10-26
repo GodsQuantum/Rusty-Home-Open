@@ -102,6 +102,11 @@ P8ag PR #108 (14 checks; run 40250349459, main 0d943526) and P8ah PR #109 (15 ch
 
 PR #108 genuine Rust HAOS guest service 14/14 merged 0d943526, #109 local guest UI 15/15 merged 8cebcf7, #110 Core HTTP 16/16 merged e891401d65d6f954afb809bd7ff9d7312c7b3e7f. All verified; NEVER retest as new proof. New branch feat/native-haos-systemd-supervisor-20261026 and separate worktree Rusty-Home-Systemd-QA-20261026 add opt-in systemd sample unit and scripts/test_p8aj_real_systemd_guest.sh. GitHub .github/workflows/p8aj-real-systemd.yml must genuinely start/stop the official HAOS 18.3 VM twice from systemd with full owner/KVM isolation at exact PR SHA before certification. No family HAOS/reboot/radios, 0/15 production.
 
+## P8ak — native Rust guest Debian lab distribution (26 October)
+
+P8aj #111 real official HAOS 18.3 under genuine systemd: 10/10 CI, GitHub run 40254861417, merged 4a1377341eabd44bc81334705465a5ebf33cf6c4. Certified lab only; DO NOT REDO.
+New separate branch feat/haos-rust-guest-debian-package-20261026, worktree Rusty-Home-Guest-Package-20261026. Changes the LAB unit executable path to Debian policy /usr/libexec/rusty-home; new rootless reproducible .deb builder scripts/build_guest_debian_package_lab.sh, actual Ubuntu dpkg upgrade/downgrade/purge workflow .github/workflows/p8ak-guest-debian.yml and updated real KVM systemd test P8aj. CI at exact SHA required. Package postinst creates only dedicated sysuser; no service start/enable or family deployment. Still no signed general host release, full Apps or hardware radio takeover; 0/15 production.
+
 ## Reprise obligatoire
 
 1. Lire ces sources, vérifier le SHA actuel de GitHub, les PR ouvertes, les preuves et la CI avant de relancer des travaux.

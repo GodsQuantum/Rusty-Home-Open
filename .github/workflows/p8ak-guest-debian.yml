@@ -1,0 +1,45 @@
+name: P8ak Genuine Debian install update downgrade purge of Rust HAOS manager
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - ".github/workflows/p8ak-guest-debian.yml"
+      - "packaging/systemd/rusty-home-haos-lab.service"
+      - "scripts/build_guest_debian_package_lab.sh"
+      - "scripts/test_guest_debian_package_lab.sh"
+      - "scripts/test_p8ak_guest_debian_contract.py"
+      - "crates/native-hub/**"
+      - "Cargo.lock"
+permissions:
+  contents: read
+jobs:
+  actual-dpkg-lifecycle:
+    name: Actual reproducible Rust guest systemd .deb update downgrade purge with no auto start
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Refuse unsafe packaging or automatic service activation
+        run: |
+          python3 scripts/test_p8ak_guest_debian_contract.py
+          bash -n scripts/build_guest_debian_package_lab.sh
+          bash -n scripts/test_guest_debian_package_lab.sh
+          python3 scripts/test_public_redaction.py
+      - name: Install genuine QEMU dependencies on disposable GitHub runner
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends qemu-system-x86 qemu-utils ovmf
+          test -x /usr/bin/qemu-system-x86_64
+          test -r /usr/share/ovmf/OVMF.fd
+      - name: Actual byte-reproducible DEB install upgrade downgrade and purge
+        timeout-minutes: 25
+        run: bash scripts/test_guest_debian_package_lab.sh
+      - name: No automatic HAOS process or leftover installed package
+        if: always()
+        run: |
+          ! dpkg-query -W rusty-home-guest-lab
+          ! test -e /usr/libexec/rusty-home/haos_guest_service_lab
+          ! systemctl is-active --quiet rusty-home-haos-lab.service

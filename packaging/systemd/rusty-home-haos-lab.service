@@ -19,7 +19,7 @@ Environment=HARS_DISPOSABLE_KVM_LAB=1
 EnvironmentFile=/run/rusty-home-lab/haos-guest.env
 StateDirectory=rusty-home-lab
 StateDirectoryMode=0700
-ExecStart=/usr/local/libexec/rusty-home/haos_guest_service_lab --lab-service-run /usr/bin/qemu-system-x86_64 /usr/share/ovmf/OVMF.fd /var/lib/rusty-home-lab/haos-base.qcow2 ${HAOS_BASE_SHA256} /var/lib/rusty-home-lab
+ExecStart=/usr/libexec/rusty-home/haos_guest_service_lab --lab-service-run /usr/bin/qemu-system-x86_64 /usr/share/ovmf/OVMF.fd /var/lib/rusty-home-lab/haos-base.qcow2 ${HAOS_BASE_SHA256} /var/lib/rusty-home-lab
 Restart=on-failure
 RestartSec=10s
 TimeoutStartSec=120s

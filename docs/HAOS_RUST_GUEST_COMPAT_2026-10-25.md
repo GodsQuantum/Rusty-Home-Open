@@ -123,3 +123,25 @@ HAOS backing SHA256. Until exact-feature-SHA CI confirms this, it is code
 and an unverified systemd packaging hypothesis, not product certification.
 No Cloud9 or household host install/reboot, no radio handover, no 72h soak,
 no signed host upgrade path. Release 0/15 fully certified.
+
+## P8ak — installable native Rust HAOS lab Debian package (CI pending)
+
+The opt-in laboratory systemd unit was actually certified in isolated
+official HAOS 18.3 KVM by P8aj PR #111: 10/10 checks on feature e1a2c97
+and GitHub run 40254861417, merged as
+4a1377341eabd44bc81334705465a5ebf33cf6c4.
+Two systemd start/stop cycles completed without orphan QEMU and with the
+same private COW guest disk and immutable pinned HAOS source.
+
+P8ak turns the runtime proof into a versioned .deb, with its native Rust
+binary at /usr/libexec/rusty-home, native unit at /usr/lib/systemd/system,
+and a systemd-sysusers account declaration. The opt-in service has NO
+Install section and package maintainer scripts create only the dedicated
+account, never start/enable/restart home automation. Built reproducibly with
+SOURCE_DATE_EPOCH. New actual Ubuntu 24.04 CI installs v0.1.0-1, upgrades
+to v0.1.1-1, downgrades to v0.1.0-1, purges package, and verifies no
+autostart and no changed real household HAOS.
+
+This LAB PACKAGE IS NOT A SIGNED GENERAL RELEASE. A signed distribution
+channel, system reboot/cold boot, full Apps lifecycle and audited production
+permissions are future gates. Rusty Home production remains 0/15.
