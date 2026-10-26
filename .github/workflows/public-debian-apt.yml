@@ -46,6 +46,10 @@ jobs:
           sudo apt-get install -y -qq apt-utils dpkg-dev gnupg
       - name: Public source and synthetic fixtures verification
         run: python3 scripts/test_public_redaction.py
+      - name: Require native Rust guest packages in trusted APT index
+        run: |
+          python3 scripts/test_signed_apt_lab_contract.py
+          python3 scripts/test_p8al_signed_guest_contract.py
       - name: Build disposable signed APT repository, reject tampered InRelease
         run: bash scripts/test_signed_apt_lab.sh
       - name: Refuse surviving APT lab containers

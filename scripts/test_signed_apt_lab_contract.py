@@ -22,14 +22,14 @@ class SignedAptLab(unittest.TestCase):
                   "P12B_SIGNED_APT_OFFLINE_END_TO_END_PASS"):
             self.assertIn(x,s)
     def test_ci_isolation_and_release_blocked(self):
-        wf=(ROOT/".github/workflows/p12b-signed-apt-lab.yml").read_text()
+        wf=(ROOT/".github/workflows/public-debian-apt.yml").read_text()
         self.assertIn("  pull_request:",wf)
         self.assertIn("  contents: read",wf)
         self.assertIn("ubuntu-24.04",wf)
         self.assertIn("bash scripts/test_signed_apt_lab.sh",wf)
         self.assertNotIn("pull_request_target",wf)
-        doc=(ROOT/"docs/P12B_SIGNED_APT_LAB_2026-10-22.md").read_text()
-        self.assertIn("NOT_PRODUCTION_READY",doc)
+        doc=(ROOT/"docs/PUBLIC_DEBIAN_APT_CI.md").read_text()
+        self.assertIn("not a production signed",doc)
         import json
         gates=json.loads((ROOT/"config/release-gates.json").read_text())["required_gates"]
         self.assertNotEqual(next(g["status"] for g in gates if g["id"]=="packaging_updates"),"certified")

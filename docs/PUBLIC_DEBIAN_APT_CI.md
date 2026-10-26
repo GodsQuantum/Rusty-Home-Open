@@ -22,3 +22,23 @@ Boundaries:
 - Published packages, rollback, signed updates and real upgrades still
   require third-party legal clearance, infrastructure and independent
   production tests. All 15 release gates remain blocked.
+
+## P8ak/P8al native Rust HAOS manager extension (26 October 2026)
+
+The earlier synthetic read-only CLI packaging tests remain valid and are
+not a substitute for real HAOS guest host verification. P8ak PR #112
+separately certified the actual versioned native Rust HAOS manager
+Debian install, upgrade, downgrade and purge on ephemeral Ubuntu. The
+service unit had no automatic start/enable, and real systemd+QEMU HAOS
+18.3 start/stop was independently green.
+
+P8al reuses this existing signed OpenPGP APT repository builder and
+temporary offline verification client. Its signed Packages index now
+contains BOTH native manager revisions as well as synthetic CLI revisions.
+An offline client must discover the native versions only after successful
+signed-by verification; corrupting InRelease must still fail with a genuine
+cryptographic signature error. The ephemeral CI OpenPGP key is discarded
+and has no production trust authority. The offline client does NOT install
+the native manager (its QEMU system dependencies are absent there); the
+real dpkg install lifecycle is certified under P8ak. Production release
+remains NOT_PRODUCTION_READY and 0/15 fully certified gates.
