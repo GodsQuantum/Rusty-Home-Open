@@ -165,7 +165,7 @@ echo P8CA_NATIVE_SYSTEMD_RESTART_OFFLINE_READONLY_ORIGINAL_AND_RESTORE_ISOLATED_
 
 HARS_DISPOSABLE_OCI_LAB=1 "$BIN" --remove-lab "$restore_slug"
 podman volume exists "$restore_vol"
-test "$(sql rh-pg-sql-proof 'SELECT count(*) FROM rusty_p8ay_checkpoint;')" = 2
+test "$(sql rh-pg-sql-proof 'SELECT count(*) FROM rusty_p8ay_checkpoint;')" = 3
 HARS_DISPOSABLE_OCI_LAB=1 "$BIN" --remove-lab "$original_slug"
 podman volume exists "$orig_vol"
 echo P8AY_PG17_INDEPENDENT_DATABASE_APP_REMOVE_PRESERVES_OWN_DATA_PASS
