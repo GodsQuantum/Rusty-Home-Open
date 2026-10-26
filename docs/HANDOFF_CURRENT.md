@@ -130,6 +130,10 @@ New separate branch feat/native-oci-app-manager-lab-20261026 worktree Rusty-Home
 
 P8ap #118 real Redis rootless systemd App persisted data test 21/21 CI merged 071b85bac4f887843be3a2f47d25e44ddcc03bd1. DO NOT REDO. Current branch feat/oci-app-backup-restore-20261026, worktree Rusty-Home-OCI-Backup-20261026. Extends proven real Redis Quadlet lab script with HARS_VOLUME_RESTORE_LAB=1, native Podman volume export/import, sha256 integrity and corrupted-archive negative, new empty volume and separate Rust-generated Redis restore instance. Compares older backed-up data vs newly mutated original. CI .github/workflows/p8aq-real-oci-restore.yml PASSED 11/11, merged 7cf1d3ad3fb74d9e7d8537f171e500b94d86eac0. This is one REAL App volume scenario, not complete Supervisor migration, signed backups, 72h or production. 0/15.
 
+## P8as — explicit localhost TCP for rootless OCI Apps (26 October)
+
+P8ar #121 native Rust App install/start/stop/remove real Redis 23/23 green merged 5af8dc1a268c7316bfe99eb50290f94726a57541, run 40291069681; DO NOT REDO. New branch feat/oci-app-localhost-tcp-20261026, separate worktree Rusty-Home-OCI-Loopback-20261026. Builds on P8ar with generic AppNetwork Offline default or operator opted LocalTcp 127.0.0.1 only (never wildcard), native rootless Podman slirp4netns and PublishPort. Rust manager accepts --local-tcp 18879:6379 in disposable CI. Real P8as CI must verify Podman port 127.0.0.1:18879 and connect via host socket, no public binding. Critically slirp4netns permits outbound egress: not an outbound network firewall and not production remote auth. No household changes. Product 0/15.
+
 ## Reprise obligatoire
 
 1. Lire ces sources, vérifier le SHA actuel de GitHub, les PR ouvertes, les preuves et la CI avant de relancer des travaux.

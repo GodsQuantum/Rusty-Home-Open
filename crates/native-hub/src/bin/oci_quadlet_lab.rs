@@ -1,6 +1,6 @@
 //! Explicitly disposable lab-only rootless OCI Quadlet writer.
 //! It does not start a service, install apps or touch systemd.
-use hars_native_hub::oci_quadlet::OciApp;
+use hars_native_hub::oci_quadlet::{AppNetwork, OciApp};
 use std::{
     env,
     fs::{self, OpenOptions},
@@ -37,6 +37,7 @@ fn execute() -> Result<(), ()> {
         memory_mib: 256,
         pids_limit: 128,
         run_uid: uid,
+        network: AppNetwork::Offline,
     }
     .render()
     .map_err(|_| ())?;
