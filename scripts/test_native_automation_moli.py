@@ -25,8 +25,12 @@ assert report == {
     "initially_inactive": True,
     "synthetic_actuator_confirmed": True,
     "approval_invalidated_by_edit": True,
+    "persisted_edit_inactive": True,
+    "stale_approval_rejected": True,
+    "no_run_after_edit": True,
+    "restart_kept_edit_inactive": True,
     "no_python": True,
     "hardware_touched": False,
     "production_ready": False,
 }, report
-print("PASS: real native Moli Rust HA YAML->conditioned graph->human approval->fake actuator; invalidated approval on edits")
+print("PASS: real native Moli Rust HA YAML->conditioned graph->human approval->fake actuator; persisted edit revocation, stale-approval denial and restart fence")

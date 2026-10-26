@@ -34,6 +34,38 @@ struct RawAutomation {
 }
 #[derive(Deserialize)]
 #[serde(deny_unknown_fields)]
+struct DisabledBackupAutomation {
+    id: Option<String>,
+    alias: Option<String>,
+    mode: Option<String>,
+    initial_state: Option<bool>,
+    triggers: Option<Vec<RawTrigger>>,
+    trigger: Option<Vec<RawTrigger>>,
+    conditions: Option<Vec<RawCondition>>,
+    condition: Option<Vec<RawCondition>>,
+    actions: Option<Vec<RawAction>>,
+    action: Option<Vec<RawAction>>,
+}
+impl DisabledBackupAutomation {
+    fn into_raw(self) -> Result<RawAutomation> {
+        if self.initial_state != Some(false) {
+            bail!("HAOS source automation is not explicitly disabled")
+        }
+        Ok(RawAutomation {
+            id: self.id,
+            alias: self.alias,
+            mode: self.mode,
+            triggers: self.triggers,
+            trigger: self.trigger,
+            conditions: self.conditions,
+            condition: self.condition,
+            actions: self.actions,
+            action: self.action,
+        })
+    }
+}
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
 struct RawTrigger {
     trigger: Option<String>,
     platform: Option<String>,
@@ -75,20 +107,44 @@ fn lab_entity(value: &str, domain: &str) -> bool {
 }
 /// Compile a bounded, immutable **non-executable** HA YAML subset.
 /// Duplicate YAML keys and unsupported metadata must fail before preview.
-pub fn parse_plan(yaml: &str) -> Result<Plan> {
+fn check_yaml(yaml: &str) -> Result<()> {
     if yaml.is_empty()
         || yaml.len() > 8192
         || yaml.chars().any(|c| c == '\0')
-        || ["{{", "{%", "!include", "<<:", "&", "*"]
+        || ["{{", "{%", "!include", "!!", "!<", "<<:", "&", "*"]
             .iter()
             .any(|part| yaml.contains(part))
     {
         bail!("unsafe or oversized YAML automation");
     }
-    let mut raw: RawAutomation = serde_saphyr::from_str_with_options(
+    Ok(())
+}
+
+/// A full real HAOS backup uses a LIST of automations. This deliberately
+/// accepts only ONE explicitly disabled synthetic recipe. Imported YAML is
+/// NEVER activated as a real Home Assistant or household service.
+pub fn parse_disabled_backup_plan(yaml: &str) -> Result<Plan> {
+    check_yaml(yaml)?;
+    let mut list: Vec<DisabledBackupAutomation> = serde_saphyr::from_str_with_options(
         yaml,
         serde_saphyr::options! { reject_unsupported_tags: true },
     )?;
+    if list.len() != 1 {
+        bail!("only one disabled synthetic automation may be bridged to Moli")
+    }
+    plan_from_raw(list.pop().expect("length checked").into_raw()?)
+}
+
+pub fn parse_plan(yaml: &str) -> Result<Plan> {
+    check_yaml(yaml)?;
+    let raw: RawAutomation = serde_saphyr::from_str_with_options(
+        yaml,
+        serde_saphyr::options! { reject_unsupported_tags: true },
+    )?;
+    plan_from_raw(raw)
+}
+
+fn plan_from_raw(mut raw: RawAutomation) -> Result<Plan> {
     if raw.triggers.is_some() && raw.trigger.is_some()
         || raw.conditions.is_some() && raw.condition.is_some()
         || raw.actions.is_some() && raw.action.is_some()
@@ -257,6 +313,32 @@ action:
         }
         let spoofed = simulate(&plan, "binary_sensor.lab_intruder", "off", "on", "off");
         assert!(!spoofed.triggered && spoofed.proposed_action.is_none());
+    }
+    #[test]
+    fn disabled_actual_haos_list_can_only_compile_known_synthetic_mapping() {
+        let source = include_str!("../../../scripts/fixtures/p8be_haos_automations.yaml");
+        let plan = parse_disabled_backup_plan(source).unwrap();
+        assert_eq!(plan.source_entity, "binary_sensor.lab_motion");
+        assert_eq!(plan.proposed_target, "light.lab_room");
+        assert_eq!(plan.proposed_service, "light.turn_on");
+        let graph = crate::automation_moli::compile(&plan).unwrap();
+        assert_eq!(graph.nodes.len(), 3);
+        for invalid in [
+            source.replace("initial_state: false", "initial_state: true"),
+            source.replace("  initial_state: false\n", ""),
+            source.replace("light.lab_room", "light.real_house"),
+            source.replace("light.turn_on", "shell_command.attack"),
+            source.replace("initial_state: false", "initial_state: !!bool false"),
+            source.replace("triggers:", "triggers: []\n  dummy:"),
+            format!("{source}\n{source}"),
+            "[]".to_string(),
+            source.replace("light.lab_room", "{{ dangerous }}"),
+        ] {
+            assert!(
+                parse_disabled_backup_plan(&invalid).is_err(),
+                "unsafe or out-of-scope HAOS YAML accepted: {invalid}"
+            );
+        }
     }
     #[test]
     fn malformed_or_nonlab_automations_rejected_before_execution() {

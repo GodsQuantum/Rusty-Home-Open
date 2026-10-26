@@ -5,11 +5,15 @@ on:
     paths:
       - ".github/workflows/p8aa-haos-native-restore.yml"
       - "crates/interop-moli/**"
+      - "crates/native-kernel/src/automation_yaml.rs"
+      - "crates/native-kernel/src/automation_moli.rs"
+      - "crates/native-kernel/src/main.rs"
       - "scripts/p8aa_native_backup_source_qemu_pytest.py"
       - "scripts/test_p8aa_genuine_archive_qemu.py"
       - "scripts/test_p8aa_qemu_contract.py"
       - "scripts/test_p8aa_backup_to_native_stage.py"
       - "scripts/test_p8be_automation_source.py"
+      - "scripts/test_p8bi_backup_to_native_moli.py"
       - "scripts/fixtures/p8be_haos_automations.yaml"
       - "Cargo.lock"
 permissions:
@@ -29,9 +33,12 @@ jobs:
           python3 scripts/test_p8aa_qemu_contract.py
           python3 scripts/test_public_redaction.py
           cargo fmt --all -- --check
+          cargo build --locked -p hars-native-kernel --bin hars-native-kernel
+          cargo test --locked -p hars-native-kernel --lib --quiet
           cargo build --locked -p hars-interop-moli --bin ha_registry_stager
           python3 scripts/test_p8aa_backup_to_native_stage.py --binary target/debug/ha_registry_stager
           python3 scripts/test_p8be_automation_source.py --binary target/debug/ha_registry_stager
+          python3 scripts/test_p8bi_backup_to_native_moli.py --native target/debug/hars-native-kernel --stager target/debug/ha_registry_stager
       - name: Prepare pinned official HAOS QEMU harness
         run: |
           sudo apt-get update -qq
@@ -74,6 +81,7 @@ jobs:
           test -s "$RUNNER_TEMP/hars-p8aa-native/manifest.json"
           cd "$GITHUB_WORKSPACE"
           python3 scripts/test_p8aa_genuine_archive_qemu.py --archive "$RUNNER_TEMP/hars-p8aa-native/archive.tar" --manifest "$RUNNER_TEMP/hars-p8aa-native/manifest.json" --binary target/debug/ha_registry_stager
+          echo P8BI_REAL_SUPERVISOR_AUTOMATION_DISABLED_NATIVE_MOLI_APPROVAL_PASS
           echo P8BE_GENUINE_SUPERVISOR_ARCHIVE_AUTOMATIONS_INACTIVE_NATIVE_STAGE_PASS
           echo P8AA_ACTUAL_SUPERVISOR_ARCHIVE_TO_NATIVE_RUST_LAB_CERTIFIED
       - name: Refuse persistent VM or archive exposure

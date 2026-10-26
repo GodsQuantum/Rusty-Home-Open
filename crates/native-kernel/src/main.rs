@@ -86,6 +86,69 @@ async fn main() -> anyhow::Result<()> {
         println!("{}", serde_json::to_string(&proof)?);
         return Ok(());
     }
+    if args.len() == 4 && args[1] == "--lab-ha-backup-automation-moli" {
+        use anyhow::{Context, bail};
+        use hars_interop_moli::registry_stage::RegistryStager;
+        if nix::unistd::Uid::effective().is_root() {
+            bail!("backup automation Moli lab cannot run as root");
+        }
+        let root = lab_registry_dir(&args[2])?;
+        let db = RegistryStager::open(&root)?;
+        let (source, bytes) = db
+            .read_backup_automations(&args[3])?
+            .context("missing protected and inactive HAOS automation source")?;
+        if !source.inactive {
+            bail!("automations must be inactive after import");
+        }
+        let active = db
+            .active()?
+            .context("HAOS Core identity stage not active")?;
+        if active.batch_sha256 != source.registry_sha256 || !active.no_device_commands {
+            bail!("untrusted or mismatched backup registry binding");
+        }
+        let original = std::str::from_utf8(&bytes)?;
+        let plan = hars_native_kernel::automation_yaml::parse_disabled_backup_plan(original)?;
+        for entity in [
+            plan.source_entity.as_str(),
+            plan.proposed_target.as_str(),
+            plan.condition_entity.as_deref().unwrap_or(""),
+        ] {
+            if !entity.is_empty()
+                && !active
+                    .entities
+                    .iter()
+                    .any(|x| x.entity_id == entity && x.stable)
+            {
+                bail!("backup automation referenced identity absent from original registry");
+            }
+        }
+        let runtime = std::env::current_dir()?.join("runtime").canonicalize()?;
+        let folder = tempfile::Builder::new()
+            .prefix("p8bi-")
+            .tempdir_in(runtime)?;
+        let proof = hars_native_kernel::automation_moli::prove_plan(folder.path(), &plan).await?;
+        println!(
+            "{}",
+            serde_json::json!({
+                "source":"genuine_haos_supervisor_full_archive",
+                "archive_sha256":source.archive_sha256,
+                "original_yaml_sha256":source.automation_sha256,
+                "original_registry_sha256":source.registry_sha256,
+                "one_explicitly_disabled_automation":true,
+                "compiled_to_native_moli":proof.actual_native_moli_automation,
+                "synthetic_actuator_confirmed":proof.synthetic_actuator_confirmed,
+                "approval_required":proof.required_human_approval,
+                "edit_revokes_approval":proof.approval_invalidated_by_edit,
+                "persisted_edit_inactive":proof.persisted_edit_inactive,
+                "stale_approval_rejected":proof.stale_approval_rejected,
+                "no_run_after_edit":proof.no_run_after_edit,
+                "restart_kept_edit_inactive":proof.restart_kept_edit_inactive,
+                "real_hardware_touched":proof.hardware_touched,
+                "production_ready":false
+            })
+        );
+        return Ok(());
+    }
     if args.len() == 2 && args[1] == "--lab-ha-automation-moli" {
         if nix::unistd::Uid::effective().is_root() {
             anyhow::bail!("P3b Moli YAML lab must run unprivileged");

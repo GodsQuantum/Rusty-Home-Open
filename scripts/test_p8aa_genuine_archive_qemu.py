@@ -69,8 +69,14 @@ assert preflight["protected_metadata_flag"] is False
 assert preflight["homeassistant_payload_identified"] is True
 assert not preflight["blocking_issues"],preflight["blocking_issues"]
 
-with tempfile.TemporaryDirectory(prefix="hars-p8aa-real-haos-private-") as tmp:
-    root=Path(tmp)/"private"; root.mkdir(mode=0o700)
+runtime=Path(__file__).resolve().parent.parent/"runtime"
+runtime.mkdir(mode=0o700,exist_ok=True)
+assert not runtime.is_symlink() and runtime.stat().st_mode & 0o077==0
+with tempfile.TemporaryDirectory(prefix="hars-p8aa-real-haos-private-",dir=runtime) as tmp:
+    # Single private child of repository runtime, satisfying the strict native
+    # Moli lab's no-arbitrary-path rule, with automatic disposal.
+    root=Path(tmp)
+    assert not root.is_symlink() and root.stat().st_mode & 0o077 == 0
     def invoke(*args):
         res=subprocess.run([str(a.binary),"--lab-readonly",str(root),*map(str,args)],
                            capture_output=True,text=True,timeout=45)
@@ -92,14 +98,32 @@ with tempfile.TemporaryDirectory(prefix="hars-p8aa-real-haos-private-") as tmp:
     assert detail["source"]["inactive"] is True
     assert detail["content_returned"] is False and detail["actions_executable"] is False
     assert staged["archive_sha256"]==manifest["sha256"]
-    assert staged["entities"]==2 and staged["stable_identities"]==2
+    assert staged["entities"]==4 and staged["stable_identities"]==4
     assert staged["read_only"] and not staged["production_ready"]
     assert not staged["apps_migrated"] and not staged["integrations_migrated"]
     digest=staged["sha256"]
     assert invoke("status")["active"] is None
     invoke("activate",digest,"none")
     assert invoke("status")["active"]==digest
-    assert invoke("status")["entities"]==2
+    assert invoke("status")["entities"]==4
+    # Distinct P8bi proof: only the original disabled automation from this
+    # genuine Supervisor archive may be compiled, approved for invented Moli
+    # devices and executed with *no* HAOS real service/hardware access.
+    core_bin=Path(__file__).resolve().parent.parent/"target/debug/hars-native-kernel"
+    parsed=subprocess.run([str(core_bin), "--lab-ha-backup-automation-moli",
+                            str(root),manifest["sha256"]],
+                          cwd=Path(__file__).resolve().parent.parent,
+                          capture_output=True,text=True,timeout=35)
+    assert parsed.returncode==0, parsed.stderr[-600:]
+    native=json.loads(parsed.stdout)
+    assert native["archive_sha256"]==manifest["sha256"]
+    assert native["original_yaml_sha256"]==automation_sha
+    assert native["original_registry_sha256"]==digest
+    assert native["one_explicitly_disabled_automation"]
+    assert native["compiled_to_native_moli"] and native["synthetic_actuator_confirmed"]
+    assert native["approval_required"] and native["edit_revokes_approval"]
+    assert not native["real_hardware_touched"] and not native["production_ready"]
+    print("P8BI_REAL_HAOS_BACKUP_DISABLED_AUTOMATION_ACTUAL_SYNTHETIC_MOLI_GRAPH_PASS")
     assert invoke("rollback",digest)["restored"] is None
     assert invoke("status")["active"] is None
     assert invoke("automation-source-status",manifest["sha256"])["source"]["automation_sha256"]==automation_sha
