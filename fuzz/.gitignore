@@ -39,3 +39,11 @@
 !/corpus/haos_backup_import/synthetic-duplicate-refused.bin
 !/corpus/haos_backup_import/synthetic-traversal-refused.bin
 !/corpus/haos_backup_import/synthetic-invalid-utf8-refused.bin
+
+/corpus/disabled_haos_automation/*
+!/corpus/disabled_haos_automation/disabled-synthetic.yaml
+!/corpus/disabled_haos_automation/enabled-denied.yaml
+!/corpus/disabled_haos_automation/template-denied.yaml
+!/corpus/disabled_haos_automation/real-target-denied.yaml
+!/corpus/disabled_haos_automation/two-automations-denied.yaml
+!/corpus/disabled_haos_automation/duplicate-key-denied.yaml
