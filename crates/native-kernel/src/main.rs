@@ -46,6 +46,22 @@ async fn main() -> anyhow::Result<()> {
         println!("{}", serde_json::to_string(&proof)?);
         return Ok(());
     }
+    if args.len() == 6 && args[1] == "--lab-ha-ws-core-token-rotation" {
+        if nix::unistd::Uid::effective().is_root() {
+            anyhow::bail!("Core token rotation lab forbids root");
+        }
+        let root = lab_registry_dir(&args[2])?;
+        let old = std::env::var("HARS_LAB_WS_TOKEN")
+            .map_err(|_| anyhow::anyhow!("old Core token unavailable"))?;
+        let fresh = std::env::var("HARS_LAB_WS_REPLACEMENT_TOKEN")
+            .map_err(|_| anyhow::anyhow!("replacement Core token unavailable"))?;
+        let result = hars_native_kernel::ha_ws_runtime_lab::prove_official_core_token_rotation(
+            &root, &args[3], &old, &fresh, &args[4], &args[5],
+        )
+        .await?;
+        println!("{}", serde_json::to_string(&result)?);
+        return Ok(());
+    }
     if args.len() == 6 && args[1] == "--lab-ha-ws-reauth-recovery" {
         if nix::unistd::Uid::effective().is_root() {
             anyhow::bail!("WS recovery lab forbids root");

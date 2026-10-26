@@ -87,8 +87,28 @@ async def main():
             file.chmod(0o600)
         (ROOT/"p8v-ready").write_text("ready",encoding="utf-8")
         print("P8V_REAL_CORE_HTTP_WEBSOCKET_REGISTRY_AND_AUTH_READY",flush=True)
-        for i in range(1,110):
+        rotation_done=False
+        for i in range(1,390):
             if (ROOT/"p8v-stop").exists(): break
+            if not rotation_done and (ROOT/"p8bl-rotate-request").is_file():
+                # Use the GENUINE HA Core auth manager, not fake auth frames.
+                # Revoke the first refresh token BEFORE publishing the new
+                # credential; all access tokens derived from it become invalid.
+                next_refresh=await hass.auth.async_create_refresh_token(
+                    owner, client_id="http://localhost/p8bl-offline-rotation")
+                rotated=hass.auth.async_create_access_token(next_refresh)
+                assert isinstance(rotated,str) and len(rotated)>16 and rotated!=access
+                hass.auth.async_remove_refresh_token(refresh)
+                assert refresh.id not in owner.refresh_tokens
+                temp=ROOT/"p8bl-token.tmp"
+                temp.write_text(rotated,encoding="utf-8")
+                temp.chmod(0o600)
+                temp.replace(ROOT/"p8bl-token")
+                ready=ROOT/"p8bl-rotate-ready"
+                ready.write_text("official_core_refresh_revoked_new_token_issued",encoding="utf-8")
+                ready.chmod(0o600)
+                rotation_done=True
+                print("P8BL_GENUINE_CORE_REFRESH_TOKEN_REVOKED_ROTATED_PASS",flush=True)
             # A repeated on-state with increasing attributes ensures genuine
             # state_changed events regardless of when Rust subscribes.
             hass.states.async_set(eid,"on",{"synthetic":True,"seq":i})

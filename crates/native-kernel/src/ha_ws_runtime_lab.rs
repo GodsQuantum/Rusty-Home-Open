@@ -102,6 +102,83 @@ pub async fn prove_core_reauth(
     })
 }
 
+#[derive(Serialize, Debug)]
+pub struct CoreTokenRotationReport {
+    pub genuine_core_old_refresh_revoked: bool,
+    pub old_access_token_refused_by_core: bool,
+    pub next_access_token_authenticated: bool,
+    pub new_native_hub_verified: bool,
+    pub revoked_epoch: u64,
+    pub fresh_epoch: u64,
+    pub no_old_state_reexposed: bool,
+    pub write_commands: usize,
+    pub production_ready: bool,
+}
+
+/// Actual isolated Home Assistant Core is the authority on token revocation.
+/// Fail closed if Core still accepts the obsolete access token, even if the
+/// replacement is valid. Both tokens arrive via private env vars, NEVER argv
+/// or output; no token is stored by Moli or logged by this function.
+pub async fn prove_official_core_token_rotation(
+    root: &Path,
+    url: &str,
+    old_token: &str,
+    replacement_token: &str,
+    entity: &str,
+    expected: &str,
+) -> Result<CoreTokenRotationReport> {
+    if old_token == replacement_token
+        || old_token.is_empty()
+        || replacement_token.is_empty()
+        || expected.is_empty()
+        || entity.is_empty()
+    {
+        bail!("invalid private Core rotation fixture");
+    }
+    let mut source = ShadowSession::new();
+    if source.resync_loopback(url, old_token).await.is_ok() {
+        bail!("genuine Core still accepts revoked access token");
+    }
+    let revoked_epoch = source.epoch();
+    if revoked_epoch != 1 || source.get(entity).is_ok() {
+        bail!("revocation attempt left stale Core state readable");
+    }
+    let (mut client, mut events, fresh_epoch) = source
+        .resync_loopback_bounded(url, replacement_token, 3)
+        .await?;
+    if fresh_epoch <= revoked_epoch {
+        bail!("replacement authentication did not advance session epoch");
+    }
+    let mut hub = EventConverger::start(root, source, fresh_epoch).await?;
+    if hub
+        .read_verified(&mut client, &mut events, entity)
+        .await?
+        .as_deref()
+        != Some(expected)
+    {
+        bail!("replacement Core token did not yield fresh Moli state");
+    }
+    hub.invalidate().await?;
+    if hub
+        .read_verified(&mut client, &mut events, entity)
+        .await
+        .is_ok()
+    {
+        bail!("revoked Core rotation Hub exposed stale state");
+    }
+    Ok(CoreTokenRotationReport {
+        genuine_core_old_refresh_revoked: true,
+        old_access_token_refused_by_core: true,
+        next_access_token_authenticated: true,
+        new_native_hub_verified: true,
+        revoked_epoch,
+        fresh_epoch,
+        no_old_state_reexposed: true,
+        write_commands: 0,
+        production_ready: false,
+    })
+}
+
 /// Scoped laboratory operation, never runs indefinitely or dispatches commands.
 /// Requires an existing staged identity and an expected observed literal state.
 pub async fn run(
