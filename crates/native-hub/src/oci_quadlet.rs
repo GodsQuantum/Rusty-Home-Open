@@ -13,6 +13,7 @@ pub struct OciApp<'a> {
     pub image: &'a str,
     pub memory_mib: u16,
     pub pids_limit: u16,
+    pub run_uid: Option<u32>,
 }
 pub struct QuadletUnits {
     pub container_name: String,
@@ -56,18 +57,28 @@ impl OciApp<'_> {
         {
             return Err(QuadletError::UnpinnedImage);
         }
+        if self.run_uid.is_some_and(|uid| uid == 0 || uid > 65533) {
+            return Err(QuadletError::InvalidResources);
+        }
+        let explicit_user = self
+            .run_uid
+            .map(|uid| format!("User={uid}\n"))
+            .unwrap_or_default();
+        let mount_flags = if self.run_uid.is_some() { ":U" } else { "" };
         let container_name = format!("rh-{slug}");
         let volume_name = format!("{container_name}-data");
         let container = format!(
             "[Unit]\nDescription=Rusty Home isolated OCI App {slug} (lab only)\n\n\
              [Container]\nImage={image}\nContainerName={container_name}\n\
-             Volume={volume_name}.volume:/data\nNetwork=none\nPull=never\n\
+             Volume={volume_name}.volume:/data{mount_flags}\n{explicit_user}Network=none\nPull=never\n\
              NoNewPrivileges=true\nDropCapability=all\nReadOnly=true\n\
              PidsLimit={pids}\n\n\
              [Service]\nMemoryMax={memory}M\nRestart=on-failure\nRestartSec=5s\nTimeoutStartSec=180s\n",
             image = self.image,
             pids = self.pids_limit,
-            memory = self.memory_mib
+            memory = self.memory_mib,
+            mount_flags = mount_flags,
+            explicit_user = explicit_user
         );
         let volume = format!(
             "[Unit]\nDescription=Rusty Home isolated OCI App {slug} persistent volume\n\n\
@@ -91,6 +102,7 @@ mod tests {
             image,
             memory_mib: 256,
             pids_limit: 128,
+            run_uid: None,
         }
     }
     #[test]
@@ -141,6 +153,19 @@ mod tests {
         ] {
             assert!(good("app", image).render().is_err(), "{image}")
         }
+    }
+    #[test]
+    fn optional_numeric_nonroot_uid_owns_volume_without_host_paths() {
+        let image = format!("docker.io/library/redis@sha256:{DIGEST}");
+        let mut cfg = good("redis-app", &image);
+        cfg.run_uid = Some(999);
+        let q = cfg.render().unwrap();
+        assert!(q.container.contains("User=999\n"));
+        assert!(q.container.contains(".volume:/data:U"));
+        cfg.run_uid = Some(0);
+        assert!(cfg.render().is_err());
+        cfg.run_uid = Some(99999);
+        assert!(cfg.render().is_err());
     }
     #[test]
     fn unreasonable_limits_are_rejected() {

@@ -1,5 +1,12 @@
 # Rusty Home — journal de développement et de certification
 
+## 2026-10-26 — P8ap genuine rootless native Podman App lifecycle (CI pending)
+
+- P8ao #117 generic OCI native Quadlet verified in actual Podman 4.9 generator, 20/20 CI, run 40264974609, merged b8d322bc8c37e3c4302f7eb08e45c76dbebccd7b. No fixed App allowlist.
+- P8ap extends manifest with optional explicitly nonroot numeric UID and native named-volume :U ownership; validates no root UID/injection; no host path/network access.
+- New genuine Redis 7.4-alpine OCI test in isolated GitHub Ubuntu: pre-pull then pin exact image digest, generate rootless Quadlet from Rust, systemd --user starts/stops and restarts service, redis-cli SET+SAVE then checks persisted bytes, default network none and read-only image. Must pass real exact SHA before certification. No production release gate yet (0/15).
+
+
 ## 2026-10-26 — P8ao generic native Podman Quadlet OCI App foundation (CI pending)
 
 - Distinct from P8an automatic QEMU crash-restart CI already in progress, Rust now renders generic OCI App manifests into native Podman Quadlet container+volume units, supporting arbitrary safe slugs and sha256-pinned registries; nine Apps are representative tests, never a whitelist.
