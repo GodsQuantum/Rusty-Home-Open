@@ -68,7 +68,9 @@ done
 if [[ "$(printenv HARS_CRASH_RECOVERY_LAB || true)" == 1 ]]; then
   # Genuine QEMU kill permitted only inside guarded disposable GitHub runner.
   # Rust must exit nonzero, systemd restarts it and reattaches existing QCOW2.
-  sudo systemctl reset-failed "$unit"
+  # A fully stopped static unit may already have been unloaded by systemd.
+  # systemctl start re-loads it; reset-failed on an unloaded unit exits
+  # nonzero and prevented the actual SIGKILL recovery scenario from running.
   sudo systemctl start "$unit"
   rust_before="$(sudo systemctl show -P MainPID "$unit")"
   [[ "$rust_before" =~ ^[0-9]+$ && "$rust_before" != "0" ]]
