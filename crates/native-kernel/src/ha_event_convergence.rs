@@ -236,6 +236,13 @@ impl EventConverger {
             .context("revocation unacknowledged")?;
         Ok(())
     }
+    /// Consume this obsolete shadow only after successful device invalidation.
+    pub fn into_revoked_session(mut self) -> Result<ShadowSession> {
+        if self.valid || self.session.len().is_ok() {
+            bail!("active session cannot be recycled")
+        }
+        Ok(std::mem::take(&mut self.session))
+    }
     #[cfg(test)]
     async fn apply_event(&mut self, epoch: u64, event: &WSEvent) -> Result<()> {
         if !self.valid {

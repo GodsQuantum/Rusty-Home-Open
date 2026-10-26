@@ -20,6 +20,86 @@ pub struct RunReport {
     pub read_only: bool,
     pub production_ready: bool,
 }
+#[derive(Serialize, Debug)]
+pub struct ReauthReport {
+    pub first_epoch: u64,
+    pub failed_epoch: u64,
+    pub recovered_epoch: u64,
+    pub old_state_revoked: bool,
+    pub new_hub_verified: bool,
+    pub write_commands: u64,
+    pub production_ready: bool,
+}
+
+/// Re-authenticate the genuine Core WS after revoking the old Moli mirror.
+/// Only synthetic entity IDs and the loopback network are permitted.
+pub async fn prove_core_reauth(
+    root: &Path,
+    url: &str,
+    token: &str,
+    entity: &str,
+    expected: &str,
+) -> Result<ReauthReport> {
+    let mut session = ShadowSession::new();
+    let (mut c1, mut r1, first) = session.resync_loopback(url, token).await?;
+    let mut old = EventConverger::start(root, session, first).await?;
+    if old
+        .read_verified(&mut c1, &mut r1, entity)
+        .await?
+        .as_deref()
+        != Some(expected)
+    {
+        bail!("initial Core read mismatch");
+    }
+    old.invalidate().await?;
+    if old.read_verified(&mut c1, &mut r1, entity).await.is_ok() {
+        bail!("revoked source remained accessible");
+    }
+    let mut session = old.into_revoked_session()?;
+    drop(c1);
+    drop(r1);
+    if session.get(entity).is_ok() {
+        bail!("stale snapshot survived revoke");
+    }
+    if session
+        .resync_loopback(url, "p8bh-fake-invalid-token")
+        .await
+        .is_ok()
+    {
+        bail!("Core accepted invalid authentication");
+    }
+    let failed_epoch = session.epoch();
+    if session.get(entity).is_ok() {
+        bail!("old state restored after denied login");
+    }
+    let (mut c2, mut r2, recovered) = session.resync_loopback(url, token).await?;
+    if recovered != failed_epoch + 1 {
+        bail!("reconnect did not advance epoch");
+    }
+    let mut fresh = EventConverger::start(root, session, recovered).await?;
+    if fresh
+        .read_verified(&mut c2, &mut r2, entity)
+        .await?
+        .as_deref()
+        != Some(expected)
+    {
+        bail!("new snapshot or native Hub mismatch");
+    }
+    fresh.invalidate().await?;
+    if fresh.read_verified(&mut c2, &mut r2, entity).await.is_ok() {
+        bail!("recovered Hub remained readable after stop");
+    }
+    Ok(ReauthReport {
+        first_epoch: first,
+        failed_epoch,
+        recovered_epoch: recovered,
+        old_state_revoked: true,
+        new_hub_verified: true,
+        write_commands: 0,
+        production_ready: false,
+    })
+}
+
 /// Scoped laboratory operation, never runs indefinitely or dispatches commands.
 /// Requires an existing staged identity and an expected observed literal state.
 pub async fn run(

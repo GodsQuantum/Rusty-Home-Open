@@ -46,6 +46,20 @@ async fn main() -> anyhow::Result<()> {
         println!("{}", serde_json::to_string(&proof)?);
         return Ok(());
     }
+    if args.len() == 6 && args[1] == "--lab-ha-ws-reauth-recovery" {
+        if nix::unistd::Uid::effective().is_root() {
+            anyhow::bail!("WS recovery lab forbids root");
+        }
+        let dir = lab_registry_dir(&args[2])?;
+        let token = std::env::var("HARS_LAB_WS_TOKEN")
+            .map_err(|_| anyhow::anyhow!("lab token unavailable"))?;
+        let report = hars_native_kernel::ha_ws_runtime_lab::prove_core_reauth(
+            &dir, &args[3], &token, &args[4], &args[5],
+        )
+        .await?;
+        println!("{}", serde_json::to_string(&report)?);
+        return Ok(());
+    }
     if args.len() == 7 && args[1] == "--lab-ha-ws-to-moli" {
         if nix::unistd::Uid::effective().is_root() {
             anyhow::bail!("read-only WS lab forbids root");
