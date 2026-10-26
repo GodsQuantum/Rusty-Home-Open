@@ -1,5 +1,12 @@
 # Rusty Home — journal de développement et de certification
 
+## 2026-10-26 — P8ao generic native Podman Quadlet OCI App foundation (CI pending)
+
+- Distinct from P8an automatic QEMU crash-restart CI already in progress, Rust now renders generic OCI App manifests into native Podman Quadlet container+volume units, supporting arbitrary safe slugs and sha256-pinned registries; nine Apps are representative tests, never a whitelist.
+- Secure defaults: no networking, read-only root, no new privileges, no Linux capabilities, bounded resources, pre-pulled images and persistent named volumes. Opt-in private directory only; no actual family app deployment.
+- Official Podman generator CLI on ephemeral Ubuntu must validate real parser/generator. This does not yet implement lifecycle/auth/backup parity. All ten host proofs preserved, release 0/15.
+
+
 ## 2026-10-26 — P8am native Type=notify and QMP heartbeat (CI pending)
 
 - Type=exec reported active before QEMU control was ready. Prior P8aj real HAOS systemd and P8ak package proofs are complete and not retested as new results.

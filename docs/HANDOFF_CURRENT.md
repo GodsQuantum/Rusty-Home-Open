@@ -111,6 +111,11 @@ New separate branch feat/haos-rust-guest-debian-package-20261026, worktree Rusty
 
 P8ak #112 exact-feature GitHub checks all 11 PASS; genuine package install/update/downgrade/purge run 40255870443, official HAOS systemd KVM run 40255870364; merged cae2cde2ce1e08eb86bd5a2b0465212be07845cf. DO NOT REDO. Current branch feat/signed-native-haos-guest-apt-20261026, worktree Rusty-Home-Signed-Guest-APT-Main-20261026. Extends existing signed APT fixture scripts/test_signed_apt_lab.sh with native guest versions v0.1.0 and v0.1.1 in same ephemeral signed Packages index; offline Ubuntu apt-cache both versions, deliberately tampered InRelease rejection. Independent static contract in scripts/test_p8al_signed_guest_contract.py. Pending exact-head GitHub public-debian-apt.yml job. No production signing key, no auto-start, no Cloud9 family or radio changes. 0/15.
 
+## P8ao — generic OCI Apps via upstream rootless Podman Quadlet (26 October)
+
+P8am #115 is merged on main 01265a9; P8an #116 separate real QEMU SIGKILL crash-restart CI is active; DO NOT REIMPLEMENT here.
+Branch feat/generic-oci-quadlet-apps-20261026, isolated worktree Rusty-Home-OCI-Quadlet-20261026, introduces generic OCI sha256 digest pinned App manifests compiled into official Podman Quadlet rootless configuration. No hardcoded App-name allowlist; constrained quotas, volumes and no auto-install. Official generator CI p8ao-oci-quadlet.yml is mandatory before even limited lab certification. This does NOT demonstrate real Apps running, login, backup or full Supervisor parity. Production 0/15.
+
 ## Reprise obligatoire
 
 1. Lire ces sources, vérifier le SHA actuel de GitHub, les PR ouvertes, les preuves et la CI avant de relancer des travaux.
