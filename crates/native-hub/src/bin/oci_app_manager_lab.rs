@@ -1,7 +1,8 @@
 //! P8ar: lab-only *actual* rootless native systemd/Podman OCI App manager.
 //! No root, no household HAOS, no user device access, no production API.
 use hars_native_hub::oci_quadlet::{
-    AppNetwork, OciApp, QuadletUnits, bind_native_runtime_tmpfs, bind_native_secret,
+    AppNetwork, OciApp, QuadletUnits, bind_native_nested_existing_volume,
+    bind_native_runtime_tmpfs, bind_native_secret,
 };
 use std::{
     env,
@@ -155,6 +156,7 @@ struct InstallExtras<'a> {
     data_destination: Option<&'a str>,
     secret_name: Option<&'a str>,
     runtime_tmpfs: Option<&'a str>,
+    nested_volume: Option<(&'a str, &'a str)>,
 }
 fn install(
     dir: &Path,
@@ -189,6 +191,14 @@ fn install(
     if let Some(path) = extras.runtime_tmpfs {
         bind_native_runtime_tmpfs(&mut q, path).map_err(|_| bad())?;
     }
+    if let Some((volume, child)) = extras.nested_volume {
+        let parent = extras.data_destination.ok_or_else(bad)?;
+        // Reuse existing native container path validation, in addition to
+        // requiring the *specific* parent and child topology below.
+        decl.render_at(child).map_err(|_| bad())?;
+        bind_native_nested_existing_volume(&mut q, slug, parent, volume, child)
+            .map_err(|_| bad())?;
+    }
     // Flock is acquired BEFORE checking or writing descriptors: concurrent
     // installers and install/remove/start/switch may never race on a slug.
     let _guard = lock_app_install(dir, slug)?;
@@ -196,6 +206,11 @@ fn install(
     // No creating, reading, printing, or marshalling secret content here.
     if let Some(name) = extras.secret_name {
         podman(&["secret", "exists", name])?;
+    }
+    // This volume must already exist in this exact rootless Podman store.
+    // Never let the engine silently create an anonymous image VOLUME child.
+    if let Some((volume, _)) = extras.nested_volume {
+        podman(&["volume", "exists", volume])?;
     }
     // Strictly no pull or mutable tags. OCI digest must already be available.
     podman(&["image", "exists", image])?;
@@ -453,6 +468,21 @@ fn execute() -> io::Result<()> {
                 network,
                 InstallExtras {
                     data_destination: Some(&args[5]),
+                    ..Default::default()
+                },
+            )
+        }
+        "--install-dual-path-lab" if args.len() == 8 => {
+            let uid = args[4].parse::<u32>().map_err(|_| bad())?;
+            install(
+                &dir,
+                &args[2],
+                &args[3],
+                uid,
+                AppNetwork::Offline,
+                InstallExtras {
+                    data_destination: Some(&args[5]),
+                    nested_volume: Some((&args[6], &args[7])),
                     ..Default::default()
                 },
             )
