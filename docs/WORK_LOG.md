@@ -466,3 +466,7 @@ P2j final exact GitHub evidence (2026-10-26): PR #155 merged f6e5351f469716cca80
 ## 26 October 2026 — P2l Moli invalid batch ownership regression (CI pending)
 
 RED on actual upstream Moli Hub: malformed direct Preview with repeated unique_id registered a phantom device (expected 1 legitimate, got 2). Added all-or-nothing validation at the public driver channel boundary before any upsert: unique IDs, 1-32 entries, supported read-only kinds, safe lab topics. GREEN isolated LXC700: P2l 1/1, full native-kernel 56/56, strict Clippy and cargo fmt and git diff --check PASS. Additional real Hub assertions: rejected competing config cannot steal an existing ID or tombstone owner, legitimate removal and same-ID re-add reset state. No MQTT broker, no hardware, no production permission, no independent audit; 0/15. PR CI exact SHA pending.
+
+## 26 October 2026 — P2l exact original CI receipt (verified LAB)
+
+PR #158 original feature HEAD 6c2d061f251149b1a9afa1424a8971c218bf0b78, 11/11 GitHub status checks COMPLETED/SUCCESS at that exact SHA, squash merge 6d13d8b61dfdc9ec606f70ef528a9f8b3a1a6593. Actual upstream Moli CI run 40389728103 job 121807245943 SUCCESS; log directly shows targeted malformed-batch regression 1/1 PASS and full native-kernel 56/56 PASS, strict Clippy and fmt. Local LXC700 workspace cargo test --locked --workspace PASS. Added scoped machine claim; release checker remains NOT_PRODUCTION_READY 0/15. No real broker, radio, VM100, secrets or independent signoff.
