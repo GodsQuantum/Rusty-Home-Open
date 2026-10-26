@@ -195,3 +195,13 @@ Scope only: actual owner-private on-disk redb, distinct from #161 in-memory Moli
 | P2n persisted redb | #162 4837233c4870c6e0604d35a064f6d748c264591f / e50928759be7b8c07b882c1c7cca460bd3194301 | [40406964357](https://github.com/GodsQuantum/Rusty-Home-Open/actions/runs/40406964357), 121867096840 | 10/10 SUCCESS | Genuine owner-private redb 3/3 targeted tests: transactional duplicate topic refusal, legacy duplicate identity/topic recovery denied, valid tombstone/reopen; P2i/P2k actual Mosquitto rerun was regression ONLY |
 
 The corresponding CI job metadata explicitly reports SUCCESS at the ORIGINAL feature HEADs and the logs contain the new test names and P2M marker. No real household broker, HAOS VM100, radio, live credential, independent pentest, release signing or 72-hour soak. Both are verified laboratory cases, never production gates. NOT_PRODUCTION_READY, 0/15.
+
+## P8ax — independent restore of SECOND genuine stateful OCI App (26 October)
+
+**Merged #164:** original feature HEAD 8a375a809b5ed1f078e42eb82ba9f6535bcca981; squash commit 2a2813dd5e96b87adac99048665f27adddbab792. **11/11 GitHub checks green**. Official original SHA run https://github.com/GodsQuantum/Rusty-Home-Open/actions/runs/40409988909, job 121877915230, workflow P8aw OCI App custom volume path with genuine Docker Distribution registry storage.
+
+Actual official Docker Distribution 3.1.2 under native generic rootless Podman App manager: original Registry stopped; state exported to private 0600 tar; SHA verified and corrupt archive refused. Original restarted and acquired NEW OCI blob after backup. Previously captured tar imported into a distinct fresh Podman named volume; new independently running Registry served old blob via localhost HTTP and returned 404 for post-backup blob. Original retains both. Restored App uninstalled without deleting its volume or disrupting source.
+
+Scope: Redis (P8aq) and Distribution are TWO real independent stateful restores, not nine representative Apps, not arbitrary Supervisor database migration, not production cutover. No household HAOS/radios, no 72 h soak, no independent reviewer. Release remains NOT_PRODUCTION_READY (0/15) and supervisor_apps_restore lab_partial.
+
+The same PR repaired GitHub REST 422 on giant old PR #59 using GraphQL only for the exact known REST error, requiring merged main branch and verified 40-character head/merge SHAs; 403/404/other errors still refuse. Exact online provenance check is not skipped.
