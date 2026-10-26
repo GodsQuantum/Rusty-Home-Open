@@ -121,6 +121,10 @@ Branch feat/generic-oci-quadlet-apps-20261026, isolated worktree Rusty-Home-OCI-
 P8ao PR #117 generic arbitrary OCI digest-pinned rootless Podman Quadlet generator 20/20 CI green, run 40264974609, MERGED b8d322bc8c37e3c4302f7eb08e45c76dbebccd7b; DO NOT RETEST AS NEW PROOF. Current worktree Rusty-Home-OCI-Real-App-Main-20261026, branch test/real-oci-app-lifecycle-main-20261026, extends generic Rust OCI App manifest to select a bounded nonroot numeric container UID and native Podman :U volume ownership; NO hardcoded app name mapping.
 Distinct CI p8ap-real-oci-app.yml uses official Redis 7.4-alpine image pinned dynamically to its actual digest and attempts real systemctl --user start/stop/restart of generated Quadlet on an isolated Ubuntu runner; checks redis-cli state persisted across restart, no host port, read-only root and exclusive rootless OCI runtime. This requires exact GitHub CI at head. Redis is a real App test, NOT blanket Supervisor add-on compatibility; no household deployment, credentials, hardware, or radio. Production 0/15.
 
+## P8aq — genuine rootless OCI App backup into independent restore (26 Oct)
+
+P8ap #118 real Redis rootless systemd App persisted data test 21/21 CI merged 071b85bac4f887843be3a2f47d25e44ddcc03bd1. DO NOT REDO. Current branch feat/oci-app-backup-restore-20261026, worktree Rusty-Home-OCI-Backup-20261026. Extends proven real Redis Quadlet lab script with HARS_VOLUME_RESTORE_LAB=1, native Podman volume export/import, sha256 integrity and corrupted-archive negative, new empty volume and separate Rust-generated Redis restore instance. Compares older backed-up data vs newly mutated original. CI .github/workflows/p8aq-real-oci-restore.yml must pass exact head SHA. This is one REAL App volume scenario, not complete Supervisor migration, signed backups, 72h or production. 0/15.
+
 ## Reprise obligatoire
 
 1. Lire ces sources, vérifier le SHA actuel de GitHub, les PR ouvertes, les preuves et la CI avant de relancer des travaux.

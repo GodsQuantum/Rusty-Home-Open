@@ -1,0 +1,42 @@
+name: P8aq Real Podman OCI App backup authenticated restore into independent volume
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/p8aq-real-oci-restore.yml"
+      - "scripts/test_p8aq_app_restore_contract.py"
+      - "scripts/test_p8ap_real_redis_quadlet.sh"
+      - "scripts/test_p8ap_real_oci_contract.py"
+      - "crates/native-hub/**"
+      - "Cargo.lock"
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  real-oci-app-backup-restore:
+    name: Real stopped Redis volume export with sha256 and independent restore, tamper rejected
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Strict generic OCI security and negative input tests
+        run: |
+          python3 scripts/test_p8ap_real_oci_contract.py
+          python3 scripts/test_p8aq_app_restore_contract.py
+          cargo fmt --all -- --check
+          cargo test --locked -p hars-native-hub --all-targets
+          cargo clippy --locked -p hars-native-hub --all-targets -- -D warnings
+          bash -n scripts/test_p8ap_real_redis_quadlet.sh
+      - name: Use official Ubuntu Podman and rootless OCI runtime
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends podman uidmap slirp4netns fuse-overlayfs
+          test -x /usr/bin/podman
+          test -S /run/user/$(id -u)/bus
+      - name: Genuine rootless Redis original and independent restored App volumes
+        timeout-minutes: 12
+        run: |
+          cargo build --locked -p hars-native-hub --bin oci_quadlet_lab
+          HARS_VOLUME_RESTORE_LAB=1 bash scripts/test_p8ap_real_redis_quadlet.sh
