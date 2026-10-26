@@ -1,5 +1,10 @@
 # Rusty Home — journal de développement et de certification
 
+## 2026-10-26 — P8ag continuous Rust-managed HAOS guest (CI pending)
+
+New Rust guest host process lifecycle, existing COW disk, private QMP, bounded shutdown and QEMU reap. Exact official HAOS KVM CI pending. No installation to the family system, no radio ownership and no production gate certified.
+
+
 ## 2026-10-26 — pinned results of P8ac–P8af (all green and merged)
 
 - Four non-duplicative official pinned HAOS 18.3 KVM proofs: Rust QEMU boot (P8ac, 18/18), actual Supervisor and Core CLI health (P8ad, 11/11), persistence of COW data across QEMU hard restart (P8ae, 12/12), and an entirely new Rust process reattaching the old guest storage while rejecting concurrent ownership (P8af, 13/13).

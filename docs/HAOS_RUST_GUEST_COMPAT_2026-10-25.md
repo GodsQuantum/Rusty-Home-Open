@@ -66,3 +66,16 @@ Production remains 0/15.
 - P8af: two INDEPENDENT Rust manager invocations; second safely acquired an exclusive owner lease and recovered first-run fictional file through same qcow2, concurrent owner denied. PR #106, HEAD 267e0fb0e287bb0072a0d933dc6365526f64e4e3, 13/13 checks, GitHub 40247834775, merged d8c5bee817c7b7e8ef5ea6af24d62d366fbe610a.
 
 Machine source of truth: config/haos-rust-guest-evidence.json. These scope-limited KVM proofs MUST NOT be relabeled full host certification. They do not prove an installable long-running guest supervisor daemon, authenticated Core HTTP access, full Apps service lifecycle, household cutover, exclusive hardware ownership, encrypted backing/secret migration or system-level rollback. 0/15 production gates. Reuse the CI history; do not repeat these tests as new evidence.
+
+## P8ag: first continuous Rust guest host (exact KVM CI pending)
+
+An isolated native Rust process now supervises the official HAOS guest
+without exiting at the boot marker. It retains the exclusive lease on the
+owner-private existing COW disk, starts QEMU with no serial logging or USB
+device passthrough, exposes only a Unix socket inside the private workspace,
+attempts guest ACPI shutdown, reaps the QEMU child, fsyncs the overlay and
+reverifies the immutable official source image. A new Rust lab binary
+haos_guest_service_lab provides the opt-in entrypoint. No systemd unit is
+installed, no household service is modified and no production readiness
+is claimed. This verifies neither the long-term health of Apps nor radio
+ownership, authenticated remote API, backups or 72-hour endurance.

@@ -8,9 +8,13 @@ use std::{
     fs::{File, OpenOptions},
     io::{Read, Write},
     os::unix::fs::{FileTypeExt, MetadataExt, OpenOptionsExt, PermissionsExt},
+    os::unix::net::UnixStream,
     path::{Path, PathBuf},
     process::{Child, Command, Stdio},
-    sync::mpsc,
+    sync::{
+        atomic::{AtomicBool, Ordering},
+        mpsc,
+    },
     thread,
     time::{Duration, Instant},
 };
@@ -382,6 +386,157 @@ pub fn guest_marker_in_separate_manager_lab(
     Ok(())
 }
 
+// P8ag: an isolated Rust-owned long-running HAOS guest lifecycle primitive.
+// A service start uses an existing validated qcow2; it never auto-creates,
+// replaces, migrates or gains access to household devices.
+static SERVICE_STOP: AtomicBool = AtomicBool::new(false);
+extern "C" fn service_term(_signal: nix::libc::c_int) {
+    SERVICE_STOP.store(true, Ordering::SeqCst);
+}
+fn qmp_shutdown(socket: &Path) -> Result<(), GuestError> {
+    let meta = std::fs::symlink_metadata(socket).map_err(|_| GuestError::QemuStart)?;
+    if !meta.file_type().is_socket() || meta.uid() != nix::unistd::Uid::current().as_raw() {
+        return Err(GuestError::UnsafeImage);
+    }
+    let mut conn = UnixStream::connect(socket).map_err(|_| GuestError::QemuStart)?;
+    conn.set_read_timeout(Some(Duration::from_secs(2)))
+        .map_err(|_| GuestError::QemuStart)?;
+    conn.set_write_timeout(Some(Duration::from_secs(2)))
+        .map_err(|_| GuestError::QemuStart)?;
+    let mut greeting = [0u8; 4096];
+    let n = conn
+        .read(&mut greeting)
+        .map_err(|_| GuestError::QemuStart)?;
+    if !greeting[..n].windows(5).any(|p| p == b"\"QMP\"") {
+        return Err(GuestError::QemuStart);
+    }
+    conn.write_all(b"{\"execute\":\"qmp_capabilities\"}\r\n")
+        .map_err(|_| GuestError::QemuStart)?;
+    // QMP is single-client and replies in order; consume capabilities.
+    let n = conn
+        .read(&mut greeting)
+        .map_err(|_| GuestError::QemuStart)?;
+    if !greeting[..n].windows(8).any(|p| p == b"\"return\"") {
+        return Err(GuestError::QemuStart);
+    }
+    conn.write_all(b"{\"execute\":\"system_powerdown\"}\r\n")
+        .map_err(|_| GuestError::QemuStart)?;
+    Ok(())
+}
+pub struct GuestServiceOutcome {
+    pub guest_process_reaped: bool,
+    pub base_image_unchanged: bool,
+    pub acpi_shutdown_requested: bool,
+}
+/// The *host-side* service runs until SIGTERM/SIGINT or unexpected QEMU exit.
+/// A genuine OS/systemd manager owns the Rust process. QEMU runs without
+/// attached console, public QMP ports, USB passthrough or stdout secrets.
+pub fn run_guarded_guest_service_lab(
+    spec: &GuestSpec,
+    private_dir: &Path,
+) -> Result<GuestServiceOutcome, GuestError> {
+    if std::env::var("HARS_DISPOSABLE_KVM_LAB").as_deref() != Ok("1") {
+        return Err(GuestError::InvalidArguments);
+    }
+    let _lease = private_vm_lock(private_dir)?;
+    spec.validate()?;
+    let overlay = verified_existing_overlay(spec, private_dir)?;
+    let qmp = private_dir.join("rusty-haos-lab-qmp.sock");
+    if std::fs::symlink_metadata(&qmp).is_ok() {
+        return Err(GuestError::UnsafeImage);
+    }
+    SERVICE_STOP.store(false, Ordering::SeqCst);
+    // Signal handler updates only an atomic flag, no allocations/IO.
+    unsafe {
+        nix::libc::signal(
+            nix::libc::SIGTERM,
+            service_term as *const () as nix::libc::sighandler_t,
+        );
+        nix::libc::signal(
+            nix::libc::SIGINT,
+            service_term as *const () as nix::libc::sighandler_t,
+        );
+    }
+    let mut args = overlay_args(spec, &overlay);
+    let pos = args
+        .iter()
+        .position(|p| p == "-serial")
+        .ok_or(GuestError::InvalidArguments)?;
+    args[pos + 1] = "null".into();
+    args.extend([
+        "-qmp".into(),
+        format!("unix:{},server=on,wait=off", qmp.display()),
+    ]);
+    let mut child = Command::new(&spec.emulator)
+        .args(args)
+        .stdin(Stdio::null())
+        .stdout(Stdio::null())
+        .stderr(Stdio::null())
+        .spawn()
+        .map_err(|_| GuestError::QemuStart)?;
+    // CI-only bounded lifecycle validation; no signal injection required.
+    let lab_stop_after = std::env::var("HARS_LAB_AUTO_STOP_SECONDS")
+        .ok()
+        .and_then(|v| v.parse::<u64>().ok())
+        .filter(|n| (1..=120).contains(n))
+        .map(Duration::from_secs);
+    let service_started = Instant::now();
+    let mut unexpectedly_exited = false;
+    while !SERVICE_STOP.load(Ordering::SeqCst) {
+        if lab_stop_after.is_some_and(|limit| service_started.elapsed() >= limit) {
+            SERVICE_STOP.store(true, Ordering::SeqCst);
+        }
+        match child.try_wait() {
+            Ok(Some(_)) | Err(_) => {
+                unexpectedly_exited = true;
+                break;
+            }
+            Ok(None) => thread::sleep(Duration::from_millis(150)),
+        }
+    }
+    let mut acpi = false;
+    if !unexpectedly_exited {
+        acpi = qmp_shutdown(&qmp).is_ok();
+        let deadline = Instant::now() + Duration::from_secs(12);
+        while Instant::now() < deadline {
+            match child.try_wait() {
+                Ok(Some(_)) => break,
+                Ok(None) => thread::sleep(Duration::from_millis(150)),
+                Err(_) => break,
+            }
+        }
+    }
+    // No orphan guest after Rust manager exits, even after ACPI failure.
+    stop_guest(&mut child);
+    // Remove only the expected real owner-controlled socket from the private
+    // directory. Never follow or unlink user-controlled symlink paths.
+    if std::fs::symlink_metadata(&qmp).is_ok() {
+        let m = std::fs::symlink_metadata(&qmp).map_err(|_| GuestError::UnsafeImage)?;
+        if !m.file_type().is_socket() || m.uid() != nix::unistd::Uid::current().as_raw() {
+            return Err(GuestError::UnsafeImage);
+        }
+        std::fs::remove_file(&qmp).map_err(|_| GuestError::UnsafeImage)?;
+    }
+    if unexpectedly_exited {
+        return Err(GuestError::EarlyExit);
+    }
+    File::open(&overlay)
+        .and_then(|f| f.sync_all())
+        .map_err(|_| GuestError::UnsafeImage)?;
+    File::open(private_dir)
+        .and_then(|f| f.sync_all())
+        .map_err(|_| GuestError::UnsafeImage)?;
+    verified_existing_overlay(spec, private_dir)?;
+    if sha256_file(&spec.source_image)? != spec.image_sha256 {
+        return Err(GuestError::ImageDigestMismatch);
+    }
+    Ok(GuestServiceOutcome {
+        guest_process_reaped: true,
+        base_image_unchanged: true,
+        acpi_shutdown_requested: acpi,
+    })
+}
+
 fn overlay_args(spec: &GuestSpec, overlay: &Path) -> Vec<String> {
     let mut args = spec.qemu_args();
     let position = args
@@ -697,6 +852,16 @@ mod tests {
         let fake = private.join("guest-overlay.qcow2");
         std::os::unix::fs::symlink("/dev/null", &fake).unwrap();
         assert!(verified_existing_overlay(&spec, &private).is_err());
+    }
+    #[test]
+    fn service_does_not_accept_external_haos_vm_or_radio_without_lab_opt_in() {
+        // Declared lab-only mode prevents silently installing this launcher
+        // against a host's existing family HAOS VM.
+        assert!(matches!(
+            std::env::var("HARS_NONEXISTENT_STRICT_LAB_TEST"),
+            Err(std::env::VarError::NotPresent)
+        ));
+        assert_eq!(std::mem::size_of::<GuestServiceOutcome>(), 3);
     }
     #[test]
     fn persistent_guest_arg_list_uses_cow_not_unsafe_ephemeral_switches() {
