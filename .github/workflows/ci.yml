@@ -103,6 +103,7 @@ jobs:
         run: |
           cargo build --locked -p hars-native-kernel
           python3 scripts/test_p20_radio_exclusivity.py
+          python3 scripts/test_p20_kernel_tty_exclusion.py
       - name: Native bearer-auth daemon, state persistence and restart
         run: python3 scripts/test_native_daemon_http.py
       - name: Durable command idempotency and real crash quarantine
