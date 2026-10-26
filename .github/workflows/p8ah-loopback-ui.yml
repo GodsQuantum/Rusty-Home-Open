@@ -1,4 +1,4 @@
-name: P8ag Native Rust service manages official HAOS guest lifetime
+name: P8ah HAOS guest UI forwarded strictly to local host in native Rust
 on:
   workflow_dispatch:
   pull_request:
@@ -6,12 +6,13 @@ on:
       - ".github/workflows/p8ah-loopback-ui.yml"
       - "crates/native-hub/**"
       - "scripts/test_p8ag_service_contract.py"
+      - "scripts/test_p8ah_loopback_contract.py"
       - "Cargo.lock"
 permissions:
   contents: read
 jobs:
   rust-launches-official-haos:
-    name: Native Rust host QMP lifecycle and locked official HAOS guest in KVM
+    name: Native Rust QEMU guest binds frontend only on local TCP in real KVM
     runs-on: ubuntu-24.04
     timeout-minutes: 35
     steps:
@@ -22,6 +23,7 @@ jobs:
       - name: Rust type-safe guest launch and negative path certification
         run: |
           python3 scripts/test_p8ag_service_contract.py
+          python3 scripts/test_p8ah_loopback_contract.py
           cargo fmt --all -- --check
           cargo test --locked -p hars-native-hub --all-targets
           cargo clippy --locked -p hars-native-hub --all-targets -- -D warnings
@@ -50,7 +52,7 @@ jobs:
           qemu-img create -f qcow2 -F qcow2 -b "$RUNNER_TEMP/haos-native-rust.qcow2" "$RUNNER_TEMP/haos-guest-service/guest-overlay.qcow2"
           chmod 0600 "$RUNNER_TEMP/haos-guest-service/guest-overlay.qcow2"
           HARS_DISPOSABLE_KVM_LAB=1 HARS_LAB_AUTO_STOP_SECONDS=20 target/debug/haos_guest_service_lab --lab-service-loopback-ui /usr/bin/qemu-system-x86_64 /usr/share/ovmf/OVMF.fd "$RUNNER_TEMP/haos-native-rust.qcow2" "$SHA" "$RUNNER_TEMP/haos-guest-service" | tee "$RUNNER_TEMP/haos-native-rust-proof.json"
-          python3 -c 'import json,os; d=json.load(open(os.environ["RUNNER_TEMP"]+"/haos-native-rust-proof.json")); assert d["native_rust_continuous_guest_manager"] and d["guest_process_reaped"] and d["official_haos_base_image_unchanged"] and d["local_private_qmp_only"] and not d["radio_passthrough"] and not d["production_ready"]; print("P8AG_REAL_RUST_GUEST_SERVICE_QMP_REAP_PASS")'
+          python3 -c 'import json,os; d=json.load(open(os.environ["RUNNER_TEMP"]+"/haos-native-rust-proof.json")); assert d["native_rust_continuous_guest_manager"] and d["guest_process_reaped"] and d["loopback_frontend_forward_requested"] and d["loopback_listener_reached"] and not d["radio_passthrough"] and not d["production_ready"]; print("P8AH_QEMU_HOST_LOCALHOST_UI_FORWARD_PASS")'
           test ! -e "$RUNNER_TEMP/haos-guest-service/rusty-haos-lab-qmp.sock"
           echo "$SHA  $RUNNER_TEMP/haos-native-rust.qcow2" | sha256sum -c
       - name: No persistent QEMU or disk artifacts in repository
