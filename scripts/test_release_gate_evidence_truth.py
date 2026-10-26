@@ -40,6 +40,12 @@ class GateReality(unittest.TestCase):
         self.assertEqual(p2l["release_gate"], "native_drivers_services")
         self.assertEqual(p2l["run_id"], 40389728103)
         self.assertEqual(p2l["head_sha"], "6c2d061f251149b1a9afa1424a8971c218bf0b78")
+        p2k = next(x for x in self.claims if x["id"] == "mqtt5_live_broker_tombstone_same_id_readd")
+        self.assertEqual(p2k["status"], "verified_lab_only")
+        self.assertEqual(p2k["release_gate"], "native_drivers_services")
+        self.assertEqual(p2k["run_id"], 40397842879)
+        self.assertEqual(p2k["head_sha"], "bae1ee85596c7d2004bda91d2281b2a091c20303")
+        self.assertEqual(p2k["merged_pr"], 157)
         known={x["id"]:x for x in self.rows}
         self.assertEqual(set(known),{x["id"] for x in self.rows})
         self.assertTrue(all(x["blocked_reason"] and len(x["blocked_reason"][0])>80

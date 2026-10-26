@@ -207,6 +207,18 @@
       "scope": "Real upstream Moli Hub rejects malformed direct in-process Preview batches atomically, rival ID theft and rogue topic writes; legitimate removal and same-ID re-add reset state, read-only. No broker, physical radio, VM100 or production authority.",
       "url": "https://github.com/GodsQuantum/Rusty-Home-Open/actions/runs/40389728103",
       "merged_pr": 158
+    },
+    {
+      "id": "mqtt5_live_broker_tombstone_same_id_readd",
+      "release_gate": "native_drivers_services",
+      "status": "verified_lab_only",
+      "run_id": 40397842879,
+      "head_sha": "bae1ee85596c7d2004bda91d2281b2a091c20303",
+      "workflow": "P2i Genuine isolated MQTT5 broker SIGKILL and durable stale quarantine",
+      "job": "real-isolated-mqtt5-broker-sigkill",
+      "scope": "Actual isolated Mosquitto retained MQTT5 config and state, genuine tombstone empties redb and Moli Hub, same unique_id re-registers without stale state, fresh value 31.2 read-only; no physical device, VM100 or production authority.",
+      "url": "https://github.com/GodsQuantum/Rusty-Home-Open/actions/runs/40397842879",
+      "merged_pr": 157
     }
   ]
 }

@@ -617,6 +617,10 @@ mod tests {
         let volume = temp.path().join("rh-redis-data.volume");
         fs::write(&container, "[Container]\nImage=test\n").unwrap();
         fs::write(&volume, "[Volume]\n").unwrap();
+        // Respect the managers owner-private unit contract even when the
+        // developer or CI uses a group-writable (0002) umask.
+        fs::set_permissions(&container, fs::Permissions::from_mode(0o600)).unwrap();
+        fs::set_permissions(&volume, fs::Permissions::from_mode(0o600)).unwrap();
         let lock = lock_app(temp.path(), "redis").unwrap();
         assert!(lock_app(temp.path(), "redis").is_err());
         assert!(lock_app_install(temp.path(), "redis").is_err());
