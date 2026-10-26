@@ -61,6 +61,50 @@ done
 test "$(podman exec rh-managedredis redis-cli GET manager-proof)" = stable
 echo P8AR_RUST_MANAGER_NATIVE_START_STOP_PERSISTENT_APP_DATA_PASS
 
+if [[ "$(printenv HARS_UPGRADE_ROLLBACK_LAB || true)" == 1 ]]; then
+  # Genuine different OCI image and same Redis series, so on-disk RDB remains
+  # compatible when the first image is restored.
+  podman pull --quiet docker.io/library/redis:7.4-bookworm
+  NEXT="$(podman image inspect docker.io/library/redis:7.4-bookworm --format '{{index .RepoDigests 0}}')"
+  [[ "$NEXT" == docker.io/library/redis@sha256:* && "$NEXT" != "$SOURCE" ]]
+  original_id="$(podman image inspect "$SOURCE" --format '{{.Id}}')"
+  updated_id="$(podman image inspect "$NEXT" --format '{{.Id}}')"
+  [[ "$original_id" != "$updated_id" ]]
+  unit="$QUADLETS/rh-managedredis.container"
+  old_unit_hash="$(sha256sum "$unit" | cut -d' ' -f1)"
+  # Wrong expected old digest and mutable tags are refused BEFORE any stop.
+  if HARS_DISPOSABLE_OCI_LAB=1 "$BIN" --switch-image-lab managedredis      "$NEXT" "$SOURCE"; then exit 1; fi
+  if HARS_DISPOSABLE_OCI_LAB=1 "$BIN" --switch-image-lab managedredis      "$SOURCE" docker.io/library/redis:7.4-bookworm; then exit 1; fi
+  test "$(sha256sum "$unit" | cut -d' ' -f1)" = "$old_unit_hash"
+  test "$(podman inspect rh-managedredis --format '{{.Image}}')" = "$original_id"
+  echo P8AT_MUTABLE_OR_STALE_OCI_UPGRADE_REJECTED_NO_MUTATION_PASS
+
+  HARS_DISPOSABLE_OCI_LAB=1 "$BIN" --switch-image-lab managedredis "$SOURCE" "$NEXT"
+  for i in $(seq 1 90); do
+    if podman exec rh-managedredis redis-cli ping 2>/dev/null | grep -Fx PONG; then break; fi
+    sleep .5
+  done
+  test "$(podman inspect rh-managedredis --format '{{.Image}}')" = "$updated_id"
+  test "$(podman exec rh-managedredis redis-cli GET manager-proof)" = stable
+  test -f "$QUADLETS/rh-managedredis.rollback"
+  podman exec rh-managedredis redis-cli SET manager-proof upgraded-data | grep -Fx OK
+  podman exec rh-managedredis redis-cli SAVE | grep -Fx OK
+  echo P8AT_REAL_DIGEST_PINNED_IMAGE_SWITCH_PERSISTENT_DATA_PASS
+
+  HARS_DISPOSABLE_OCI_LAB=1 "$BIN" --rollback-image-lab managedredis
+  for i in $(seq 1 90); do
+    if podman exec rh-managedredis redis-cli ping 2>/dev/null | grep -Fx PONG; then break; fi
+    sleep .5
+  done
+  test "$(podman inspect rh-managedredis --format '{{.Image}}')" = "$original_id"
+  test "$(podman exec rh-managedredis redis-cli GET manager-proof)" = upgraded-data
+  test "$(sha256sum "$unit" | cut -d' ' -f1)" = "$old_unit_hash"
+  ! test -e "$QUADLETS/rh-managedredis.rollback"
+  if HARS_DISPOSABLE_OCI_LAB=1 "$BIN" --rollback-image-lab managedredis; then exit 1; fi
+  echo P8AT_REAL_OCI_IMAGE_ROLLBACK_EXACT_UNIT_AND_DATA_RETAINED_PASS
+fi
+
+
 if [[ "$(printenv HARS_LOCAL_TCP_LAB || true)" == 1 ]]; then
   bound="$(podman port rh-managedredis 6379/tcp)"
   printf 'P8AS_NATIVE_PODMAN_HOST_BIND=%s\n' "$bound"

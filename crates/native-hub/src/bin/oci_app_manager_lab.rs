@@ -5,7 +5,10 @@ use std::{
     env,
     fs::{self, File, OpenOptions},
     io::{self, Write},
-    os::unix::fs::{MetadataExt, OpenOptionsExt, PermissionsExt},
+    os::unix::{
+        fs::{MetadataExt, OpenOptionsExt, PermissionsExt},
+        io::AsRawFd,
+    },
     path::{Path, PathBuf},
     process::{Command, Stdio},
 };
@@ -143,14 +146,143 @@ fn install(dir: &Path, slug: &str, image: &str, uid: u32, network: AppNetwork) -
     Ok(())
 }
 fn remove(dir: &Path, slug: &str) -> io::Result<()> {
+    let _guard = lock_app(dir, slug)?;
     let unit = require_installed(dir, slug)?;
-    systemctl(&["--user", "stop", &unit])?;
     let (a, b, _) = unit_paths(dir, slug)?;
+    if fs::symlink_metadata(a.with_extension("rollback")).is_ok() {
+        return Err(denied());
+    }
+    systemctl(&["--user", "stop", &unit])?;
     fs::remove_file(a)?;
     fs::remove_file(b)?;
     File::open(dir)?.sync_all()?;
     systemctl(&["--user", "daemon-reload"])?;
     // No volume deletion: App data survives uninstall by default.
+    Ok(())
+}
+// A short exclusive per-App advisory lock serializes separate manager invocations.
+fn lock_app(dir: &Path, slug: &str) -> io::Result<File> {
+    let (a, _, _) = unit_paths(dir, slug)?;
+    let lock = a.with_extension("lock");
+    let file = OpenOptions::new()
+        .read(true)
+        .write(true)
+        .create(true)
+        .mode(0o600)
+        .custom_flags(nix::libc::O_NOFOLLOW)
+        .open(lock)?;
+    installed_file(&a)?;
+    let m = file.metadata()?;
+    if !m.is_file() || m.uid() != unsafe { nix::libc::geteuid() } || m.mode() & 0o077 != 0 {
+        return Err(denied());
+    }
+    let code =
+        unsafe { nix::libc::flock(file.as_raw_fd(), nix::libc::LOCK_EX | nix::libc::LOCK_NB) };
+    if code != 0 {
+        return Err(denied());
+    }
+    Ok(file)
+}
+fn extract_image(content: &str) -> io::Result<&str> {
+    let mut matches = content.lines().filter_map(|s| s.strip_prefix("Image="));
+    let img = matches.next().ok_or_else(bad)?;
+    if matches.next().is_some() || !content.contains("Pull=never\n") {
+        return Err(denied());
+    }
+    Ok(img)
+}
+fn validate_digest(slug: &str, image: &str) -> io::Result<()> {
+    let app = OciApp {
+        slug,
+        image,
+        memory_mib: 256,
+        pids_limit: 128,
+        run_uid: Some(999),
+        network: AppNetwork::Offline,
+    };
+    app.render().map(|_| ()).map_err(|_| bad())
+}
+fn replace_image(content: &str, expected: &str, new_image: &str) -> io::Result<String> {
+    if extract_image(content)? != expected {
+        return Err(denied());
+    }
+    let prev = format!("Image={expected}\n");
+    if content.matches(&prev).count() != 1 {
+        return Err(denied());
+    }
+    Ok(content.replacen(&prev, &format!("Image={new_image}\n"), 1))
+}
+fn replace_private_atomic(dir: &Path, target: &Path, bytes: &str) -> io::Result<()> {
+    let stage = target.with_extension("pending");
+    // Reject existing stage, including symlink. Never replace arbitrary paths.
+    write_private_new(&stage, bytes)?;
+    if let Err(e) = fs::rename(&stage, target) {
+        let _ = fs::remove_file(stage);
+        return Err(e);
+    }
+    File::open(dir)?.sync_all()
+}
+fn restart_from_unit(unit: &str) -> io::Result<()> {
+    systemctl(&["--user", "daemon-reload"])?;
+    systemctl(&["--user", "start", unit])?;
+    systemctl(&["--user", "is-active", "--quiet", unit])
+}
+fn switch_image(dir: &Path, slug: &str, expected: &str, new_image: &str) -> io::Result<()> {
+    let _guard = lock_app(dir, slug)?;
+    validate_digest(slug, expected)?;
+    validate_digest(slug, new_image)?;
+    if new_image == expected {
+        return Err(bad());
+    }
+    podman(&["image", "exists", new_image])?;
+    let (path, _, unit) = unit_paths(dir, slug)?;
+    installed_file(&path)?;
+    let old = fs::read_to_string(&path)?;
+    let updated = replace_image(&old, expected, new_image)?;
+    let rollback = path.with_extension("rollback");
+    if fs::symlink_metadata(&rollback).is_ok() {
+        return Err(denied());
+    }
+    // If stop fails, the old application remains untouched.
+    systemctl(&["--user", "stop", &unit])?;
+    write_private_new(&rollback, &old)?;
+    if let Err(e) =
+        replace_private_atomic(dir, &path, &updated).and_then(|_| restart_from_unit(&unit))
+    {
+        // Recover the exact old digest and restart original if the new
+        // container fails systemd startup. Keep rollback file for diagnosis.
+        replace_private_atomic(dir, &path, &old)?;
+        restart_from_unit(&unit)?;
+        return Err(e);
+    }
+    Ok(())
+}
+fn rollback_image(dir: &Path, slug: &str) -> io::Result<()> {
+    let _guard = lock_app(dir, slug)?;
+    let (path, _, unit) = unit_paths(dir, slug)?;
+    installed_file(&path)?;
+    let rollback = path.with_extension("rollback");
+    installed_file(&rollback)?;
+    let current = fs::read_to_string(&path)?;
+    let previous = fs::read_to_string(&rollback)?;
+    validate_digest(slug, extract_image(&previous)?)?;
+    validate_digest(slug, extract_image(&current)?)?;
+    podman(&["image", "exists", extract_image(&previous)?])?;
+    // The rollback descriptor is a copy of the exact previous unit; enforce
+    // no modified network, permissions, or capabilities during rollback.
+    if current.replace(extract_image(&current)?, extract_image(&previous)?) != previous {
+        return Err(denied());
+    }
+    systemctl(&["--user", "stop", &unit])?;
+    if let Err(e) =
+        replace_private_atomic(dir, &path, &previous).and_then(|_| restart_from_unit(&unit))
+    {
+        replace_private_atomic(dir, &path, &current)?;
+        restart_from_unit(&unit)?;
+        return Err(e);
+    }
+    fs::remove_file(&rollback)?;
+    File::open(dir)?.sync_all()?;
     Ok(())
 }
 fn execute() -> io::Result<()> {
@@ -191,6 +323,8 @@ fn execute() -> io::Result<()> {
             let unit = require_installed(&dir, &args[2])?;
             systemctl(&["--user", "stop", &unit])
         }
+        "--switch-image-lab" if args.len() == 5 => switch_image(&dir, &args[2], &args[3], &args[4]),
+        "--rollback-image-lab" if args.len() == 3 => rollback_image(&dir, &args[2]),
         "--remove-lab" if args.len() == 3 => remove(&dir, &args[2]),
         _ => Err(bad()),
     }
@@ -250,6 +384,35 @@ mod tests {
             0o600
         );
         assert!(emit_files(temp.path(), &u).is_err());
+    }
+    #[test]
+    fn pinned_digest_switch_only_changes_image_key_not_isolation_or_volumes() {
+        let a = format!("docker.io/library/redis@sha256:{}", "a".repeat(64));
+        let b = format!("docker.io/library/redis@sha256:{}", "b".repeat(64));
+        let old = OciApp {
+            slug: "redis",
+            image: &a,
+            memory_mib: 256,
+            pids_limit: 128,
+            run_uid: Some(999),
+            network: AppNetwork::Offline,
+        }
+        .render()
+        .unwrap()
+        .container;
+        let newer = replace_image(&old, &a, &b).unwrap();
+        assert!(newer.contains(&format!("Image={b}")));
+        assert_eq!(newer.replace(&b, &a), old);
+        assert!(newer.contains("Network=none"));
+        assert!(newer.contains("DropCapability=all"));
+        assert!(newer.contains("Volume=rh-redis-data.volume:/data:U"));
+        assert!(replace_image(&newer, &a, &b).is_err());
+        assert!(validate_digest("redis", "docker.io/library/redis:latest").is_err());
+    }
+    #[test]
+    fn fake_or_duplicate_image_configuration_fails_closed() {
+        assert!(extract_image("[Container]\nImage=a\nImage=b\nPull=never\n").is_err());
+        assert!(extract_image("[Container]\nImage=a\n").is_err());
     }
     #[test]
     fn symlink_is_never_trusted_as_installed_app() {

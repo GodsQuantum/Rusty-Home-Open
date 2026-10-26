@@ -1,0 +1,42 @@
+name: P8at Real generic OCI digest-image switch and rollback with unchanged data
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/p8at-image-rollback.yml"
+      - "scripts/test_p8at_upgrade_contract.py"
+      - "scripts/test_p8ar_native_oci_manager.sh"
+      - "scripts/test_p8ar_manager_contract.py"
+      - "crates/native-hub/**"
+      - "Cargo.lock"
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  actual-rust-image-rollback:
+    name: Rust manager switches genuine Redis OCI image digest and rolls back with unchanged data
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Guard unauthorized execution and unsafe manifests
+        run: |
+          python3 scripts/test_p8ar_manager_contract.py
+          python3 scripts/test_p8at_upgrade_contract.py
+          cargo fmt --all -- --check
+          cargo test --locked -p hars-native-hub --all-targets
+          cargo clippy --locked -p hars-native-hub --all-targets -- -D warnings
+          bash -n scripts/test_p8ar_native_oci_manager.sh
+      - name: Install official rootless Podman and user systemd
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends podman uidmap slirp4netns fuse-overlayfs
+          test -x /usr/bin/podman
+          test -S /run/user/$(id -u)/bus
+      - name: Genuine Redis digest upgrade, rollback and persistent data under native Rust manager
+        timeout-minutes: 12
+        run: |
+          cargo build --locked -p hars-native-hub --bin oci_app_manager_lab
+          HARS_UPGRADE_ROLLBACK_LAB=1 bash scripts/test_p8ar_native_oci_manager.sh
