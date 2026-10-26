@@ -1,5 +1,12 @@
 # Rusty Home — journal de développement et de certification
 
+## 2026-10-26 — P8ao generic native Podman Quadlet OCI App foundation (CI pending)
+
+- Distinct from P8an automatic QEMU crash-restart CI already in progress, Rust now renders generic OCI App manifests into native Podman Quadlet container+volume units, supporting arbitrary safe slugs and sha256-pinned registries; nine Apps are representative tests, never a whitelist.
+- Secure defaults: no networking, read-only root, no new privileges, no Linux capabilities, bounded resources, pre-pulled images and persistent named volumes. Opt-in private directory only; no actual family app deployment.
+- Official Podman generator CLI on ephemeral Ubuntu must validate real parser/generator. This does not yet implement lifecycle/auth/backup parity. All ten host proofs preserved, release 0/15.
+
+
 ## 2026-10-26 — P8am native Type=notify and QMP heartbeat (CI pending)
 
 - Type=exec reported active before QEMU control was ready. Prior P8aj real HAOS systemd and P8ak package proofs are complete and not retested as new results.
@@ -256,3 +263,7 @@ All six are MERGED, latest main a756696b60081d641ad7ec9cf43144f3361a201b. Do NOT
 ## 2026-10-26 — P8an fail-closed systemd recovery after genuine QEMU SIGKILL (CI pending)
 
 P8am #115 successfully certified Type=notify/watchdog 26/26 CI, merged 01265a99a8548274fd454fdc81b5037ff299c60e. Separate P8an branch does not rerun these as new evidence. New opt-in fake-guest-only SIGKILL mode in existing real official HAOS systemd QEMU fixture; watches native systemd Restart=on-failure, distinct Rust MainPID, same persistent QCOW2 inode, no orphan after recovery stop and original backing hash. New pinned KVM workflow p8an-crash-restart.yml required at exact SHA. NO family host changes, 0/15 production.
+
+P8ao official Podman 4.9.3 real generator rejected [Container] Memory (newer Podman key). Moved memory budget to native systemd [Service] MemoryMax (supported on Ubuntu 24.04) while preserving PidsLimit, capabilities and read-only root; exact-head CI rerun required.
+
+P8ao runner with Ubuntu Podman 4.9 successfully generated all container and volume units. Final CI assertion assumed '--network none' and '--cap-drop all', but the genuine generator uses '--network=none' and '--cap-drop=all'. Assertions corrected to exact emitted flags and expanded to include NoNewPrivileges, MemoryMax and Pull=never; rerun pending.

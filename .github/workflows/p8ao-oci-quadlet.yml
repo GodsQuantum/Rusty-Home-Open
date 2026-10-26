@@ -1,0 +1,70 @@
+name: P8ao Generic Rust OCI Apps to official rootless Podman Quadlet
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/p8ao-oci-quadlet.yml"
+      - "crates/native-hub/**"
+      - "scripts/test_p8ao_quadlet_contract.py"
+      - "Cargo.lock"
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  genuine-quadlet-generator:
+    name: Native Rust generates arbitrary OCI app units accepted by official Podman
+    runs-on: ubuntu-24.04
+    timeout-minutes: 22
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Strict Rust unit and security contract
+        run: |
+          python3 scripts/test_p8ao_quadlet_contract.py
+          cargo fmt --all -- --check
+          cargo test --locked -p hars-native-hub --all-targets
+          cargo clippy --locked -p hars-native-hub --all-targets -- -D warnings
+      - name: Install unmodified Podman Quadlet native generator
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends podman
+          GEN=""
+          for candidate in               /lib/systemd/system-generators/podman-system-generator               /usr/lib/systemd/system-generators/podman-system-generator               /usr/libexec/podman/quadlet; do
+            if test -x "$candidate"; then GEN="$candidate"; break; fi
+          done
+          test -n "$GEN"
+          echo "PODMAN_GEN=$GEN" >> "$GITHUB_ENV"
+      - name: Real Quadlet generator accepts two arbitrary signed OCI App manifests
+        run: |
+          set -euo pipefail
+          cargo build --locked -p hars-native-hub --bin oci_quadlet_lab
+          APP_DIR="$(mktemp -d "$RUNNER_TEMP/oci-quadlet-XXXXXX")"
+          chmod 0700 "$APP_DIR"
+          DIGEST="0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+          HARS_DISPOSABLE_OCI_LAB=1 target/debug/oci_quadlet_lab --generate-lab mealie             "registry.example.org/apps/mealie@sha256:$DIGEST" "$APP_DIR"
+          HARS_DISPOSABLE_OCI_LAB=1 target/debug/oci_quadlet_lab --generate-lab zigbee2mqtt             "registry.example.org/other/zigbee2mqtt@sha256:$DIGEST" "$APP_DIR"
+          test -f "$APP_DIR/rh-mealie.container"
+          test -f "$APP_DIR/rh-zigbee2mqtt.container"
+          test -f "$APP_DIR/rh-mealie-data.volume"
+          test -f "$APP_DIR/rh-zigbee2mqtt-data.volume"
+          test "$(stat -c '%a' "$APP_DIR/rh-mealie.container")" = 600
+          if ! QUADLET_UNIT_DIRS="$APP_DIR" "$PODMAN_GEN" --user --dryrun > "$RUNNER_TEMP/quadlet-gen.out" 2>&1; then
+            echo "P8AO_REAL_PODMAN_GENERATOR_REJECTED_CONFIG"
+            cat "$RUNNER_TEMP/quadlet-gen.out"
+            exit 1
+          fi
+          echo "P8AO_REAL_PODMAN_GENERATOR_ACCEPTED_CONFIG"
+          cat "$RUNNER_TEMP/quadlet-gen.out"
+          grep -F "rh-mealie" "$RUNNER_TEMP/quadlet-gen.out"
+          grep -F "rh-zigbee2mqtt" "$RUNNER_TEMP/quadlet-gen.out"
+          grep -F -- "--network=none" "$RUNNER_TEMP/quadlet-gen.out"
+          grep -F -- "--cap-drop=all" "$RUNNER_TEMP/quadlet-gen.out"
+          grep -F -- "--security-opt=no-new-privileges" "$RUNNER_TEMP/quadlet-gen.out"
+          grep -F "MemoryMax=256M" "$RUNNER_TEMP/quadlet-gen.out"
+          grep -F -- "--pull never" "$RUNNER_TEMP/quadlet-gen.out"
+          if HARS_DISPOSABLE_OCI_LAB=1 target/debug/oci_quadlet_lab --generate-lab evil               "registry.example.org/apps/evil:latest" "$APP_DIR"; then exit 1; fi
+          if target/debug/oci_quadlet_lab --generate-lab third               "registry.example.org/apps/third@sha256:$DIGEST" "$APP_DIR"; then exit 1; fi
+          test ! -e "$APP_DIR/rh-evil.container"
+          test ! -e "$APP_DIR/rh-third.container"
+          echo P8AO_OFFICIAL_PODMAN_QUADLET_GENERATOR_PASS

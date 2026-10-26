@@ -223,3 +223,14 @@ real household HAOS/physical radios are not connected.
 This does not prove all Apps/DBs are transactionally consistent after
 crash or actual Core entity restoration. It is one negative failure mode,
 not 72h endurance or full product certification (0/15).
+
+## P8ao — OCI via official rootless Podman Quadlet (CI pending)
+
+New generic Rust OCI app declaration accepts any safe slug and fully
+qualified sha256-pinned OCI image; no fixed app list. It emits official
+Podman Quadlet container+volume units, not a custom container manager,
+with default no network, read-only image, dropped Linux capabilities,
+bounded resource use, strict owner-private lab directory and persistent
+volume. CI must validate units through Podman's actual generator.
+This is manifest generation only, not install/start/stop of a real App,
+authentication, backup/migration, household radio takeover or production.
