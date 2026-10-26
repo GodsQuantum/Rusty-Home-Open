@@ -205,3 +205,13 @@ Actual official Docker Distribution 3.1.2 under native generic rootless Podman A
 Scope: Redis (P8aq) and Distribution are TWO real independent stateful restores, not nine representative Apps, not arbitrary Supervisor database migration, not production cutover. No household HAOS/radios, no 72 h soak, no independent reviewer. Release remains NOT_PRODUCTION_READY (0/15) and supervisor_apps_restore lab_partial.
 
 The same PR repaired GitHub REST 422 on giant old PR #59 using GraphQL only for the exact known REST error, requiring merged main branch and verified 40-character head/merge SHAs; 403/404/other errors still refuse. Exact online provenance check is not skipped.
+
+## P8ay — third REAL stateful OCI App: PostgreSQL 17 independent SQL checkpoint restore (26 October)
+
+- **PR #166 merged** as 848f2e480ec2c8d84aee2bdf0865ec574df2f0b0; original verified feature HEAD 1fd8101f5658338ae86bdecbb9a0ba8bfb3609f6.
+- **GitHub exact-head run:** https://github.com/GodsQuantum/Rusty-Home-Open/actions/runs/40413124727, job 121888597420, name Real rootless OCI Registry HTTP and PostgreSQL SQL separate-volume restores, workflow Generic rootless OCI Registry and PostgreSQL App persistence and restore. **20/20 checks on PR #166 SUCCESS** (15 successful workflow runs, 20 individual jobs).
+- Official unchanged PostgreSQL 17 Alpine image pinned at its pulled digest, UID70 in rootless Quadlet, native /var/run/postgresql tmpfs Unix socket, network=none, read-only root filesystem. Bootstrap CI synthetic password never in persistent unit. Real SQL table pre-backup committed ONE row. Writer stopped before exporting owner-private Podman volume to SHA-256 checked 0600 tar; deliberate corruption rejected. Same image+generic Rust manager started original; a SECOND SQL row committed after checkpoint. A new independent named volume imported the original tar and started a SECOND PostgreSQL server concurrently. SQL SELECT confirmed original TWO rows, restored exactly ONE original row. Both App removal and volume/data preservation checked.
+- Existing separate app proofs: Redis (P8aq) and Docker Distribution Registry (P8ax). Thus THREE DISTINCT real persistent Apps with independent restores, NOT nine required representative App lifecycles.
+- No production passwords, household access, HAOS VM100, public socket, shared radio, 72h endurance or integration cutover. Still supervisor_apps_restore lab_partial and all 15 production gates NOT certified.
+
+Source: scripts/test_p8ay_postgresql17_independent_restore.sh; native generic path sanitization in crates/native-hub/src/oci_quadlet.rs; no custom wrapper / hardcoded image install in the manager. This is independent exact SHA evidence for one NEW tested application.
