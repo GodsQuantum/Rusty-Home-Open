@@ -5,6 +5,8 @@ No household Home Assistant, device or live credentials.
 """
 import base64
 import hashlib
+from pathlib import Path
+import os
 import json
 import pytest
 import re
@@ -24,6 +26,14 @@ def test_hars_native_backup_source(shell,shell_json):
     source=home+"/core.entity_registry"
     shell.run_check("mkdir -p "+home)
     shell.run_check("sh -c 'printf %s "+encoded+" | base64 -d > "+source+"'")
+    # A new DISTINCT fixture alongside the prior 2-entity Core identity test.
+    # The file is inert and never executed by the disposable Core.
+    fixture=Path(os.environ["GITHUB_WORKSPACE"])/"scripts/fixtures/p8be_haos_automations.yaml"
+    automation=fixture.read_bytes()
+    encoded_automation=base64.b64encode(automation).decode("ascii")
+    automation_path="/mnt/data/supervisor/homeassistant/automations.yaml"
+    shell.run_check("sh -c 'printf %s "+encoded_automation+" | base64 -d > "+automation_path+"'")
+    assert shell.run_check("sha256sum "+automation_path)[0].split()[0] == hashlib.sha256(automation).hexdigest()
     result=shell.run_check("sha256sum "+source)
     assert len(result)==1
     assert result[0].split()[0]==hashlib.sha256(fake).hexdigest()
@@ -49,3 +59,4 @@ def test_hars_native_backup_source(shell,shell_json):
         " http://10.0.2.2:18674/archive && echo P8AA_EXPORT_DONE",timeout=480)
     assert "P8AA_EXPORT_DONE" in transferred
     print("P8AA_REAL_HAOS_SUPERVISOR_CREATED_BACKUP_EXPORTED_PASS")
+    print("P8BE_INERT_AUTOMATION_SOURCE_INCLUDED_IN_REAL_HAOS_BACKUP_PASS")

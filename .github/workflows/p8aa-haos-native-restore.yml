@@ -9,6 +9,8 @@ on:
       - "scripts/test_p8aa_genuine_archive_qemu.py"
       - "scripts/test_p8aa_qemu_contract.py"
       - "scripts/test_p8aa_backup_to_native_stage.py"
+      - "scripts/test_p8be_automation_source.py"
+      - "scripts/fixtures/p8be_haos_automations.yaml"
       - "Cargo.lock"
 permissions:
   contents: read
@@ -29,6 +31,7 @@ jobs:
           cargo fmt --all -- --check
           cargo build --locked -p hars-interop-moli --bin ha_registry_stager
           python3 scripts/test_p8aa_backup_to_native_stage.py --binary target/debug/ha_registry_stager
+          python3 scripts/test_p8be_automation_source.py --binary target/debug/ha_registry_stager
       - name: Prepare pinned official HAOS QEMU harness
         run: |
           sudo apt-get update -qq
@@ -71,6 +74,7 @@ jobs:
           test -s "$RUNNER_TEMP/hars-p8aa-native/manifest.json"
           cd "$GITHUB_WORKSPACE"
           python3 scripts/test_p8aa_genuine_archive_qemu.py --archive "$RUNNER_TEMP/hars-p8aa-native/archive.tar" --manifest "$RUNNER_TEMP/hars-p8aa-native/manifest.json" --binary target/debug/ha_registry_stager
+          echo P8BE_GENUINE_SUPERVISOR_ARCHIVE_AUTOMATIONS_INACTIVE_NATIVE_STAGE_PASS
           echo P8AA_ACTUAL_SUPERVISOR_ARCHIVE_TO_NATIVE_RUST_LAB_CERTIFIED
       - name: Refuse persistent VM or archive exposure
         if: always()
