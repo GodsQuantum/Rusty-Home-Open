@@ -1,0 +1,62 @@
+name: P8ai Native Rust proves real official HAOS Core frontend HTTP response
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - ".github/workflows/p8ai-real-core-frontend.yml"
+      - "crates/native-hub/**"
+      - "scripts/test_p8ag_service_contract.py"
+      - "scripts/test_p8ai_frontend_contract.py"
+      - "Cargo.lock"
+permissions:
+  contents: read
+jobs:
+  rust-launches-official-haos:
+    name: Native Rust QEMU guest returns real official Core HTML through loopback
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Rust type-safe guest launch and negative path certification
+        run: |
+          python3 scripts/test_p8ag_service_contract.py
+          python3 scripts/test_p8ai_frontend_contract.py
+          cargo fmt --all -- --check
+          cargo test --locked -p hars-native-hub --all-targets
+          cargo clippy --locked -p hars-native-hub --all-targets -- -D warnings
+          cargo build --locked -p hars-native-hub --bin haos_guest_service_lab
+      - name: Official pinned HAOS 18.3 x86_64 image and KVM
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends qemu-system-x86 qemu-utils ovmf xz-utils
+          test -c /dev/kvm
+          sudo chmod 0666 /dev/kvm
+          test -r /usr/share/ovmf/OVMF.fd
+          curl -fLSs --retry 3 --retry-delay 5 -o "$RUNNER_TEMP/haos_ova-18.3.qcow2.xz" https://github.com/home-assistant/operating-system/releases/download/18.3/haos_ova-18.3.qcow2.xz
+          cd "$RUNNER_TEMP"
+          echo "fae6a728768cc10aff60d4820bfcd40d64cd77fab82c8bd92af13b3d9d414090  haos_ova-18.3.qcow2.xz" | sha256sum -c
+          xz -T2 -dc haos_ova-18.3.qcow2.xz > haos-native-rust.qcow2
+          rm haos_ova-18.3.qcow2.xz
+          qemu-img resize -f qcow2 haos-native-rust.qcow2 64G
+          chmod 0600 haos-native-rust.qcow2
+          qemu-img info --output=json haos-native-rust.qcow2 | jq -e '.[ "virtual-size" ] >= 68719476736'
+      - name: Native Rust host service keeps and reaps official HAOS guest process
+        timeout-minutes: 16
+        run: |
+          set -euo pipefail
+          SHA="$(sha256sum "$RUNNER_TEMP/haos-native-rust.qcow2" | cut -d' ' -f1)"
+          mkdir -m 0700 "$RUNNER_TEMP/haos-guest-service"
+          qemu-img create -f qcow2 -F qcow2 -b "$RUNNER_TEMP/haos-native-rust.qcow2" "$RUNNER_TEMP/haos-guest-service/guest-overlay.qcow2"
+          chmod 0600 "$RUNNER_TEMP/haos-guest-service/guest-overlay.qcow2"
+          HARS_DISPOSABLE_KVM_LAB=1 HARS_LAB_AUTO_STOP_SECONDS=240 target/debug/haos_guest_service_lab --lab-core-frontend-ready /usr/bin/qemu-system-x86_64 /usr/share/ovmf/OVMF.fd "$RUNNER_TEMP/haos-native-rust.qcow2" "$SHA" "$RUNNER_TEMP/haos-guest-service" | tee "$RUNNER_TEMP/haos-native-rust-proof.json"
+          python3 -c 'import json,os; d=json.load(open(os.environ["RUNNER_TEMP"]+"/haos-native-rust-proof.json")); assert d["native_rust_continuous_guest_manager"] and d["guest_process_reaped"] and d["loopback_frontend_forward_requested"] and d["loopback_listener_reached"] and d["core_frontend_http_responded"] and not d["radio_passthrough"] and not d["production_ready"]; print("P8AI_REAL_OFFICIAL_HAOS_CORE_FRONTEND_HTTP_VIA_RUST_PASS")'
+          test ! -e "$RUNNER_TEMP/haos-guest-service/rusty-haos-lab-qmp.sock"
+          echo "$SHA  $RUNNER_TEMP/haos-native-rust.qcow2" | sha256sum -c
+      - name: No persistent QEMU or disk artifacts in repository
+        if: always()
+        run: |
+          test ! -e "$GITHUB_WORKSPACE/haos-native-rust.qcow2"
+          test ! -e "$GITHUB_WORKSPACE/haos-native-rust-proof.json"

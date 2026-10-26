@@ -1,6 +1,7 @@
 //! Experimental Rust host-controlled HAOS guest lifecycle; disposable lab only.
 use hars_native_hub::haos_guest::{
     GuestSpec, run_guarded_guest_service_http_loopback_lab, run_guarded_guest_service_lab,
+    verify_core_frontend_via_rust_guest_lab,
 };
 use std::{env, path::PathBuf};
 fn main() {
@@ -16,6 +17,7 @@ fn main() {
              "local_private_qmp_only":true,
              "loopback_frontend_forward_requested":out.loopback_frontend_forward_requested,
              "loopback_listener_reached":out.loopback_listener_reached,
+             "core_frontend_http_responded":out.core_frontend_http_responded,
              "radio_passthrough":false,"production_ready":false
             })
         ),
@@ -30,7 +32,7 @@ fn run() -> Result<hars_native_hub::haos_guest::GuestServiceOutcome, Box<dyn std
     if a.len() != 7
         || !matches!(
             a[1].as_str(),
-            "--lab-service-run" | "--lab-service-loopback-ui"
+            "--lab-service-run" | "--lab-service-loopback-ui" | "--lab-core-frontend-ready"
         )
     {
         return Err("requires lab service QEMU OVMF QCOW2 SHA256 private-overlay-dir".into());
@@ -41,7 +43,12 @@ fn run() -> Result<hars_native_hub::haos_guest::GuestServiceOutcome, Box<dyn std
         source_image: PathBuf::from(&a[4]),
         image_sha256: a[5].clone(),
     };
-    if a[1] == "--lab-service-loopback-ui" {
+    if a[1] == "--lab-core-frontend-ready" {
+        Ok(verify_core_frontend_via_rust_guest_lab(
+            &s,
+            &PathBuf::from(&a[6]),
+        )?)
+    } else if a[1] == "--lab-service-loopback-ui" {
         Ok(run_guarded_guest_service_http_loopback_lab(
             &s,
             &PathBuf::from(&a[6]),
