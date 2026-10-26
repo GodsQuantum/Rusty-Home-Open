@@ -1,8 +1,8 @@
 # Rusty Home — handoff permanent
 
-## P2j - live Moli tombstone then re-discovery (26 October 2026, CI pending)
+## P2j - live Moli tombstone then re-discovery (26 October 2026, VERIFIED LAB)
 
-New gap distinct from P2h (offline broker tombstone) and P2i (Mosquitto SIGKILL): actual Moli kept unique_id in globally_known after removal, blocking re-discovery within the SAME process. RED test reproduced failure to reach one device after re-add. Fix: release only IDs owned by removed config; re-add requires fresh Config Intent and inherits neither old state nor old topic. GREEN: real upstream Moli Hub, one sensor, initial state, tombstone, ignored old-topic state, same-ID new-topic re-add, no state until new packet, read-only. CT700 55/55 native-kernel tests PASS, strict Clippy and fmt PASS. Dedicated p2j CI added; exact-head PR/CI pending. This test did not run a live broker. Production 0/15, no radio/VM100/service access.
+New gap distinct from P2h (offline broker tombstone) and P2i (Mosquitto SIGKILL): actual Moli kept unique_id in globally_known after removal, blocking re-discovery within the SAME process. RED test reproduced failure to reach one device after re-add. Fix: release only IDs owned by removed config; re-add requires fresh Config Intent and inherits neither old state nor old topic. GREEN: real upstream Moli Hub, one sensor, initial state, tombstone, ignored old-topic state, same-ID new-topic re-add, no state until new packet, read-only. CT700 55/55 native-kernel tests PASS, strict Clippy and fmt PASS. PR #155 merged f6e5351f469716cca80cbfe34fcd0e97999d5769 after 10/10 SUCCESS on exact feature HEAD 7a5944e7e96838fefabd5305dbf415074dec4581; dedicated CI run 40380159515, job 121773908172 PASS (targeted 1/1 and full native-kernel 55/55). This test did not run a live broker. Production 0/15, no radio/VM100/service access.
 
 ## ÉTAT CANONIQUE ACTUEL — 26 octobre 2026 (prioritaire sur les notes historiques ci-dessous)
 
