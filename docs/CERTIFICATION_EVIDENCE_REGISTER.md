@@ -182,6 +182,16 @@ PR #157: exact original HEAD `bae1ee85596c7d2004bda91d2281b2a091c20303`, squash 
 
 Separate local portability correction: full Rust workspace initially failed one OCI App manager test under LXC700 `umask 0002` because its synthetic fixture used group-writable default permissions; explicitly private `0600` fixture permissions restore the actual manager security contract. After the test-only correction, **311/311 workspace tests**, strict workspace Clippy, fmt passed locally. This does not assert new real App behavior. No household, real broker, radios, VM100, human audit or production credential. **0/15 independent production gates**.
 
-## P2n — durable redb MQTT discovery topic/identity ownership (26 Oct, pending CI)
+## P2n — durable redb MQTT discovery topic/identity ownership (26 Oct, VERIFIED LAB)
 
 Scope only: actual owner-private on-disk redb, distinct from #161 in-memory Moli topic ownership. Initial failing Rust tests reproduced accepted cross-config duplicate state topic and accepted ambiguous legacy cache after restart. Three focused real redb regressions cover (1) same topic across two retained configs, (2) repeated topic inside one multi-component config, (3) pre-fix on-disk duplicate topic/identity recovery refusal without deleting original owner. Transactional refusal, explicit tombstone release, reopened records always stale_unverified. Exact original PR head, job and CI markers must be filled ONLY after verification. No production gate, no independent review or real broker in these NEW tests; existing P2i broker test is regression. Release NOT_PRODUCTION_READY, 0/15.
+
+
+## P2m/P2n — original exact GitHub receipts, verified 26 October (LAB ONLY)
+
+| Case | Original PR HEAD / squash merge | Exact GitHub run/job | Checks | New behavior only |
+| --- | --- | --- | --- | --- |
+| P2m in-memory real Moli | #161 c0b5cd4c963ca8f9ea1ca5162ec183ff53278909 / 0d6bbbace80e1b6923065d4108a47fc3be9b3712 | [40404859841](https://github.com/GodsQuantum/Rusty-Home-Open/actions/runs/40404859841), 121859885821 | 11/11 SUCCESS | Real upstream Moli refuses cross-identity and in-batch shared MQTT state topic; targeted test and P2M safety marker in CI logs |
+| P2n persisted redb | #162 4837233c4870c6e0604d35a064f6d748c264591f / e50928759be7b8c07b882c1c7cca460bd3194301 | [40406964357](https://github.com/GodsQuantum/Rusty-Home-Open/actions/runs/40406964357), 121867096840 | 10/10 SUCCESS | Genuine owner-private redb 3/3 targeted tests: transactional duplicate topic refusal, legacy duplicate identity/topic recovery denied, valid tombstone/reopen; P2i/P2k actual Mosquitto rerun was regression ONLY |
+
+The corresponding CI job metadata explicitly reports SUCCESS at the ORIGINAL feature HEADs and the logs contain the new test names and P2M marker. No real household broker, HAOS VM100, radio, live credential, independent pentest, release signing or 72-hour soak. Both are verified laboratory cases, never production gates. NOT_PRODUCTION_READY, 0/15.
