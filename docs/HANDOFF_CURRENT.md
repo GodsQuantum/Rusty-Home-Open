@@ -98,6 +98,10 @@ PR #108 P8ag genuine Rust service lifecycle passed 14/14, merged 0d943526a1e62f9
 
 P8ag PR #108 (14 checks; run 40250349459, main 0d943526) and P8ah PR #109 (15 checks; run 40251693506, main 8cebcf788cde7b18dd893d28fb6d3d75abb97e51) are MERGED and must not be retested as new proof. P8ai branch feat/rust-haos-real-frontend-health-20261026 in worktree Rusty-Home-Core-Frontend-Main-20261026 adds a real Rust HTTP GET / check against the fixed local HAOS guest 80/tcp route; new official KVM workflow p8ai-real-core-frontend.yml must pass exact feature SHA. This only proves the uncredentialed frontend responds with HTTP success/redirect; product remains not production-ready (0/15), no household HAOS/radios.
 
+## P8aj — actual systemd managed HAOS guest supervision (26 October)
+
+PR #108 genuine Rust HAOS guest service 14/14 merged 0d943526, #109 local guest UI 15/15 merged 8cebcf7, #110 Core HTTP 16/16 merged e891401d65d6f954afb809bd7ff9d7312c7b3e7f. All verified; NEVER retest as new proof. New branch feat/native-haos-systemd-supervisor-20261026 and separate worktree Rusty-Home-Systemd-QA-20261026 add opt-in systemd sample unit and scripts/test_p8aj_real_systemd_guest.sh. GitHub .github/workflows/p8aj-real-systemd.yml must genuinely start/stop the official HAOS 18.3 VM twice from systemd with full owner/KVM isolation at exact PR SHA before certification. No family HAOS/reboot/radios, 0/15 production.
+
 ## Reprise obligatoire
 
 1. Lire ces sources, vérifier le SHA actuel de GitHub, les PR ouvertes, les preuves et la CI avant de relancer des travaux.

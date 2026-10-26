@@ -103,3 +103,23 @@ tokens. If Core does not start by the bounded disposable CI deadline,
 the laboratory fails closed. A fresh official HAOS 18.3 KVM test at the
 exact feature SHA is required; no conclusion about real Apps, logged-in
 sessions, Core WebSockets or production service is implied.
+
+## P8aj — actual systemd supervision (official KVM CI pending)
+
+P8ai PR #110 validated a real Core frontend HTTP response through the native
+Rust host's local HAOS guest, 16/16 CI, merged e891401d65d6f954afb809bd7ff9d7312c7b3e7f.
+
+P8aj adds a deliberately opt-in laboratory systemd unit in
+packaging/systemd/rusty-home-haos-lab.service. It has NO Install section and
+cannot be enabled on boot. A dedicated unprivileged rusty-home-lab user,
+owner-only QCOW2, KVM-only explicit device access, read-only host filesystem,
+limited memory/tasks, cgroup cleanup and bounded restart policy are enforced.
+
+New genuinely isolated official HAOS 18.3 GitHub KVM workflow installs unit
+under /run/systemd/system on its disposable Ubuntu runner only, starts/stops
+the genuine native Rust/QEMU HAOS guest TWICE via systemctl and verifies
+no orphan guest, retained original QCOW2 overlay inode, and original official
+HAOS backing SHA256. Until exact-feature-SHA CI confirms this, it is code
+and an unverified systemd packaging hypothesis, not product certification.
+No Cloud9 or household host install/reboot, no radio handover, no 72h soak,
+no signed host upgrade path. Release 0/15 fully certified.
