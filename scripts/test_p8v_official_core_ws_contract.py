@@ -41,6 +41,18 @@ for required in ("pub async fn resync_loopback_bounded", "explicitly revoke the 
                  "bounded_retry_denies_live_session_and_exhaustion_leaves_no_state"):
     assert required in session,required
 assert 'd["bounded_retry_policy"]' in script
+assert "prove_official_core_token_rotation" in native
+assert "old_access_token_refused_by_core" in native
+assert "next_access_token_authenticated" in native
+p8bl=(R/"scripts/test_p8bl_core_token_rotation.sh").read_text()
+for required in ("--lab-ha-ws-core-token-rotation", "HARS_LAB_WS_REPLACEMENT_TOKEN",
+                 "p8bl-token", "p8bl-rotate-request", "P8BL_GENUINE_CORE_TOKEN_REVOKED_NEW_ACCESS_AUTHENTICATED_ACTUAL_MOLI_PASS"):
+    assert required in p8bl,required
+for required in ("hass.auth.async_remove_refresh_token(refresh)",
+                 "hass.auth.async_create_refresh_token(", "p8bl-token.tmp",
+                 "p8bl-rotate-ready"):
+    assert required in core,required
+assert "source scripts/test_p8bl_core_token_rotation.sh" in script
 assert "write_commands: 0" in native
 
 assert "--cap-drop ALL" in script and "no-new-privileges" in script and "--read-only" in script
