@@ -65,6 +65,41 @@ for round in 1 2; do
   [[ "$(sudo systemctl show -P Result "$unit")" == "success" ]]
   echo "P8AJ_SYSTEMD_STOP_REAPS_QEMU_PASS round=$round"
 done
+if [[ "$(printenv HARS_CRASH_RECOVERY_LAB || true)" == 1 ]]; then
+  # Genuine QEMU kill permitted only inside guarded disposable GitHub runner.
+  # Rust must exit nonzero, systemd restarts it and reattaches existing QCOW2.
+  # A fully stopped static unit may already have been unloaded by systemd.
+  # systemctl start re-loads it; reset-failed on an unloaded unit exits
+  # nonzero and prevented the actual SIGKILL recovery scenario from running.
+  sudo systemctl start "$unit"
+  rust_before="$(sudo systemctl show -P MainPID "$unit")"
+  [[ "$rust_before" =~ ^[0-9]+$ && "$rust_before" != "0" ]]
+  qemu_pid="$(sudo pgrep -u rusty-home-lab -f '^/usr/bin/qemu-system-x86_64' | head -1)"
+  [[ "$qemu_pid" =~ ^[0-9]+$ ]]
+  sudo kill -KILL "$qemu_pid"
+  recovered=0
+  for attempt in $(seq 1 180); do
+    rust_after="$(sudo systemctl show -P MainPID "$unit")"
+    restarts="$(sudo systemctl show -P NRestarts "$unit")"
+    if [[ "$rust_after" =~ ^[0-9]+$ && "$rust_after" != 0 &&
+          "$rust_after" != "$rust_before" && "$restarts" =~ ^[0-9]+$ ]] &&
+          (( restarts > 0 )) &&
+          [[ "$(sudo systemctl is-active "$unit")" == "active" ]] &&
+          sudo test -S /var/lib/rusty-home-lab/rusty-haos-lab-qmp.sock; then
+      recovered=1
+      break
+    fi
+    sleep 0.4
+  done
+  [[ "$recovered" == 1 ]]
+  [[ "$(sudo stat -c '%i' /var/lib/rusty-home-lab/guest-overlay.qcow2)" == "$overlay_inode" ]]
+  echo P8AN_REAL_QEMU_CRASH_SYSTEMD_AUTO_RESTART_SAME_DISK_PASS
+  sudo systemctl stop "$unit"
+  [[ "$(sudo systemctl is-active "$unit")" == "inactive" ]]
+  ! sudo pgrep -u rusty-home-lab -f qemu-system-x86_64 >/dev/null
+  ! sudo test -e /var/lib/rusty-home-lab/rusty-haos-lab-qmp.sock
+  echo P8AN_RESTARTED_GUEST_CLEAN_STOP_NO_ORPHANS_PASS
+fi
 echo "$base_sha  /var/lib/rusty-home-lab/haos-base.qcow2" | sudo sha256sum -c
 [[ "$(sudo stat -c '%i' /var/lib/rusty-home-lab/guest-overlay.qcow2)" == "$overlay_inode" ]]
 echo P8AJ_REAL_SYSTEMD_RESTART_SAME_OVERLAY_AND_PINNED_SOURCE_PASS
