@@ -46,6 +46,17 @@ class GateReality(unittest.TestCase):
         self.assertEqual(p2k["run_id"], 40397842879)
         self.assertEqual(p2k["head_sha"], "bae1ee85596c7d2004bda91d2281b2a091c20303")
         self.assertEqual(p2k["merged_pr"], 157)
+        # Exact CI receipts are laboratory evidence, never release signatures.
+        for claim_id, pr, run, head in (
+            ("moli_direct_topic_alias_owner_fence", 161, 40404859841, "c0b5cd4c963ca8f9ea1ca5162ec183ff53278909"),
+            ("mqtt_redb_durable_topic_identity_collision_refusal", 162, 40406964357, "4837233c4870c6e0604d35a064f6d748c264591f"),
+        ):
+            item = next(x for x in self.claims if x["id"] == claim_id)
+            self.assertEqual(item["release_gate"], "native_drivers_services")
+            self.assertEqual(item["status"], "verified_lab_only")
+            self.assertEqual(item["merged_pr"], pr)
+            self.assertEqual(item["run_id"], run)
+            self.assertEqual(item["head_sha"], head)
         known={x["id"]:x for x in self.rows}
         self.assertEqual(set(known),{x["id"] for x in self.rows})
         self.assertTrue(all(x["blocked_reason"] and len(x["blocked_reason"][0])>80

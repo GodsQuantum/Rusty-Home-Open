@@ -219,6 +219,30 @@
       "scope": "Actual isolated Mosquitto retained MQTT5 config and state, genuine tombstone empties redb and Moli Hub, same unique_id re-registers without stale state, fresh value 31.2 read-only; no physical device, VM100 or production authority.",
       "url": "https://github.com/GodsQuantum/Rusty-Home-Open/actions/runs/40397842879",
       "merged_pr": 157
+    },
+    {
+      "id": "moli_direct_topic_alias_owner_fence",
+      "release_gate": "native_drivers_services",
+      "status": "verified_lab_only",
+      "run_id": 40404859841,
+      "head_sha": "c0b5cd4c963ca8f9ea1ca5162ec183ff53278909",
+      "workflow": "P2l actual upstream Moli atomic discovery ingress",
+      "job": "actual-moli-atomic-discovery-ingress",
+      "scope": "P2m real upstream Moli Hub rejects shared state_topic across distinct sensor IDs and within one batch; read-only in-process synthetic lab only, no real broker or household.",
+      "url": "https://github.com/GodsQuantum/Rusty-Home-Open/actions/runs/40404859841",
+      "merged_pr": 161
+    },
+    {
+      "id": "mqtt_redb_durable_topic_identity_collision_refusal",
+      "release_gate": "native_drivers_services",
+      "status": "verified_lab_only",
+      "run_id": 40406964357,
+      "head_sha": "4837233c4870c6e0604d35a064f6d748c264591f",
+      "workflow": "P2i Genuine isolated MQTT5 broker SIGKILL and durable stale quarantine",
+      "job": "real-isolated-mqtt5-broker-sigkill",
+      "scope": "P2n real owner-private redb refuses duplicate state_topic across retained configs or one device batch; legacy duplicate topic or unique_id fails closed on restart; original P2i/P2k broker test was only regression.",
+      "url": "https://github.com/GodsQuantum/Rusty-Home-Open/actions/runs/40406964357",
+      "merged_pr": 162
     }
   ]
 }
