@@ -1,6 +1,6 @@
 //! P8ar: lab-only *actual* rootless native systemd/Podman OCI App manager.
 //! No root, no household HAOS, no user device access, no production API.
-use hars_native_hub::oci_quadlet::{AppNetwork, OciApp, QuadletUnits};
+use hars_native_hub::oci_quadlet::{AppNetwork, OciApp, QuadletUnits, bind_native_secret};
 use std::{
     env,
     fs::{self, File, OpenOptions},
@@ -147,14 +147,19 @@ fn with_health(container: &str, cmd: &str) -> io::Result<String> {
     }
     Ok(container.replacen("Pull=never\n", &format!("Pull=never\n{config}"), 1))
 }
+#[derive(Default)]
+struct InstallExtras<'a> {
+    health: Option<&'a str>,
+    data_destination: Option<&'a str>,
+    secret_name: Option<&'a str>,
+}
 fn install(
     dir: &Path,
     slug: &str,
     image: &str,
     uid: u32,
     network: AppNetwork,
-    health: Option<&str>,
-    data_destination: Option<&str>,
+    extras: InstallExtras<'_>,
 ) -> io::Result<()> {
     if uid == 0 || uid > 65533 {
         return Err(bad());
@@ -167,17 +172,25 @@ fn install(
         run_uid: Some(uid),
         network,
     };
-    let mut q = if let Some(path) = data_destination {
+    let mut q = if let Some(path) = extras.data_destination {
         decl.render_at(path).map_err(|_| bad())?
     } else {
         decl.render().map_err(|_| bad())?
     };
-    if let Some(healthcmd) = health {
+    if let Some(healthcmd) = extras.health {
         q.container = with_health(&q.container, healthcmd)?;
+    }
+    if let Some(name) = extras.secret_name {
+        bind_native_secret(&mut q, name).map_err(|_| bad())?;
     }
     // Flock is acquired BEFORE checking or writing descriptors: concurrent
     // installers and install/remove/start/switch may never race on a slug.
     let _guard = lock_app_install(dir, slug)?;
+    // Bind only a previously created native secret in this same rootless store.
+    // No creating, reading, printing, or marshalling secret content here.
+    if let Some(name) = extras.secret_name {
+        podman(&["secret", "exists", name])?;
+    }
     // Strictly no pull or mutable tags. OCI digest must already be available.
     podman(&["image", "exists", image])?;
     let (a, b, _) = unit_paths(dir, slug)?;
@@ -389,7 +402,7 @@ fn execute() -> io::Result<()> {
             } else {
                 AppNetwork::Offline
             };
-            install(&dir, &args[2], &args[3], uid, net, None, None)
+            install(&dir, &args[2], &args[3], uid, net, InstallExtras::default())
         }
         "--start-lab" if args.len() == 3 => {
             let _guard = lock_app(&dir, &args[2])?;
@@ -409,8 +422,10 @@ fn execute() -> io::Result<()> {
                 &args[3],
                 uid,
                 AppNetwork::Offline,
-                Some(&args[5]),
-                None,
+                InstallExtras {
+                    health: Some(&args[5]),
+                    ..Default::default()
+                },
             )
         }
         "--install-path-lab" if args.len() == 6 || args.len() == 7 => {
@@ -424,7 +439,31 @@ fn execute() -> io::Result<()> {
             } else {
                 AppNetwork::Offline
             };
-            install(&dir, &args[2], &args[3], uid, network, None, Some(&args[5]))
+            install(
+                &dir,
+                &args[2],
+                &args[3],
+                uid,
+                network,
+                InstallExtras {
+                    data_destination: Some(&args[5]),
+                    ..Default::default()
+                },
+            )
+        }
+        "--install-secret-lab" if args.len() == 6 => {
+            let uid = args[4].parse::<u32>().map_err(|_| bad())?;
+            install(
+                &dir,
+                &args[2],
+                &args[3],
+                uid,
+                AppNetwork::Offline,
+                InstallExtras {
+                    secret_name: Some(&args[5]),
+                    ..Default::default()
+                },
+            )
         }
         "--switch-image-lab" if args.len() == 5 => switch_image(&dir, &args[2], &args[3], &args[4]),
         "--rollback-image-lab" if args.len() == 3 => rollback_image(&dir, &args[2]),

@@ -29,6 +29,28 @@ pub struct QuadletUnits {
     pub volume_name: String,
     pub volume: String,
 }
+/// Bind only an EXISTING rootless Podman secret by its safe opaque name.
+/// The secret material is never written to a Quadlet, argv, or app manifest.
+/// The caller must verify Podman secret existence in the matching user store.
+pub fn bind_native_secret(units: &mut QuadletUnits, name: &str) -> Result<(), QuadletError> {
+    if name.is_empty()
+        || name.len() > 64
+        || !name.as_bytes()[0].is_ascii_lowercase()
+        || !name
+            .bytes()
+            .all(|b| b.is_ascii_lowercase() || b.is_ascii_digit() || b == b'-' || b == b'_')
+        || units.container.matches("Pull=never\n").count() != 1
+        || units.container.contains("Secret=")
+    {
+        return Err(QuadletError::InvalidResources);
+    }
+    units.container =
+        units
+            .container
+            .replacen("Pull=never\n", &format!("Pull=never\nSecret={name}\n"), 1);
+    Ok(())
+}
+
 impl OciApp<'_> {
     /// A Podman-managed named volume, never a host-path bind.
     /// Custom OCI storage destinations must be absolute safe container paths.
@@ -171,6 +193,34 @@ mod tests {
             run_uid: None,
             network: AppNetwork::Offline,
         }
+    }
+    #[test]
+    fn optional_native_secret_reference_never_embeds_material_or_shell() {
+        let image = format!("docker.io/library/redis@sha256:{DIGEST}");
+        let mut u = good("redis", &image).render().unwrap();
+        bind_native_secret(&mut u, "app-secret_2").unwrap();
+        assert!(u.container.contains("Secret=app-secret_2\n"));
+        assert!(u.container.contains("Network=none\n"));
+        assert!(u.container.contains("Pull=never\n"));
+        assert!(!u.container.contains("Environment="));
+        assert!(bind_native_secret(&mut u, "second").is_err());
+        for name in [
+            "",
+            "A",
+            "bad/name",
+            "../../data",
+            "a\n[Service]",
+            "a=val",
+            "a;true",
+            "-leading",
+            "a%.env",
+            "a\n",
+        ] {
+            let mut clean = good("redis", &image).render().unwrap();
+            assert!(bind_native_secret(&mut clean, name).is_err(), "{name}");
+        }
+        let mut clean = good("redis", &image).render().unwrap();
+        assert!(bind_native_secret(&mut clean, &"a".repeat(65)).is_err());
     }
     #[test]
     fn any_safe_slug_and_registry_can_generate_rootless_quadlet() {

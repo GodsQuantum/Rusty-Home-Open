@@ -228,3 +228,11 @@ Ownership: SentinelX Cloud9 / LXC700, isolated branch fix/oci-app-lifecycle-lock
 ## 26 October P8ay — lifecycle fencing delivered for CI qualification
 
 All native OCI install/start/stop/switch/rollback/remove commands now reuse one persistent owner-private per-App flock. New tests in the existing Redis CI hold that actual inode across separate manager processes and check start/install denial, unchanged unit/data, successful retry, and reuse of same inode after remove/reinstall. DEV: 8/8 targeted Rust binary tests and strict Clippy passed. GitHub independent OCI CI on the new SHA remains required; until then this is NOT production-ready and 0/15 gates.
+
+## 26 October P8az — native Podman per-App secret references [IN PROGRESS]
+
+Owner: SentinelX on Cloud9, LXC700 only, isolated branch feat/oci-native-secret-ref-20261026, base main 075e18e. P8ay native lifecycle locks 18/18 CI already merged; do not repeat as new independent proof. Current gap: OCI Apps have state, restart and health but cannot consume externally provisioned credentials, limiting real third-party App parity. Implement strict opt-in Podman native Secret= with only validated preexisting rootless secret name, no secret content in source/untrusted frontend, no home secrets, and CI disposable Redis image mounting synthetic secret; preserve all previous default OCI isolation. Rollback: revert this branch. Release 0/15.
+
+## 26 October — P8az implementation + CI pending
+
+Generic native Quadlet Secret= validates lowercase opaque names only; privileged secret storage and material never enter Rusty Home. New CI uses independently provisioned fictional Podman secret, verifies SHA256 bytes mounted inside real rootless Redis, rejects nonexistent/malicious names and preserves rootless store after service uninstall. 23 core Rust and 8 native manager tests + strict Clippy passed LXC700. CI exact HEAD required. 0/15 production gates.
