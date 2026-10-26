@@ -5,6 +5,7 @@ on:
     paths:
       - ".github/workflows/p8p-cross-vm-recovery.yml"
       - "scripts/p8p_cross_vm_backup_pytest.py"
+      - "scripts/fixtures/p8be_haos_automations.yaml"
       - "scripts/p8p_cross_vm_backup_relay.py"
       - "scripts/check_p8p_cross_vm_junit.py"
       - "scripts/test_p8p_cross_vm_contract.py"
@@ -68,4 +69,5 @@ jobs:
           test -s "$RUNNER_TEMP/hars-cross-vm/manifest.json"
           ./run_tests.sh supervisor_test/test_supervisor.py::test_start_supervisor supervisor_test/test_supervisor.py::test_check_supervisor supervisor_test/test_supervisor.py::test_hars_cross_vm_target
           python3 "$GITHUB_WORKSPACE/scripts/check_p8p_cross_vm_junit.py" junit_reports/tests.xml target
+          echo P8BF_DIRECT_HAOS_TO_FRESH_HAOS_AUTOMATION_SOURCE_RESTORED_PASS
           echo P8P_CROSS_VM_SOURCE_TO_FRESH_TARGET_OFFICIAL_HAOS_PASS

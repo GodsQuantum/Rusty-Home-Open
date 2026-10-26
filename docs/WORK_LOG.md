@@ -391,3 +391,7 @@ GitHub PR #134 final exact head 21d9b21421a215856930764f2264509f06459a3a and run
 ## 26 October 2026 — P8be source custody (NOT automation parity)
 
 Preserve automations.yaml as a byte-exact, bounded, unexecuted, archive- and entity-registry-bound input in the existing private redb store. The immutable archive custody and real HAOS P8aa import remain separate. New original material remains inactive; raw YAML is never logged nor interpreted or targeted at home radios. Tests cover durable reopen, replay idempotency, rebind refusal, dual legacy/modern archive path refusal, UTF-8/size limits, rollback of identity stage leaving original proof intact. A full automation migration/execution, secrets, platform-specific custom components and reverse full-stack conversion remain NOT VERIFIED. Current product release 0/15.
+
+## 26 October P8bf automation restore fidelity
+
+Extended existing real HAOS 18.3 QEMU two-guest source/target fixtures with one fictitious disabled automation. Validate original SHA256 on source and after independent official Supervisor full restore to different guest. P8p verifies direct transport; P8ab verifies native Rust escrow + restored target. New marker per path with no new services or third CI harness. Neither executes automations or establishes Rust automation compatibility. Independent CI pending, 0/15.

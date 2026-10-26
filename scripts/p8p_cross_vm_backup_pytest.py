@@ -3,6 +3,10 @@
 Source and target run via separate invocations of upstream run_tests.sh.
 Only a bounded SHA256-attested synthetic archive crosses the host relay.
 """
+import base64
+import hashlib
+import os
+from pathlib import Path
 import pytest
 import re
 from time import sleep
@@ -10,6 +14,12 @@ from time import sleep
 URL="http://10.0.2.2:18674"
 MARK="/mnt/data/supervisor/share/rusty_home_fresh_vm_marker"
 VALUE="P8P_FRESH_SECOND_HAOS_VERIFIED_SOURCE_20261024"
+AUTOMATION_PATH="/mnt/data/supervisor/homeassistant/automations.yaml"
+def inert_automation():
+    raw=(Path(os.environ["GITHUB_WORKSPACE"])/"scripts/fixtures/p8be_haos_automations.yaml").read_bytes()
+    assert 32 < len(raw) < 4096
+    assert b"initial_state: false" in raw and b"trigger: []" in raw and b"action: []" in raw
+    return raw
 def one(shell,command,timeout=45):
     result=shell.run_check(command,timeout=timeout)
     assert len(result)==1,(command,len(result))
@@ -21,6 +31,12 @@ def test_hars_cross_vm_source(shell,shell_json):
     shell.run_check("mkdir -p /mnt/data/supervisor/share")
     shell.run_check("sh -c 'echo "+VALUE+" > "+MARK+"'")
     assert one(shell,"cat "+MARK)==VALUE
+    # Independent extra fixture: original HA automations.yaml is restored
+    # byte-for-byte, never executed. Only invented disabled triggers/actions.
+    original=inert_automation()
+    encoded=base64.b64encode(original).decode("ascii")
+    shell.run_check("sh -c 'printf %s "+encoded+" | base64 -d > "+AUTOMATION_PATH+"'")
+    assert one(shell,"sha256sum "+AUTOMATION_PATH).split()[0]==hashlib.sha256(original).hexdigest()
     boot=one(shell,"cat /proc/sys/kernel/random/boot_id")
     assert re.fullmatch(r"[0-9a-f-]{36}",boot)
     core=shell_json("ha core info --no-progress --raw-json",timeout=90)
@@ -44,6 +60,7 @@ def test_hars_cross_vm_source(shell,shell_json):
         "&& echo P8P_EXPORT_DONE", timeout=480)
     assert "P8P_EXPORT_DONE" in transferred
     print("P8P_REAL_SOURCE_FULL_BACKUP_EXPORTED_PASS")
+    print("P8BF_SOURCE_FICTITIOUS_DISABLED_AUTOMATION_INCLUDED_IN_REAL_HAOS_BACKUP_PASS")
 
 @pytest.mark.dependency(depends=["test_start_supervisor"])
 @pytest.mark.timeout(1200)
@@ -78,6 +95,9 @@ def test_hars_cross_vm_target(shell,shell_json):
     assert row.get("type")=="full" and row.get("homeassistant")==version
     assert "share" in row.get("folders",[])
     assert one(shell,"test ! -e "+MARK+" && echo CLEAN")=="CLEAN"
+    expected_automation_sha=hashlib.sha256(inert_automation()).hexdigest()
+    before=one(shell,"if test -f "+AUTOMATION_PATH+"; then sha256sum "+AUTOMATION_PATH+"; else echo ABSENT; fi")
+    assert before.split()[0]!=expected_automation_sha, "target already contains source automation fixture before restore"
     done=shell_json("ha backups restore "+slug+" --no-progress --raw-json",timeout=540)
     assert done.get("result")=="ok"
     recovered=False
@@ -94,5 +114,9 @@ def test_hars_cross_vm_target(shell,shell_json):
             pass
         sleep(5)
     assert recovered,"Independent fresh target did not restore source data and Core"
+    assert one(shell,"sha256sum "+AUTOMATION_PATH).split()[0]==expected_automation_sha, (
+        "Restored genuine second HAOS did not retain automation file bytes"
+    )
     assert one(shell,"cat /proc/sys/kernel/random/boot_id")==target_boot
     print("P8P_GENUINE_SECOND_FRESH_HAOS_FULL_RESTORE_PASS")
+    print("P8BF_ACTUAL_SECOND_HAOS_AUTOMATION_SOURCE_EXACT_BYTES_RESTORED_PASS")
