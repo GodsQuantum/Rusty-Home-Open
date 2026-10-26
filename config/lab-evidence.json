@@ -279,6 +279,18 @@
       "scope": "Real PostgreSQL 17: SIGKILL with open SQL transaction; native systemd restart and WAL recovery preserve committed row, reject uncommitted row; independent restored snapshot intact. Rootless offline lab, no household.",
       "url": "https://github.com/GodsQuantum/Rusty-Home-Open/actions/runs/40415028970",
       "merged_pr": 168
+    },
+    {
+      "id": "oci_mosquitto_retained_independent_nested_volume_restore",
+      "release_gate": "supervisor_apps_restore",
+      "status": "verified_lab_only",
+      "run_id": 40420840984,
+      "head_sha": "4408d31cad40f8c48eb79eff59ea38c7d5c9e62a",
+      "workflow": "Generic rootless OCI Registry and PostgreSQL App persistence and restore",
+      "job": "Real rootless OCI Registry HTTP and PostgreSQL SQL separate-volume restores",
+      "scope": "Fourth real stateful OCI App: official Mosquitto retained MQTT, explicit native named nested data volume, stopped private SHA backups, independent second broker restores old retained topic but not later source topic. Rootless offline lab only.",
+      "url": "https://github.com/GodsQuantum/Rusty-Home-Open/actions/runs/40420840984",
+      "merged_pr": 170
     }
   ]
 }
