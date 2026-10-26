@@ -27,6 +27,7 @@ pub struct ReauthReport {
     pub recovered_epoch: u64,
     pub old_state_revoked: bool,
     pub new_hub_verified: bool,
+    pub bounded_retry_policy: bool,
     pub write_commands: u64,
     pub production_ready: bool,
 }
@@ -72,7 +73,7 @@ pub async fn prove_core_reauth(
     if session.get(entity).is_ok() {
         bail!("old state restored after denied login");
     }
-    let (mut c2, mut r2, recovered) = session.resync_loopback(url, token).await?;
+    let (mut c2, mut r2, recovered) = session.resync_loopback_bounded(url, token, 3).await?;
     if recovered != failed_epoch + 1 {
         bail!("reconnect did not advance epoch");
     }
@@ -95,6 +96,7 @@ pub async fn prove_core_reauth(
         recovered_epoch: recovered,
         old_state_revoked: true,
         new_hub_verified: true,
+        bounded_retry_policy: true,
         write_commands: 0,
         production_ready: false,
     })

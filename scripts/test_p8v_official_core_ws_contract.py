@@ -32,6 +32,15 @@ for key in ("prove_core_reauth", "into_revoked_session", "resync_loopback",
 assert "--lab-ha-ws-reauth-recovery" in script
 assert "P8BH_REAL_CORE_WS_REVOKE_BAD_AUTH_NEW_EPOCH_NATIVE_HUB_PASS" in script
 assert 'd["recovered_epoch"]==3' in script
+assert "bounded_retry_policy" in native
+assert "resync_loopback_bounded(url, token, 3)" in native
+session=(R/"crates/ha-compat/src/session.rs").read_text()
+for required in ("pub async fn resync_loopback_bounded", "explicitly revoke the old Core session",
+                 "bounded Core loopback reconnect exhausted",
+                 "bounded_retry_survives_real_loopback_tcp_outage_with_new_auth_epoch",
+                 "bounded_retry_denies_live_session_and_exhaustion_leaves_no_state"):
+    assert required in session,required
+assert 'd["bounded_retry_policy"]' in script
 assert "write_commands: 0" in native
 
 assert "--cap-drop ALL" in script and "no-new-privileges" in script and "--read-only" in script
