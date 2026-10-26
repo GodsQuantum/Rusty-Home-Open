@@ -236,3 +236,22 @@ Owner: SentinelX on Cloud9, LXC700 only, isolated branch feat/oci-native-secret-
 ## 26 October — P8az implementation + CI pending
 
 Generic native Quadlet Secret= validates lowercase opaque names only; privileged secret storage and material never enter Rusty Home. New CI uses independently provisioned fictional Podman secret, verifies SHA256 bytes mounted inside real rootless Redis, rejects nonexistent/malicious names and preserves rootless store after service uninstall. 23 core Rust and 8 native manager tests + strict Clippy passed LXC700. CI exact HEAD required. 0/15 production gates.
+
+## 26 October P8ba — evidence registry reconciliation RUNNING
+
+Owner SentinelX Cloud9 LXC700 on branch docs/oci-evidence-p8at-p8az-20261026, base main a351529. Existing immutable config/native-oci-app-evidence.json ends at P8as, omitting SIX verified distinct features already merged: P8at #124, P8au #125, P8av #126, P8aw #127, P8ay #130, P8az #131. Restore historical exact head/merge/run/check and scenario marker IDs from existing GitHub job proofs without rerunning any QEMU/OCI workload, update validator and central evidence/handoff/log. No host app data altered. Rollback: revert docs-only commit; 0/15 production remains unchanged.
+
+## 26 October 2026 — P8at–P8az immutable independent OCI proof reconciliation
+
+These six distinct cases were already completed in real, disposable GitHub CI and merged. Their exact SHA/run/marker is now pinned in `config/native-oci-app-evidence.json`; **do not rerun** unless a material version/code/environment change invalidates a specific test. All cases are lab only, no household or genuine production secret was used.
+
+| Case | PR | Original head | Merge | Run ID | Checks | Actual new scoped behavior |
+|---|---:|---|---|---:|---:|---|
+| P8AT | #124 | `f11a8022` | `42db2dc1` | 40295014593 | 25/25 | generic oci sha256 image upgrade and explicit rollback |
+| P8AU | #125 | `fa64f294` | `05008d4c` | 40297108559 | 26/26 | real redis native oci healthcheck automatic incompatible image rollback |
+| P8AV | #126 | `a4f66d11` | `6ed03afa` | 40299977840 | 10/10 | simultaneous distinct rootless redis and memcached generic lifecycle |
+| P8AW | #127 | `be76a29a` | `b1881a64` | 40301611933 | 28/28 | stateful docker distribution registry custom oci data volume http |
+| P8AY | #130 | `3004210c` | `075e18e5` | 40314671475 | 18/18 | real rootless oci lifecycle lock install start remove reinstall |
+| P8AZ | #131 | `ddcd3550` | `a351529c` | 40315761886 | 20/20 | native podman secret reference real rootless redis sha256 mount |
+
+The existing five P8ao–P8as immutable proofs remain intact. The test suite verifies all eleven cases and their exact original sources; production still has 0/15 accepted independent gates.

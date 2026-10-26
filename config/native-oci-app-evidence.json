@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "verified_as_of": "2026-10-26",
-  "environment": "disposable Ubuntu 24.04 GitHub runner, genuine rootless Podman 4.9, user systemd and real Redis; no actual household, radios, production secrets or Cloud9",
+  "environment": "disposable Ubuntu 24.04 GitHub runners, genuine rootless Podman 4.9 and user systemd; real Redis, Memcached and Docker Distribution HTTP Registry using fictional fixtures only; no household devices, real production secrets or Cloud9 deployment",
   "cases": [
     {
       "case_id": "p8ao",
@@ -77,6 +77,96 @@
       "verified_marker": "P8AS_REAL_ROOTLESS_REDIS_LOCALHOST_ONLY_TCP_PASS",
       "github_workflow": ".github/workflows/p8as-oci-localhost-tcp.yml",
       "verified_marker_source": "scripts/test_p8ar_native_oci_manager.sh"
+    },
+    {
+      "case_id": "p8at",
+      "scope": "generic_oci_sha256_image_upgrade_and_explicit_rollback",
+      "status": "VERIFIED_IN_DISPOSABLE_REAL_ROOTLESS_OCI_APP_LAB_ONLY",
+      "pr": 124,
+      "feature_head_sha": "f11a80226a55a7b2e7c7e346beae16e9997a2a94",
+      "merged_commit_sha": "42db2dc1f1bf53873b37a95e83b88c6dfd5bd658",
+      "github_actions_run_id": 40295014593,
+      "github_actions_run_url": "https://github.com/GodsQuantum/Rusty-Home-Open/actions/runs/40295014593",
+      "checks_passed": 25,
+      "checks_failed": 0,
+      "verified_marker": "P8AT_REAL_OCI_IMAGE_ROLLBACK_EXACT_UNIT_AND_DATA_RETAINED_PASS",
+      "github_workflow": ".github/workflows/p8at-image-rollback.yml",
+      "verified_marker_source": "scripts/test_p8ar_native_oci_manager.sh"
+    },
+    {
+      "case_id": "p8au",
+      "scope": "real_redis_native_oci_healthcheck_automatic_incompatible_image_rollback",
+      "status": "VERIFIED_IN_DISPOSABLE_REAL_ROOTLESS_OCI_APP_LAB_ONLY",
+      "pr": 125,
+      "feature_head_sha": "fa64f2940624d949f70d8ad501404d819f59f2f4",
+      "merged_commit_sha": "05008d4cb9d2d577bec1567ea3bcda67f1faaa2e",
+      "github_actions_run_id": 40297108559,
+      "github_actions_run_url": "https://github.com/GodsQuantum/Rusty-Home-Open/actions/runs/40297108559",
+      "checks_passed": 26,
+      "checks_failed": 0,
+      "verified_marker": "P8AU_UNHEALTHY_OCI_APP_AUTO_IMAGE_RECOVERY_PASS",
+      "github_workflow": ".github/workflows/p8au-app-health-rollback.yml",
+      "verified_marker_source": "scripts/test_p8ar_native_oci_manager.sh"
+    },
+    {
+      "case_id": "p8av",
+      "scope": "simultaneous_distinct_rootless_redis_and_memcached_generic_lifecycle",
+      "status": "VERIFIED_IN_DISPOSABLE_REAL_ROOTLESS_OCI_APP_LAB_ONLY",
+      "pr": 126,
+      "feature_head_sha": "a4f66d11c1ff127547ac4bebe906cf8fd43c47ae",
+      "merged_commit_sha": "6ed03afa6d9a55a28cd4a51d28d48c21480fe57d",
+      "github_actions_run_id": 40299977840,
+      "github_actions_run_url": "https://github.com/GodsQuantum/Rusty-Home-Open/actions/runs/40299977840",
+      "checks_passed": 10,
+      "checks_failed": 0,
+      "verified_marker": "P8AV_TWO_LIVE_UNRELATED_ROOTLESS_OCI_APPS_ISOLATED_PASS",
+      "github_workflow": ".github/workflows/p8av-real-two-oci-apps.yml",
+      "verified_marker_source": "scripts/test_p8av_real_two_distinct_apps.sh"
+    },
+    {
+      "case_id": "p8aw",
+      "scope": "stateful_docker_distribution_registry_custom_oci_data_volume_http",
+      "status": "VERIFIED_IN_DISPOSABLE_REAL_ROOTLESS_OCI_APP_LAB_ONLY",
+      "pr": 127,
+      "feature_head_sha": "be76a29af314ab6607f9dec1f5c0302967e5b4f0",
+      "merged_commit_sha": "b1881a64ccfcc47f75e39a61fe3b1142c78b861f",
+      "github_actions_run_id": 40301611933,
+      "github_actions_run_url": "https://github.com/GodsQuantum/Rusty-Home-Open/actions/runs/40301611933",
+      "checks_passed": 28,
+      "checks_failed": 0,
+      "verified_marker": "P8AW_ACTUAL_DOCKER_REGISTRY_BLOB_SURVIVES_RUST_APP_RESTART_PASS",
+      "github_workflow": ".github/workflows/p8aw-custom-volume-registry.yml",
+      "verified_marker_source": "scripts/test_p8aw_real_registry_custom_volume.sh"
+    },
+    {
+      "case_id": "p8ay",
+      "scope": "real_rootless_oci_lifecycle_lock_install_start_remove_reinstall",
+      "status": "VERIFIED_IN_DISPOSABLE_REAL_ROOTLESS_OCI_APP_LAB_ONLY",
+      "pr": 130,
+      "feature_head_sha": "3004210c539fcb4c6d43055cf67f0e634e59ae73",
+      "merged_commit_sha": "075e18e525c960cee19390180b09eba2bf2b65c2",
+      "github_actions_run_id": 40314671475,
+      "github_actions_run_url": "https://github.com/GodsQuantum/Rusty-Home-Open/actions/runs/40314671475",
+      "checks_passed": 18,
+      "checks_failed": 0,
+      "verified_marker": "P8AY_TRUE_INTERPROCESS_LOCK_PERSISTS_ACROSS_REMOVE_REINSTALL_PASS",
+      "github_workflow": ".github/workflows/p8ar-real-oci-manager.yml",
+      "verified_marker_source": "scripts/test_p8ar_native_oci_manager.sh"
+    },
+    {
+      "case_id": "p8az",
+      "scope": "native_podman_secret_reference_real_rootless_redis_sha256_mount",
+      "status": "VERIFIED_IN_DISPOSABLE_REAL_ROOTLESS_OCI_APP_LAB_ONLY",
+      "pr": 131,
+      "feature_head_sha": "ddcd3550a134abeeb899d38d107c6a1044eeebe2",
+      "merged_commit_sha": "a351529c6a4ce6ac826430e3b5ad8b6f400028c1",
+      "github_actions_run_id": 40315761886,
+      "github_actions_run_url": "https://github.com/GodsQuantum/Rusty-Home-Open/actions/runs/40315761886",
+      "checks_passed": 20,
+      "checks_failed": 0,
+      "verified_marker": "P8AZ_REAL_ROOTLESS_PODMAN_SECRET_MOUNT_SHA256_PASS",
+      "github_workflow": ".github/workflows/p8az-oci-secret.yml",
+      "verified_marker_source": "scripts/test_p8az_native_oci_secret.sh"
     }
   ],
   "production_release": "NOT_PRODUCTION_READY",
@@ -87,6 +177,8 @@
     "P8aq is one Redis independent volume restore, not all Apps nor transactional HAOS migration",
     "P8ar requires explicit disposable CI environment, not production operator authentication/RBAC",
     "P8as 127.0.0.1 ingress is not outbound egress isolation or public ingress authentication",
-    "No universal official HA Supervisor App parity, multi-container orchestration, production signed image upgrade/rollback, 72-hour soak or independent audit"
+    "No universal official HA Supervisor App parity, multi-container orchestration, production signed image upgrade/rollback, 72-hour soak or independent audit",
+    "P8at-P8az extend real generic OCI features but do not qualify Supervisor third-party Apps and secrets end-to-end",
+    "Podman secret reference is pre-provisioned only; credential creation, rotation, user permission revocation and service dependency graph remain noncertified"
   ]
 }
