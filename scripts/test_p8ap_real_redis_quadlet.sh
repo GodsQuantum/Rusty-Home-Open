@@ -68,9 +68,14 @@ if [[ "$(printenv HARS_VOLUME_RESTORE_LAB || true)" == 1 ]]; then
   umask 077
   backup="$APP_DIR/rh-redis-data.tar"
   podman volume export --output "$backup" "$original_volume"
+  # Podman 4.9 creates output using its own mode: enforce private file
+  # permissions explicitly before reading or retaining the archive.
+  chmod 0600 "$backup"
   test -s "$backup"
   [[ "$(stat -c '%a' "$backup")" == 600 ]]
+  echo P8AQ_PODMAN_VOLUME_EXPORT_PRIVATE_ARCHIVE_PASS
   tar -tf "$backup" | grep -E '(^|/)dump\.rdb$'
+  echo P8AQ_REDIS_RDB_PRESENT_IN_ARCHIVE_PASS
   backup_sha="$(sha256sum "$backup" | cut -d' ' -f1)"
   [[ "$backup_sha" =~ ^[0-9a-f]{64}$ ]]
   echo "$backup_sha  $backup" | sha256sum -c

@@ -281,3 +281,5 @@ P8am #115 successfully certified Type=notify/watchdog 26/26 CI, merged 01265a99a
 P8ao official Podman 4.9.3 real generator rejected [Container] Memory (newer Podman key). Moved memory budget to native systemd [Service] MemoryMax (supported on Ubuntu 24.04) while preserving PidsLimit, capabilities and read-only root; exact-head CI rerun required.
 
 P8ao runner with Ubuntu Podman 4.9 successfully generated all container and volume units. Final CI assertion assumed '--network none' and '--cap-drop all', but the genuine generator uses '--network=none' and '--cap-drop=all'. Assertions corrected to exact emitted flags and expanded to include NoNewPrivileges, MemoryMax and Pull=never; rerun pending.
+
+- First P8aq GitHub run 40289862772 failed shortly after Redis writer quiesced/Podman export, before checksum marker. Podman 4.9 may create volume export output with its own file permissions; explicitly chmod 0600 after export and emit unambiguous archive/Redis RDB markers. Rerun exact head required, not a certified restore yet.
