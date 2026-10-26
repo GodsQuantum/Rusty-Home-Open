@@ -1,0 +1,27 @@
+name: P2j isolated upstream Moli tombstone and re-discovery
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/p2j-moli-discovery-readd.yml"
+      - "crates/native-kernel/src/mqtt_hub.rs"
+      - "Cargo.lock"
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  actual-moli-live-tombstone-readd:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+      - name: Real upstream Moli Hub removal and same-ID safe re-registration
+        run: |
+          cargo fmt --all -- --check
+          cargo test --locked -p hars-native-kernel --lib live_tombstone_readd_same_id_clears_state_and_old_topic -- --nocapture
+          cargo test --locked -p hars-native-kernel --lib
+          cargo clippy --locked -p hars-native-kernel --all-targets -- -D warnings

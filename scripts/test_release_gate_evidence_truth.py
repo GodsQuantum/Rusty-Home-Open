@@ -22,7 +22,14 @@ class GateReality(unittest.TestCase):
         self.assertEqual(sum(x["status"]=="blocked" for x in self.rows),state["progress"]["blocked"])
         self.assertTrue(all(x["status"]!="certified" or x["id"] not in state["blocked_ids"] for x in self.rows))
     def test_real_evidence_never_waives_production_acceptance(self):
-        self.assertEqual(len(self.claims),15)
+        # Fifteen is the number of product gates, NOT a cap on independent
+        # laboratory receipts. Preserve the original fifteen immutable IDs.
+        self.assertGreaterEqual(len(self.claims),15)
+        baseline = ["debian_real_dpkg","apt_signed_tamper_refusal","official_core_rust_bridge","selected_hacs_three","adaptive_media_hacs","epson_snmp_hacs","card_announcements_hacs","native_rust_security_suite","official_product_nonroot","official_marketplace_abi","official_haos_kvm","browser_chromium","security_fuzzer","fuzz_four_native_security_surfaces","github_oidc_cargo_source_sbom"]
+        self.assertTrue(set(baseline) <= {x["id"] for x in self.claims})
+        mqtt = next(x for x in self.claims if x["id"] == "mqtt5_real_broker_sigkill_stale_quarantine")
+        self.assertEqual(mqtt["status"], "verified_lab_only")
+        self.assertEqual(mqtt["release_gate"], "native_drivers_services")
         known={x["id"]:x for x in self.rows}
         self.assertEqual(set(known),{x["id"] for x in self.rows})
         self.assertTrue(all(x["blocked_reason"] and len(x["blocked_reason"][0])>80
