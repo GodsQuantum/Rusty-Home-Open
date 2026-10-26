@@ -79,3 +79,15 @@ haos_guest_service_lab provides the opt-in entrypoint. No systemd unit is
 installed, no household service is modified and no production readiness
 is claimed. This verifies neither the long-term health of Apps nor radio
 ownership, authenticated remote API, backups or 72-hour endurance.
+
+## P8ah — fixed localhost-only frontend transport (real KVM CI pending)
+
+The official HAOS 18.3 guest now has an optional local-user-only QEMU
+frontend bridge in the Rust guest host service. Only 127.0.0.1:18180
+is bound on the host; the guest port is 80 (HAOS uses 80 since
+Home Assistant 2026.8). The original mode keeps zero host forwards.
+The new mode does not provide credentials, a public interface, proxy
+trust, real radio USB pass-through or app control. Rust only detects
+the local TCP listener, not that the entire HA Core UI is ready.
+A separate real KVM certification at exact feature SHA is required.
+Production certification remains 0/15; family HAOS untouched.
