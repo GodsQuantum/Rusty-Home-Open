@@ -20,6 +20,8 @@ pub enum CorroborationError {
     Core(CoreLiveError),
     InvalidCoreSnapshot(CoreUserError),
     DurableState(io::Error),
+    #[cfg(feature = "core-durable-dispatch-lab")]
+    Dispatch(crate::durable_dispatch_fence_lab::TrackedError),
 }
 impl From<io::Error> for CorroborationError {
     fn from(e: io::Error) -> Self {
@@ -97,7 +99,80 @@ pub fn arm_corroborated_disposable_dispatch(
     else {
         return Ok(None);
     };
-    arm_granted_disposable_dispatch(permit, fence, now).map(Some)
+    let armed = arm_granted_disposable_dispatch(permit, fence, now)?;
+    Ok(Some(armed.bind_corroborated_session(session_token)?))
+}
+
+/// QEMU-only submit: revalidate the trusted Core user and persisted session
+/// AFTER a disposable intent was armed, immediately before the original
+/// one-shot POST. A revoked/demoted/swapped actor drops the permit while the
+/// durable Uncertain lock remains: a crash, denial or missing response NEVER
+/// authorizes an automatic repeat. No browser-supplied role is trusted.
+#[cfg(feature = "core-durable-dispatch-lab")]
+#[allow(clippy::too_many_arguments)]
+pub fn submit_corroborated_disposable_dispatch(
+    accepted_tcp: &TcpStream,
+    ingress_headers: &[(&str, &str)],
+    sessions: &DurableFixtureSessions,
+    session_token: &str,
+    fence: &mut crate::durable_dispatch_fence_lab::DurableDispatchFence,
+    armed: crate::durable_dispatch_fence_lab::ArmedDispatch,
+    client: &crate::official_transport::AppSupervisorClient,
+    now: u64,
+) -> Result<Option<crate::durable_dispatch_fence_lab::TrackedReceipt>, CorroborationError> {
+    let Some(claim) = corroborated_active_admin(accepted_tcp, ingress_headers, now)? else {
+        return Ok(None);
+    };
+    if !recheck_armed_fixture_status(
+        CoreAccountStatus::ActiveAdmin,
+        &claim,
+        sessions,
+        session_token,
+        fence,
+        &armed,
+        now,
+    )? {
+        return Ok(None);
+    }
+    let rechecked = armed.allow_after_fresh_core_recheck(session_token)?;
+    client
+        .preview_execute_fenced(fence, rechecked)
+        .map(Some)
+        .map_err(CorroborationError::Dispatch)
+}
+
+/// Internal typed Core fixture seam for the critical grant-to-dispatch race.
+/// Callers cannot pass an HTTP-supplied Core status to the public submission.
+#[cfg(feature = "core-durable-dispatch-lab")]
+fn recheck_armed_fixture_status(
+    status: CoreAccountStatus,
+    claim: &IngressUserClaim,
+    sessions: &DurableFixtureSessions,
+    token: &str,
+    fence: &crate::durable_dispatch_fence_lab::DurableDispatchFence,
+    armed: &crate::durable_dispatch_fence_lab::ArmedDispatch,
+    now: u64,
+) -> io::Result<bool> {
+    if status != CoreAccountStatus::ActiveAdmin {
+        return Ok(false);
+    }
+    let Some(actor) = sessions.current_fixture_actor(token, now)? else {
+        return Ok(false);
+    };
+    if actor.role() != Role::Administrator
+        || actor.subject() != claim.as_str()
+        || actor.subject() != armed.actor_subject()
+        || !armed.same_corroborated_session(token)
+    {
+        return Ok(false);
+    }
+    let Some(record) = fence.get(armed.id())? else {
+        return Ok(false);
+    };
+    Ok(
+        record.state == crate::durable_dispatch_fence_lab::DispatchState::Uncertain
+            && record.actor_subject == actor.subject(),
+    )
 }
 
 /// Never public: only a Core-corroborated one-use grant can reach this helper
@@ -666,6 +741,123 @@ mod durable_dispatch_auth_tests {
             &[("X-Remote-User-Id", "coreowner")],
         )
         .unwrap()
+    }
+
+    #[test]
+    fn post_arm_core_recheck_rejects_revocation_and_new_session_same_admin() {
+        let d = tempfile::tempdir().unwrap();
+        fs::set_permissions(d.path(), fs::Permissions::from_mode(0o700)).unwrap();
+        let mut sessions = DurableFixtureSessions::open(&d.path().join("sessions.redb")).unwrap();
+        let mut fence = DurableDispatchFence::open(&d.path().join("dispatch.redb")).unwrap();
+        let mut journal = FileAuditJournal::open(&d.path().join("audit.jsonl")).unwrap();
+        let app = AppSlug::parse("fictional_vendor_test").unwrap();
+        let req = prepare(&app, Operation::Start).unwrap();
+        let mut policy = Policy::default();
+        policy.grant("coreowner", &app, &[Action::Start]);
+        let actor = Actor::new("coreowner", Role::Administrator).unwrap();
+        let session = sessions.issue_fixture(actor, 100, 120, 90).unwrap();
+        let permit = grant_checked_fixture_status(
+            CoreAccountStatus::ActiveAdmin,
+            &claim(),
+            &policy,
+            &mut sessions,
+            session.as_str(),
+            &req,
+            None,
+            &mut journal,
+            100,
+        )
+        .unwrap()
+        .unwrap();
+        let armed = arm_granted_disposable_dispatch(permit, &mut fence, 100)
+            .unwrap()
+            .bind_corroborated_session(session.as_str())
+            .unwrap();
+        let id = armed.id().to_owned();
+        assert!(
+            recheck_armed_fixture_status(
+                CoreAccountStatus::ActiveAdmin,
+                &claim(),
+                &sessions,
+                session.as_str(),
+                &fence,
+                &armed,
+                101
+            )
+            .unwrap()
+        );
+        for status in [CoreAccountStatus::Denied, CoreAccountStatus::ActiveNonAdmin] {
+            assert!(
+                !recheck_armed_fixture_status(
+                    status,
+                    &claim(),
+                    &sessions,
+                    session.as_str(),
+                    &fence,
+                    &armed,
+                    101
+                )
+                .unwrap()
+            );
+        }
+        sessions.revoke(session.as_str()).unwrap();
+        assert!(
+            !recheck_armed_fixture_status(
+                CoreAccountStatus::ActiveAdmin,
+                &claim(),
+                &sessions,
+                session.as_str(),
+                &fence,
+                &armed,
+                102
+            )
+            .unwrap()
+        );
+        let replacement = sessions
+            .issue_fixture(
+                Actor::new("coreowner", Role::Administrator).unwrap(),
+                102,
+                120,
+                90,
+            )
+            .unwrap();
+        assert!(
+            !recheck_armed_fixture_status(
+                CoreAccountStatus::ActiveAdmin,
+                &claim(),
+                &sessions,
+                replacement.as_str(),
+                &fence,
+                &armed,
+                103
+            )
+            .unwrap()
+        );
+        assert_eq!(
+            fence.get(&id).unwrap().unwrap().state,
+            DispatchState::Uncertain
+        );
+        // Old generic transport cannot skip fresh Core authorization.
+        let client = crate::official_transport::AppSupervisorClient::new(
+            crate::official_transport::SupervisorToken::new("fictional-not-real".to_owned())
+                .unwrap(),
+        );
+        assert!(matches!(
+            client.preview_execute_fenced(&mut fence, armed),
+            Err(crate::durable_dispatch_fence_lab::TrackedError::Transport(
+                crate::official_transport::TransportError::ManagedPreviewDisabled
+            ))
+        ));
+        drop(fence);
+        assert_eq!(
+            DurableDispatchFence::open(&d.path().join("dispatch.redb"))
+                .unwrap()
+                .get(&id)
+                .unwrap()
+                .unwrap()
+                .state,
+            DispatchState::Uncertain
+        );
     }
 
     #[test]

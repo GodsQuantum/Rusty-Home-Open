@@ -110,11 +110,41 @@ fn decode(data: &str) -> io::Result<DispatchRecord> {
 pub struct ArmedDispatch {
     id: String,
     permit: AuditedPermit,
+    /// Only the original Core-corroborated session may submit after arming.
+    #[cfg(feature = "core-durable-dispatch-lab")]
+    corroborated_session: Option<[u8; 32]>,
+    #[cfg(feature = "core-durable-dispatch-lab")]
+    corroborated_rechecked: bool,
 }
 impl ArmedDispatch {
     /// Record identifier is NOT a bearer authorization to submit or release.
     pub fn id(&self) -> &str {
         &self.id
+    }
+    /// Verified only from the audited original permit, never caller input.
+    pub(crate) fn actor_subject(&self) -> &str {
+        self.permit.actor_subject()
+    }
+    #[cfg(feature = "core-durable-dispatch-lab")]
+    pub(crate) fn bind_corroborated_session(mut self, raw: &str) -> io::Result<Self> {
+        self.corroborated_session =
+            Some(crate::session_lab::digest_secret(raw).ok_or_else(invalid)?);
+        self.corroborated_rechecked = false;
+        Ok(self)
+    }
+    #[cfg(feature = "core-durable-dispatch-lab")]
+    pub(crate) fn allow_after_fresh_core_recheck(mut self, token: &str) -> io::Result<Self> {
+        if !self.same_corroborated_session(token) {
+            return Err(invalid());
+        }
+        self.corroborated_rechecked = true;
+        Ok(self)
+    }
+    #[cfg(feature = "core-durable-dispatch-lab")]
+    pub(crate) fn same_corroborated_session(&self, raw: &str) -> bool {
+        self.corroborated_session
+            .zip(crate::session_lab::digest_secret(raw))
+            .is_some_and(|(a, b)| a == b)
     }
 }
 pub struct DurableDispatchFence {
@@ -575,7 +605,14 @@ impl DurableDispatchFence {
             records.insert(id.as_str(), json.as_str()).map_err(error)?;
         }
         tx.commit().map_err(error)?;
-        Ok(ArmedDispatch { id, permit })
+        Ok(ArmedDispatch {
+            id,
+            permit,
+            #[cfg(feature = "core-durable-dispatch-lab")]
+            corroborated_session: None,
+            #[cfg(feature = "core-durable-dispatch-lab")]
+            corroborated_rechecked: false,
+        })
     }
 
     fn record_transport_result(
@@ -678,7 +715,16 @@ impl AppSupervisorClient {
         fence: &mut DurableDispatchFence,
         armed: ArmedDispatch,
     ) -> Result<TrackedReceipt, TrackedError> {
-        let ArmedDispatch { id, permit } = armed;
+        // A Core-corroborated intent must NOT be posted through the older
+        // generic preview API without a fresh identity + original session
+        // check, even when the pre-POST durable fence already exists.
+        #[cfg(feature = "core-durable-dispatch-lab")]
+        if armed.corroborated_session.is_some() && !armed.corroborated_rechecked {
+            return Err(TrackedError::Transport(
+                TransportError::ManagedPreviewDisabled,
+            ));
+        }
+        let ArmedDispatch { id, permit, .. } = armed;
         let result = self.preview_execute(permit);
         // A failed persistence here leaves the pre-existing Uncertain fence.
         fence
