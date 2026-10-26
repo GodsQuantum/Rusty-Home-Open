@@ -1,5 +1,12 @@
 # Rusty Home — journal de développement et de certification
 
+## 2026-10-26 — P8aq real independent OCI App data backup and restore (CI pending)
+
+- Already verified: #118 actual rootless Redis App start/stop and persisted data, 21/21 exact-head CI, merged 071b85bac4f887843be3a2f47d25e44ddcc03bd1. DO NOT REDO.
+- P8aq extends the same Redis + systemd rootless fixture only under an additional explicit laboratory environment. After stopping Redis writer, native Podman volume export writes private tar, enforces SHA256, corrupts a second copy and requires checksum rejection. The original Redis App restarts and its state is intentionally changed. A FRESH differently named Podman volume imports the checksum-verified archive; a new Rust-generated Quadlet starts the independent restore App; prior backup value is checked while primary still has new value.
+- Disposable GitHub Ubuntu only, home HAOS untouched. Not generic HAOS migration/cutover, signed backups, offsite encryption, multi-volume transaction consistency or long endurance. Production 0/15.
+
+
 ## 2026-10-26 — P8ap genuine rootless native Podman App lifecycle (CI pending)
 
 - P8ao #117 generic OCI native Quadlet verified in actual Podman 4.9 generator, 20/20 CI, run 40264974609, merged b8d322bc8c37e3c4302f7eb08e45c76dbebccd7b. No fixed App allowlist.
@@ -274,3 +281,5 @@ P8am #115 successfully certified Type=notify/watchdog 26/26 CI, merged 01265a99a
 P8ao official Podman 4.9.3 real generator rejected [Container] Memory (newer Podman key). Moved memory budget to native systemd [Service] MemoryMax (supported on Ubuntu 24.04) while preserving PidsLimit, capabilities and read-only root; exact-head CI rerun required.
 
 P8ao runner with Ubuntu Podman 4.9 successfully generated all container and volume units. Final CI assertion assumed '--network none' and '--cap-drop all', but the genuine generator uses '--network=none' and '--cap-drop=all'. Assertions corrected to exact emitted flags and expanded to include NoNewPrivileges, MemoryMax and Pull=never; rerun pending.
+
+- First P8aq GitHub run 40289862772 failed shortly after Redis writer quiesced/Podman export, before checksum marker. Podman 4.9 may create volume export output with its own file permissions; explicitly chmod 0600 after export and emit unambiguous archive/Redis RDB markers. Rerun exact head required, not a certified restore yet.
