@@ -42,18 +42,12 @@ for i in $(seq 1 90); do
   sleep .5
 done
 podman exec rh-managedredis redis-cli ping | grep -Fx PONG
-test "$(podman inspect rh-managedredis --format '{{.HostConfig.NetworkMode}}')" = none
 test "$(podman inspect rh-managedredis --format '{{.HostConfig.ReadonlyRootfs}}')" = true
-
 if [[ "$(printenv HARS_LOCAL_TCP_LAB || true)" == 1 ]]; then
-  podman port rh-managedredis 6379/tcp | grep -Fx '127.0.0.1:18879'
-  python3 - <<'PYTHON'
-import socket
-with socket.create_connection(('127.0.0.1',18879),timeout=5) as conn:
-    conn.sendall(b"*1\r\n$4\r\nPING\r\n")
-    assert conn.recv(64)==b"+PONG\r\n"
-PYTHON
-  echo P8AS_REAL_ROOTLESS_REDIS_LOCALHOST_ONLY_TCP_PASS
+  # An explicit network mode must differ from the default fully-offline App.
+  test "$(podman inspect rh-managedredis --format '{{.HostConfig.NetworkMode}}')" != none
+else
+  test "$(podman inspect rh-managedredis --format '{{.HostConfig.NetworkMode}}')" = none
 fi
 podman exec rh-managedredis redis-cli SET manager-proof stable | grep -Fx OK
 podman exec rh-managedredis redis-cli SAVE | grep -Fx OK
@@ -66,6 +60,29 @@ for i in $(seq 1 90); do
 done
 test "$(podman exec rh-managedredis redis-cli GET manager-proof)" = stable
 echo P8AR_RUST_MANAGER_NATIVE_START_STOP_PERSISTENT_APP_DATA_PASS
+
+if [[ "$(printenv HARS_LOCAL_TCP_LAB || true)" == 1 ]]; then
+  bound="$(podman port rh-managedredis 6379/tcp)"
+  printf 'P8AS_NATIVE_PODMAN_HOST_BIND=%s\n' "$bound"
+  test "$bound" = '127.0.0.1:18879'
+  # Redis itself requires authentication for non-container-loopback clients.
+  # Generate an ephemeral random test password, NEVER log it or weaken
+  # protected-mode for host access.
+  redis_pw="$(python3 -c 'import secrets; print(secrets.token_urlsafe(40))')"
+  podman exec rh-managedredis redis-cli CONFIG SET requirepass "$redis_pw" >/dev/null
+  P8AS_REDIS_PASSWORD="$redis_pw" python3 - <<'PYTHON'
+import os, socket
+pw=os.environ["P8AS_REDIS_PASSWORD"].encode("ascii")
+auth=b"*2\r\n$4\r\nAUTH\r\n$"+str(len(pw)).encode()+b"\r\n"+pw+b"\r\n"
+with socket.create_connection(("127.0.0.1",18879),timeout=5) as conn:
+    conn.sendall(auth)
+    assert conn.recv(64)==b"+OK\r\n"
+    conn.sendall(b"*1\r\n$4\r\nPING\r\n")
+    assert conn.recv(64)==b"+PONG\r\n"
+PYTHON
+  unset redis_pw
+  echo P8AS_REAL_ROOTLESS_REDIS_LOCALHOST_ONLY_TCP_PASS
+fi
 
 # Install/remove are deliberately distinct from persistent Podman data.
 HARS_DISPOSABLE_OCI_LAB=1 "$BIN" --remove-lab managedredis
