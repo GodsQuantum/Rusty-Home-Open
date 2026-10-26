@@ -4,7 +4,7 @@ r=Path(__file__).resolve().parent.parent
 manager=(r/'crates/native-hub/src/bin/oci_app_manager_lab.rs').read_text()
 script=(r/'scripts/test_p8ar_native_oci_manager.sh').read_text()
 workflow=(r/'.github/workflows/p8au-app-health-rollback.yml').read_text()
-for v in ('HealthCmd=','HealthInterval=15s','HealthTimeout=5s','HealthRetries=2',
+for v in ('HealthCmd=','HealthInterval=15s','HealthTimeout=5s','HealthRetries=2','HealthOnFailure=kill',
     '--install-health-lab','require_health(', 'healthcheck', '"run"',
     'application health failed', 'restart_from_unit'):
  assert v in manager,v

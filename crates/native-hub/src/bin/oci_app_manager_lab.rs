@@ -137,7 +137,7 @@ fn checked_health_cmd(cmd: &str) -> io::Result<String> {
         }
     }
     Ok(format!(
-        "HealthCmd={cmd}\nHealthInterval=15s\nHealthTimeout=5s\nHealthRetries=2\n"
+        "HealthCmd={cmd}\nHealthInterval=15s\nHealthTimeout=5s\nHealthRetries=2\nHealthOnFailure=kill\n"
     ))
 }
 fn with_health(container: &str, cmd: &str) -> io::Result<String> {
@@ -492,6 +492,7 @@ mod tests {
         let healthy = with_health(&original, "redis-cli ping").unwrap();
         assert!(healthy.contains("HealthCmd=redis-cli ping\n"));
         assert!(healthy.contains("HealthTimeout=5s"));
+        assert!(healthy.contains("HealthOnFailure=kill"));
         assert!(healthy.contains("Network=none"));
         for bad in [
             "",
