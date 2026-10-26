@@ -171,6 +171,18 @@
       "scope": "Source-only Cargo.lock SPDX attestation, independently Sigstore-verified with pinned main signer, not a release binary",
       "url": "https://github.com/GodsQuantum/Rusty-Home-Open/actions/runs/40027460088",
       "merged_pr": 59
+    },
+    {
+      "id": "mqtt5_real_broker_sigkill_stale_quarantine",
+      "release_gate": "native_drivers_services",
+      "status": "verified_lab_only",
+      "run_id": 40371604105,
+      "head_sha": "6322f0607a80fd03e5ef190956d84e8384fd0149",
+      "workflow": "P2i Genuine isolated MQTT5 broker SIGKILL and durable stale quarantine",
+      "job": "real-isolated-mqtt5-broker-sigkill",
+      "scope": "Genuine isolated Mosquitto MQTT5 broker SIGKILL with active subscriber, empty restart leaves redb stale and zero Moli states, unsolicited state rejected, new retained config safely reattests read-only Moli; no household radio or authority",
+      "url": "https://github.com/GodsQuantum/Rusty-Home-Open/actions/runs/40371604105",
+      "merged_pr": 153
     }
   ]
 }
