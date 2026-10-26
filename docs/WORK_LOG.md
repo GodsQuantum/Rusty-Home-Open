@@ -409,3 +409,7 @@ New fifth sanitizer target invokes actual bounded Rust HAOS unprotected tar impo
 
 ## 26 October 2026 — P8bh/P15 exact pinned independent lab receipts (0/15 production)
 PR #139 native Core WS authenticated generation recovery, head 83b90ab, merge 2828751, GH real Core run 40340882977, 9/9 CI. PR #140 HAOS full archive import real sanitizer fuzz head 8453d35, merge 016c002, GH run 40342730820, 11/11, 263654 iterations/46s. New fifth fuzz source and immutable fake corpus. Extended five-target 180s GH run 40343956190 started, conclusion pending. Historical proofs kept, no second redundant harness or field machine touched. All production gates stay blocked.
+
+## 26 October — P8bi genuine HAOS archive to native executable fake Moli graph (CI pending)
+
+New scoped chain covers one explicit **disabled** fictional Home Assistant YAML automation from a genuine disposable Supervisor full archive, byte-exact private redb custody, validated matching original entity-registry identities, safe YAML subset compile, upstream Moli automation engine save disabled and explicit in-process lab approval, synthetic device actuation, approval invalidation after edit, rollback refusing further execution. All other automations (templates, multiple triggers, time, complex actions, unsupported domains, real devices) fail closed. Local synthetic archive and 53 Rust tests/clippy green. Official genuine HAOS QEMU + native engine pending CI; neither family VM100 nor devices touched. Still NOT_PRODUCTION_READY; no automation data from a household tested.

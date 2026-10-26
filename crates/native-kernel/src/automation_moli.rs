@@ -118,7 +118,13 @@ pub struct Proof {
 /// and two invented devices; NO real service/broker/network/HAOS.
 pub async fn prove(folder: &Path) -> Result<Proof> {
     let plan = parse_plan(SYNTHETIC_YAML)?;
-    let graph = compile(&plan)?;
+    prove_plan(folder, &plan).await
+}
+
+/// Reuse the exact existing Moli real synthetic execution/approval proof
+/// with a parsed, SHA-bound source emitted by genuine Supervisor backups.
+pub async fn prove_plan(folder: &Path, plan: &Plan) -> Result<Proof> {
+    let graph = compile(plan)?;
     let hub = Hub::new(HubOptions::default())?;
     let cancel = CancellationToken::new();
     let driver = spawn_driver(
