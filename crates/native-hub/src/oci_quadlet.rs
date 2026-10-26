@@ -86,6 +86,53 @@ pub fn bind_native_runtime_tmpfs(
     Ok(())
 }
 
+/// Bind an explicitly pre-existing second rootless Podman named volume at
+/// a nested path. Some official images declare VOLUME for children such as
+/// /mosquitto/data; without an explicit mount Podman silently creates an
+/// ANONYMOUS volume, which is not part of parent backup. This guard prevents
+/// such invisible backup exclusions, and never authorizes a host bind.
+pub fn bind_native_nested_existing_volume(
+    units: &mut QuadletUnits,
+    slug: &str,
+    parent: &str,
+    volume: &str,
+    child: &str,
+) -> Result<(), QuadletError> {
+    let expected = format!("rh-{slug}-extra");
+    if slug.is_empty()
+        || !slug
+            .bytes()
+            .all(|b| b.is_ascii_lowercase() || b.is_ascii_digit() || b == b'-')
+        || volume != expected
+        || parent == child
+        || !child.starts_with(&format!("{parent}/"))
+        || parent.starts_with("/run")
+        || units.container.matches("Pull=never\n").count() != 1
+        || units.container.contains(&format!("Volume={volume}:"))
+        || !units
+            .container
+            .contains(&format!("Volume=rh-{slug}-data.volume:{parent}:U\n"))
+        || child.len() > 120
+        || !child.starts_with('/')
+        || child.split('/').skip(1).any(|segment| {
+            segment.is_empty()
+                || segment == "."
+                || segment == ".."
+                || !segment
+                    .bytes()
+                    .all(|b| b.is_ascii_alphanumeric() || b"_-. ".contains(&b) && b != b' ')
+        })
+    {
+        return Err(QuadletError::InvalidResources);
+    }
+    units.container = units.container.replacen(
+        "Pull=never\n",
+        &format!("Pull=never\nVolume={volume}:{child}:U\n"),
+        1,
+    );
+    Ok(())
+}
+
 impl OciApp<'_> {
     /// A Podman-managed named volume, never a host-path bind.
     /// Custom OCI storage destinations must be absolute safe container paths.
@@ -267,6 +314,60 @@ mod tests {
         }
     }
 
+    #[test]
+    fn native_nested_volume_prevents_anonymous_image_data_mounts() {
+        let image = format!("docker.io/library/eclipse-mosquitto@sha256:{DIGEST}");
+        let mut app = good("mq", &image);
+        app.run_uid = Some(1883);
+        let mut units = app.render_at("/mosquitto").unwrap();
+        bind_native_nested_existing_volume(
+            &mut units,
+            "mq",
+            "/mosquitto",
+            "rh-mq-extra",
+            "/mosquitto/data",
+        )
+        .unwrap();
+        assert!(
+            units
+                .container
+                .contains("Volume=rh-mq-data.volume:/mosquitto:U\n")
+        );
+        assert!(
+            units
+                .container
+                .contains("Volume=rh-mq-extra:/mosquitto/data:U\n")
+        );
+        assert!(units.container.contains("Network=none\n"));
+        assert!(units.container.contains("ReadOnly=true\n"));
+        assert!(
+            bind_native_nested_existing_volume(
+                &mut units,
+                "mq",
+                "/mosquitto",
+                "rh-mq-extra",
+                "/mosquitto/log",
+            )
+            .is_err()
+        );
+        for (name, child) in [
+            ("other-owner", "/mosquitto/data"),
+            ("rh-mq-extra", "/etc/passwd"),
+            ("rh-mq-extra", "/mosquitto/../etc"),
+            ("rh-mq-extra", "/mosquitto//oops"),
+            ("rh-mq-extra", "/mosquitto/data\nImage=evil"),
+            ("rh-mq-extra", "/mosquitto"),
+        ] {
+            let mut app = good("mq", &image);
+            app.run_uid = Some(1883);
+            let mut clean = app.render_at("/mosquitto").unwrap();
+            assert!(
+                bind_native_nested_existing_volume(&mut clean, "mq", "/mosquitto", name, child,)
+                    .is_err(),
+                "{name}: {child}"
+            );
+        }
+    }
     #[test]
     fn optional_native_secret_reference_never_embeds_material_or_shell() {
         let image = format!("docker.io/library/redis@sha256:{DIGEST}");
