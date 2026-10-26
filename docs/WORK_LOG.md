@@ -402,3 +402,7 @@ P8be PR #136 merged 004f2cb, exact feature HEAD 3527be5, 12/12 green, real Super
 
 ## 26 October 2026 P8bh actual Core WS recovery (ongoing)
 New distinct scenario added to existing official Core (p8v) CI: create authenticated read-only WS/Moli shadow, explicitly revoke/cancel old Moli Hub, reject stale reads and invalid-token login on genuine Core, then reauthenticate a fresh epoch, subscribe-before-snapshot and verify state published by a NEW native Hub, revoke again. No Core service calls, no physical devices, no real HAOS token. This is not multi-day reconnect, nor field certification; CI must pass before merging.
+
+## 26 Oct 2026 — P15 archive importer real libFuzzer target in CI
+
+New fifth sanitizer target invokes actual bounded Rust HAOS unprotected tar importer, tests validated original registries and inert automations with five entirely fictional tar seeds (clean, protected, duplicate alias, traversal, malformed UTF-8). Extends existing nightly-2026-10-15 libFuzzer/ASan workflow, 45s PR smoke and 180s scheduled, without touching household or uploading real archives. The root Cargo.lock is unchanged; separate fuzz/Cargo.lock updated. Local compile and corpus checks PASS; awaited GitHub sanitizer CI must be cited before claiming real fuzz pass. Release remains blocked.

@@ -24,3 +24,13 @@ The GitHub Actions pull-request job runs all four sanitizers for 45 seconds each
 Weekly scheduled and manually dispatched runs additionally execute 180 seconds
 per target, still subject to the GitHub runner time limit. These are bounded
 laboratory tests, not a 24-hour soak or release certification.
+
+### P15 fifth source: actual HAOS archive import parser (Oct 26)
+The bounded unprotected official-format Supervisor full TAR and nested Core TAR.GZ
+are fuzzed by invoking the actual hars_interop_moli::ha_backup_import importer,
+including archive entry/path policy, duplicate registry and automation names,
+UTF-8, gzip validation, and the strict Core entity registry. The corpus
+contains only fictitious entity identities and inert YAML. No HAOS/VM100,
+network, real tokens, or devices are ever opened. A passing 45s/180s libFuzzer
+run is a limited instrumented lab result, not a penetration test, soak,
+HAOS migration certification, or production authorization.

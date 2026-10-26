@@ -32,3 +32,10 @@
 !/corpus/lifecycle_preflight/unauthorized-source.bin
 !/corpus/lifecycle_preflight/bad-repository.bin
 !/corpus/lifecycle_preflight/duplicate-app.bin
+
+/corpus/haos_backup_import/*
+!/corpus/haos_backup_import/synthetic-valid-full.bin
+!/corpus/haos_backup_import/synthetic-protected-refused.bin
+!/corpus/haos_backup_import/synthetic-duplicate-refused.bin
+!/corpus/haos_backup_import/synthetic-traversal-refused.bin
+!/corpus/haos_backup_import/synthetic-invalid-utf8-refused.bin

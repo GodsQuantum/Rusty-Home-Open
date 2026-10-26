@@ -9,6 +9,8 @@ cargo-fuzz = true
 
 [dependencies]
 libfuzzer-sys = "=0.4.13"
+hars-interop-moli = { path = "../crates/interop-moli" }
+tempfile = "3"
 hars-supervisor-apps = { path = "../crates/supervisor-apps", features = ["core-user-snapshot-lab"] }
 
 [[bin]]
@@ -38,6 +40,13 @@ bench = false
 [[bin]]
 name = "lifecycle_preflight"
 path = "fuzz_targets/lifecycle_preflight.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "haos_backup_import"
+path = "fuzz_targets/haos_backup_import.rs"
 test = false
 doc = false
 bench = false
