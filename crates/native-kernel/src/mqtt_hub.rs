@@ -67,7 +67,23 @@ impl Driver for DiscoveryDriver {
             while let Some(msg) = rx.recv().await {
                 match msg {
                     DiscoveryEvent::Config(Intent::Preview { id, sensors, .. }) => {
-                        if sensors.iter().any(|s| !safe_sensor_id(&s.unique_id)) {
+                        // The driver channel is public and may be fed by a
+                        // future adapter that bypasses mqtt_discovery::preview.
+                        // Reject malformed batches BEFORE any Moli mutation.
+                        let mut batch_ids = HashSet::new();
+                        if sensors.is_empty()
+                            || sensors.len() > 32
+                            || sensors.iter().any(|s| {
+                                !safe_sensor_id(&s.unique_id)
+                                    || !batch_ids.insert(s.unique_id.as_str())
+                                    || !matches!(s.platform.as_str(), "sensor" | "binary_sensor")
+                                    || !s.state_topic.starts_with("lab/readonly/")
+                                    || s.state_topic.len() > 128
+                                    || !s.state_topic.bytes().all(|b| {
+                                        b.is_ascii_alphanumeric() || matches!(b, b'/' | b'_' | b'-')
+                                    })
+                            })
+                        {
                             continue;
                         }
                         if configs.contains_key(&id) {
@@ -290,6 +306,173 @@ mod p2j_tombstone_readd_tests {
                 .points
                 .iter()
                 .all(|p| !p.access.write)
+        );
+        cancel.cancel();
+        drop(tx);
+        tokio::time::timeout(Duration::from_secs(3), worker)
+            .await
+            .unwrap()
+            .unwrap();
+    }
+}
+
+#[cfg(test)]
+mod p2l_atomic_discovery_tests {
+    use super::*;
+    use crate::mqtt_discovery::Sensor;
+    use moli_core::{InstanceId, PointId, Value};
+    use moli_runtime::{Hub, HubOptions, spawn_driver};
+    use std::{sync::Arc, time::Duration};
+    use tokio::sync::mpsc;
+    use tokio_util::sync::CancellationToken;
+
+    fn sensor(id: &str, topic: &str) -> Sensor {
+        Sensor {
+            platform: "sensor".into(),
+            unique_id: id.into(),
+            state_topic: topic.into(),
+        }
+    }
+    fn config(id: &str, sensors: Vec<Sensor>) -> DiscoveryEvent {
+        DiscoveryEvent::Config(Intent::Preview {
+            id: id.into(),
+            device_id: None,
+            sensors,
+        })
+    }
+    async fn count(hub: &Hub, expected: usize) {
+        for _ in 0..150 {
+            if hub.snapshot().devices.len() == expected {
+                return;
+            }
+            tokio::time::sleep(Duration::from_millis(10)).await;
+        }
+        panic!(
+            "expected {expected} Moli devices, got {}",
+            hub.snapshot().devices.len()
+        );
+    }
+
+    #[tokio::test]
+    async fn malformed_batch_is_atomic_and_cannot_claim_or_release_another_config_identity() {
+        let hub = Hub::new(HubOptions::default()).unwrap();
+        let cancel = CancellationToken::new();
+        let (tx, rx) = mpsc::channel(32);
+        let worker = spawn_driver(
+            &hub,
+            InstanceId::from("hars-p2l-atomic-lab"),
+            Arc::new(DiscoveryDriver::new(rx)),
+            cancel.clone(),
+        );
+        // Direct driver ingress must remain fail-closed even if a future
+        // transport forgets the parser's duplicate-identity validation.
+        tx.send(config(
+            "malformed",
+            vec![
+                sensor("duplicate_id", "lab/readonly/rogue_one"),
+                sensor("duplicate_id", "lab/readonly/rogue_two"),
+            ],
+        ))
+        .await
+        .unwrap();
+        tx.send(config("empty", vec![])).await.unwrap();
+        tx.send(config(
+            "bad_kind",
+            vec![Sensor {
+                platform: "switch".into(),
+                unique_id: "bad_kind_id".into(),
+                state_topic: "lab/readonly/bad".into(),
+            }],
+        ))
+        .await
+        .unwrap();
+        tx.send(config(
+            "bad_topic",
+            vec![sensor("bad_topic_id", "lab/readonly/../escape")],
+        ))
+        .await
+        .unwrap();
+        tx.send(config(
+            "oversized",
+            (0..33)
+                .map(|n| sensor(&format!("oversized_{n}"), "lab/readonly/bad"))
+                .collect(),
+        ))
+        .await
+        .unwrap();
+        tx.send(config(
+            "owner",
+            vec![sensor("owner_id", "lab/readonly/owner")],
+        ))
+        .await
+        .unwrap();
+        count(&hub, 1).await;
+        let device = hub.snapshot().devices[0].device.clone();
+        assert_eq!(device.native_name.as_ref(), "owner_id");
+        assert!(device.points.iter().all(|p| !p.access.write));
+        let point = PointId::new(&device.id, "state");
+
+        // A second config that attempts to steal the live owner's ID
+        // must be rejected as a WHOLE, not partially registered.
+        tx.send(config(
+            "attacker",
+            vec![
+                sensor("new_rogue_id", "lab/readonly/rogue_one"),
+                sensor("owner_id", "lab/readonly/rogue_two"),
+            ],
+        ))
+        .await
+        .unwrap();
+        tx.send(DiscoveryEvent::Config(Intent::Remove {
+            id: "attacker".into(),
+        }))
+        .await
+        .unwrap();
+        tx.send(DiscoveryEvent::Config(Intent::Remove {
+            id: "malformed".into(),
+        }))
+        .await
+        .unwrap();
+        tx.send(DiscoveryEvent::SensorState {
+            topic: "lab/readonly/rogue_two".into(),
+            payload: b"forged".to_vec(),
+        })
+        .await
+        .unwrap();
+        tx.send(DiscoveryEvent::SensorState {
+            topic: "lab/readonly/owner".into(),
+            payload: b"trusted".to_vec(),
+        })
+        .await
+        .unwrap();
+        for _ in 0..150 {
+            if hub.state(&point).map(|s| s.value) == Some(Value::Text("trusted".into())) {
+                break;
+            }
+            tokio::time::sleep(Duration::from_millis(10)).await;
+        }
+        assert_eq!(hub.snapshot().devices.len(), 1);
+        assert_eq!(
+            hub.state(&point).unwrap().value,
+            Value::Text("trusted".into())
+        );
+
+        tx.send(DiscoveryEvent::Config(Intent::Remove {
+            id: "owner".into(),
+        }))
+        .await
+        .unwrap();
+        count(&hub, 0).await;
+        tx.send(config(
+            "new_owner",
+            vec![sensor("owner_id", "lab/readonly/new_owner")],
+        ))
+        .await
+        .unwrap();
+        count(&hub, 1).await;
+        assert!(
+            hub.state(&point).is_none(),
+            "new owner inherits no old state"
         );
         cancel.cancel();
         drop(tx);
