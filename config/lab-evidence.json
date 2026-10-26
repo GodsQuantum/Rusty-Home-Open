@@ -195,6 +195,18 @@
       "scope": "Real upstream native Moli Hub same-process config removal and safe same-ID re-registration: old state erased, old topic ignored, new state read-only; no MQTT broker in this new test, no physical device",
       "url": "https://github.com/GodsQuantum/Rusty-Home-Open/actions/runs/40380159515",
       "merged_pr": 155
+    },
+    {
+      "id": "moli_atomic_direct_discovery_batch_refusal",
+      "release_gate": "native_drivers_services",
+      "status": "verified_lab_only",
+      "run_id": 40389728103,
+      "head_sha": "6c2d061f251149b1a9afa1424a8971c218bf0b78",
+      "workflow": "P2l actual upstream Moli atomic discovery ingress",
+      "job": "actual-moli-atomic-discovery-ingress",
+      "scope": "Real upstream Moli Hub rejects malformed direct in-process Preview batches atomically, rival ID theft and rogue topic writes; legitimate removal and same-ID re-add reset state, read-only. No broker, physical radio, VM100 or production authority.",
+      "url": "https://github.com/GodsQuantum/Rusty-Home-Open/actions/runs/40389728103",
+      "merged_pr": 158
     }
   ]
 }

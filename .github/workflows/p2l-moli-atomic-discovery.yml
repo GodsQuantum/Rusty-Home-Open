@@ -1,0 +1,27 @@
+name: P2l actual upstream Moli atomic discovery ingress
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/p2l-moli-atomic-discovery.yml"
+      - "crates/native-kernel/src/mqtt_hub.rs"
+      - "Cargo.lock"
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  actual-moli-atomic-discovery-ingress:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+      - name: Actual upstream Moli atomic invalid-batch refusal and ownership
+        run: |
+          cargo fmt --all -- --check
+          cargo test --locked -p hars-native-kernel --lib p2l_atomic_discovery_tests -- --nocapture
+          cargo test --locked -p hars-native-kernel --lib
+          cargo clippy --locked -p hars-native-kernel --all-targets -- -D warnings
