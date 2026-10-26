@@ -30,6 +30,11 @@ class GateReality(unittest.TestCase):
         mqtt = next(x for x in self.claims if x["id"] == "mqtt5_real_broker_sigkill_stale_quarantine")
         self.assertEqual(mqtt["status"], "verified_lab_only")
         self.assertEqual(mqtt["release_gate"], "native_drivers_services")
+        p2j = next(x for x in self.claims if x["id"] == "moli_live_tombstone_same_id_readd")
+        self.assertEqual(p2j["status"], "verified_lab_only")
+        self.assertEqual(p2j["release_gate"], "native_drivers_services")
+        self.assertEqual(p2j["run_id"], 40380159515)
+        self.assertEqual(p2j["head_sha"], "7a5944e7e96838fefabd5305dbf415074dec4581")
         known={x["id"]:x for x in self.rows}
         self.assertEqual(set(known),{x["id"] for x in self.rows})
         self.assertTrue(all(x["blocked_reason"] and len(x["blocked_reason"][0])>80

@@ -183,6 +183,18 @@
       "scope": "Genuine isolated Mosquitto MQTT5 broker SIGKILL with active subscriber, empty restart leaves redb stale and zero Moli states, unsolicited state rejected, new retained config safely reattests read-only Moli; no household radio or authority",
       "url": "https://github.com/GodsQuantum/Rusty-Home-Open/actions/runs/40371604105",
       "merged_pr": 153
+    },
+    {
+      "id": "moli_live_tombstone_same_id_readd",
+      "release_gate": "native_drivers_services",
+      "status": "verified_lab_only",
+      "run_id": 40380159515,
+      "head_sha": "7a5944e7e96838fefabd5305dbf415074dec4581",
+      "workflow": "P2j isolated upstream Moli tombstone and re-discovery",
+      "job": "actual-moli-live-tombstone-readd",
+      "scope": "Real upstream native Moli Hub same-process config removal and safe same-ID re-registration: old state erased, old topic ignored, new state read-only; no MQTT broker in this new test, no physical device",
+      "url": "https://github.com/GodsQuantum/Rusty-Home-Open/actions/runs/40380159515",
+      "merged_pr": 155
     }
   ]
 }
