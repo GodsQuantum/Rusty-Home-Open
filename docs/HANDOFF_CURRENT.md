@@ -256,6 +256,18 @@ These six distinct cases were already completed in real, disposable GitHub CI an
 
 The existing five P8ao–P8as immutable proofs remain intact. The test suite verifies all eleven cases and their exact original sources; production still has 0/15 accepted independent gates.
 
+## 26 October P8bb — unblock legitimate per-gate certification transitions [IN PROGRESS]
+
+Owner SentinelX Cloud9/LXC700, branch fix/incremental-release-gate-tests-20261026, base main 6ee9e7e. Gap: check_release_gate.py supports proof-scoped independently signed promotion one at a time, but CI scripts/test_public_certification_ledger.py, test_release_gate.py, test_release_gate_evidence_truth.py and historical masterplan/evidence tests hardcode the old 9/6/0 snapshot and reject any future certified gate. Preserve historical baseline evidence, use live audit for actual current release and strictly reject unverified certification, keep deployment_authorized and release_signoff false; 0/15 currently. Rollback: revert branch. No changes to household/service/data.
+
+## 26 October — P8bb gate transition hardcode corrected
+
+CI now compares the CURRENT release gate manifest and its independently verified Ed25519 evidence instead of freezing all five current check suites at historical 9 partial/6 blocked/0 certified. The 24 Oct masterplan and HAOS backup receipts remain immutable snapshots. Signed-scope attestation negative and positive test already verifies that a real single approved gate can count without granting deployment or signoff. Local validation of release gate, ledger, historical evidence, masterplan and attestation passed. No real independent production certificate has been issued; current 0/15, no household changes.
+
+## 26 Oct P8bb — remaining historical suites migrated to live proof authority
+
+Four ancillary suites (historic source-licence receipt, fuzz CI, signed APT, genuine HAOS archive escrow) no longer freeze live gate statuses; they use check_release_gate.audit for per-criterion independently signed promotion, while preserving their immutable laboratory attestations. Targeted old-license and fuzz transition tests + complete APT/escrow and public gate/attestation tests PASSED locally. Inactive legacy Codespaces suite refers to files missing in public repository; it is unchanged, not a new certification claim. CI exact final SHA required; release 0/15.
+
 ## 26 October P8bd — official Core 2026.10.4 isolated ABI lifecycle [IN PROGRESS]
 
 Owner: SentinelX Cloud9 LXC700, isolated branch test/core-2026-10-4-20261026, base main 6ee9e7e. Current upstream official Core stable 2026.10.4 (released 24 October) Docker GHCR OCI index sha256:23f4dfbb69ce76315dbc4de7915504f1c2dcecd7ca2648113a493a385972e133 checked with docker buildx manifest only. Existing verified 2026.10.2 baseline and 2026.11-dev marketplace lab remain immutable, no rerun as new proof. Add separate disposable CI using same native synthetic Core config-entry lifecycle with dynamically selected strictly pinned 2026.10.4 candidate, assert actual runtime version and full create/unload/reload/remove. No HAOS family VM100 data or drivers. Rollback: revert branch, leave current release 0/15.

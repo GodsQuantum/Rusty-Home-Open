@@ -254,3 +254,7 @@ le passage en production sans preuve indépendante vérifiée, double signature
 Ed25519 puis approbation explicite de publication. Statut actuel : 9 partiels,
 6 bloqués, **0/15 certifié** ; aucune restauration HAOS précédemment prouvée
 n'a été répétée.
+
+## Future independently signed criterion promotion
+
+The `check_release_gate.py --matrix` machine guard remains the only authority for **current** accepted per-gate technical evidence. Snapshot statements above describe laboratory status on 26 October 2026. The CI regression suite now allows a future single criterion to change to `certified` ONLY after its precise required scenarios and independent dual Ed25519 signatures have passed; the live manifest and ledger must then be updated together. Historical masterplan and archived HAOS fixture claims are not silently rewritten. Even 15/15 accepted technical gates never authorize production deployment without an additional explicit independent release signoff. This is not a claim that any gate has been certified today.

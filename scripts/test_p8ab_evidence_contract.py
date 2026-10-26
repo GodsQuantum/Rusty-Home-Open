@@ -17,7 +17,8 @@ for name in ('docs/WORK_LOG.md','docs/HANDOFF_CURRENT.md','docs/CERTIFICATION_EV
  assert str(e['run']) in s,name
  assert e['head'] in s,name
 assert len(g['required_gates'])==15
-assert all(row['certification_artifact'] is None for row in g['required_gates'])
-assert {row['id']:row['status'] for row in g['required_gates']}['haos_backup_restore']=='lab_partial'
-assert {row['id']:row['status'] for row in g['required_gates']}['rollback_verified']=='blocked'
+from check_release_gate import audit
+live=audit(g)
+assert all(row['status']!='certified' or row['id'] not in live['blocked_ids'] for row in g['required_gates'])
+assert live['deployment_authorized'] is False
 print('P8AB_IMMUTABLE_6_OF_6_REAL_QEMU_EVIDENCE_WITH_ZERO_PRODUCTION_GATE_PASS')
