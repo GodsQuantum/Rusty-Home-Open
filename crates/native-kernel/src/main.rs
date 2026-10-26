@@ -139,6 +139,10 @@ async fn main() -> anyhow::Result<()> {
                 "synthetic_actuator_confirmed":proof.synthetic_actuator_confirmed,
                 "approval_required":proof.required_human_approval,
                 "edit_revokes_approval":proof.approval_invalidated_by_edit,
+                "persisted_edit_inactive":proof.persisted_edit_inactive,
+                "stale_approval_rejected":proof.stale_approval_rejected,
+                "no_run_after_edit":proof.no_run_after_edit,
+                "restart_kept_edit_inactive":proof.restart_kept_edit_inactive,
                 "real_hardware_touched":proof.hardware_touched,
                 "production_ready":false
             })
