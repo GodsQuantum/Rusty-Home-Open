@@ -343,6 +343,10 @@ no family HAOS system modified or rebooted.
 
 - First real P8aw CI run 40301156020 verified native Registry 3.1.2 startup, no-autostart, proper /var/lib/registry Podman mount and 127.0.0.1-only port; actual PUT blob returned HTTP 400 because Python test client omitted REQUIRED Content-Type: application/octet-stream and defaulted to urlencoded. Added conformant header per OCI Distribution API and constrained local-only response-code diagnostics. Rerun exact SHA required; not yet certified persistent HTTP data.
 
+## 26 October 2026 — no-retest per-gate production matrix
+
+Compared main b1881a6 against `config/release-gates.json`, the independent-signature attestation requirements, and the immutable evidence registers. Added optional machine-readable 15-item audit to existing release guard (not another certification system), plus negative regression tests. Existing 9 partial / 6 blocked / 0 certified status remains unchanged. Real HAOS same-VM and second-VM restores and OCI Redis/Registry proof not rerun. No production host, radios, secrets or backups modified.
+
 ## 26 October 2026 — P8ay race containment, NOT production certification
 
 New issue independent of previously pinned Redis/Registry results: install, start and stop lacked per-App flock although upgrade/rollback/remove used it. Hardened existing native Rust OCI manager (no custom watcher/services) by locking before install descriptor creation and throughout start/stop; do not unlink the lock on remove. Added genuine inter-process denial and removal/reinstallation inode-continuity assertions to existing real Redis workflow. No radio, host change, new separate test infrastructure, or household deployment. Existing P8ar-P8aw proof remains unchanged; exact CI SHA must pass.
