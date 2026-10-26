@@ -86,6 +86,10 @@ P8ae PR #105 12/12 GitHub CI SUCCESS at feature 4534b23, merged 45811bcefa791544
 
 PR #103 P8ac real serial boot 18/18, run 40243098816; PR #104 P8ad genuine official Supervisor+Core CLI health 11/11, run 40243728521; PR #105 P8ae persistent QEMU guest disk hard restart 12/12, run 40247000475; PR #106 P8af separate Rust manager disk reattachment and double-owner denial 13/13, run 40247834775. ALL FOUR MERGED on main: d8c5bee817c7b7e8ef5ea6af24d62d366fbe610a. Exact feature SHAs, run markers and limits in config/haos-rust-guest-evidence.json and docs/HAOS_RUST_GUEST_COMPAT_2026-10-25.md. These official HAOS 18.3 isolated KVM proofs are COMPLETE; DO NOT RE-RUN by hand or substitute for production certification. Next nonredundant gaps: installable long-running Rust guest host service/secure networking and Core/API+Apps lifecycle; independent proof of real device/radio ownership, full rollback and 72h reliability soak. Zero production gates certified, never touch household HAOS.
 
+## P8ag native guest host service lifecycle — 26 October
+
+Branch feat/native-guest-service-lifecycle-20261026, isolated worktree Rusty-Home-Lifecycle-20261026 from main 7957fce. New Rust guest host service and executable haos_guest_service_lab; opt-in laboratory QMP and lifecycle CI .github/workflows/p8ag-guest-service.yml. Prior P8ac-P8af proofs pinned and merged; don't repeat. No real home cutover or deployment, 0/15 production. Validate exact SHA in CI before marking verified.
+
 ## Reprise obligatoire
 
 1. Lire ces sources, vérifier le SHA actuel de GitHub, les PR ouvertes, les preuves et la CI avant de relancer des travaux.
