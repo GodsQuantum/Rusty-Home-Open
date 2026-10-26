@@ -4,7 +4,7 @@ from __future__ import annotations
 import copy
 import json
 from pathlib import Path
-from check_release_gate import audit, InvalidGate
+from check_release_gate import audit, InvalidGate, individual_gate_matrix
 
 ROOT=Path(__file__).resolve().parent.parent
 cfg=json.loads((ROOT/"config/release-gates.json").read_text())
@@ -44,3 +44,14 @@ try: audit(a)
 except InvalidGate: pass
 else: raise AssertionError("unknown gate state accepted")
 print("PASS: missing/duplicate/invalid proofs rejected")
+
+# Matrix is a transparent per-criterion verdict; it may never equate CI/lab to release.
+gates=individual_gate_matrix(cfg,baseline)
+assert len(gates)==15 and len({g["gate_id"] for g in gates})==15
+assert sum(g["laboratory_status"]=="lab_partial" for g in gates)==9
+assert all(g["production_status"]=="blocked" and not g["independent_proof_accepted"] for g in gates)
+assert all(len(g["mandatory_production_scenarios"])>=4 and g["remaining_blockers"] for g in gates)
+forged=copy.deepcopy(cfg)
+forged["required_gates"][0]["status"]="certified"
+assert individual_gate_matrix(forged,audit(forged))[0]["production_status"]=="blocked"
+print("PASS: all 15 individual certification verdicts preserve fail-closed release")

@@ -8,7 +8,7 @@ from __future__ import annotations
 import argparse
 import json
 from pathlib import Path
-from release_attestation import verified_release_artifact
+from release_attestation import verified_release_artifact, REQUIRED_SCENARIOS
 
 ROOT=Path(__file__).resolve().parent.parent
 EXPECTED_GATES=frozenset((
@@ -62,14 +62,29 @@ def audit(config: dict, root: Path=ROOT)->dict:
         "deployment_authorized":False,
     }
 
+def individual_gate_matrix(config: dict, report: dict)->list[dict]:
+    """Per-gate evidence, not a proxy for release approval or a CI pass count."""
+    blocked=set(report["blocked_ids"])
+    return [{
+        "gate_id":gate["id"],
+        "laboratory_status":gate["status"],
+        "production_status":("certified" if gate["id"] not in blocked else "blocked"),
+        "independent_proof_accepted":gate["id"] not in blocked,
+        "mandatory_production_scenarios":sorted(REQUIRED_SCENARIOS[gate["id"]]),
+        "remaining_blockers":gate.get("blocked_reason",[]),
+    } for gate in config["required_gates"]]
+
 def main()->None:
     ap=argparse.ArgumentParser()
     ap.add_argument("--config",type=Path,default=ROOT/"config/release-gates.json")
     ap.add_argument("--expect-blocked",action="store_true")
     ap.add_argument("--assert-ready",action="store_true")
+    ap.add_argument("--matrix",action="store_true",help="show all 15 individual production gates and blockers")
     args=ap.parse_args()
-    report=audit(json.loads(args.config.read_text()))
-    print(json.dumps(report,indent=2,sort_keys=True))
+    manifest=json.loads(args.config.read_text())
+    report=audit(manifest)
+    result={"summary":report,"gates":individual_gate_matrix(manifest,report)} if args.matrix else report
+    print(json.dumps(result,indent=2,sort_keys=True))
     if args.expect_blocked and report["status"]!="NOT_PRODUCTION_READY":
         raise SystemExit("FAIL: release-gate guard unexpectedly cleared")
     if args.assert_ready:

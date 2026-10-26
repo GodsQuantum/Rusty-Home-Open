@@ -342,3 +342,7 @@ no family HAOS system modified or rebooted.
 - P8at PR #124 is now MERGED after all 25/25 CI, commit 42db2dc1f1bf53873b37a95e83b88c6dfd5bd658. P8au is rebased on that exact main and preserves previous evidence. P8au opted native HealthOnFailure=kill (Podman Quadlet 4.9) for subsequent asynchronous unhealthy states to request systemd restart; the bounded Rust upgrade health loop is still responsible only for immediate image rollback, not infinite-uptime rollback.
 
 - First real P8aw CI run 40301156020 verified native Registry 3.1.2 startup, no-autostart, proper /var/lib/registry Podman mount and 127.0.0.1-only port; actual PUT blob returned HTTP 400 because Python test client omitted REQUIRED Content-Type: application/octet-stream and defaulted to urlencoded. Added conformant header per OCI Distribution API and constrained local-only response-code diagnostics. Rerun exact SHA required; not yet certified persistent HTTP data.
+
+## 26 October 2026 — no-retest per-gate production matrix
+
+Compared main b1881a6 against `config/release-gates.json`, the independent-signature attestation requirements, and the immutable evidence registers. Added optional machine-readable 15-item audit to existing release guard (not another certification system), plus negative regression tests. Existing 9 partial / 6 blocked / 0 certified status remains unchanged. Real HAOS same-VM and second-VM restores and OCI Redis/Registry proof not rerun. No production host, radios, secrets or backups modified.
