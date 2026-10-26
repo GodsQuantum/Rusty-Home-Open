@@ -203,3 +203,23 @@ system modified; production 0/15.
 
 - At first PR #115 head 304c848, official HAOS systemd Type=notify test timed out before READY. Root cause: the new QMP detection used literal escaped quote bytes instead of normal JSON quote bytes. Readiness now calls the SAME QMP greeting parser as the previously certified shutdown path; new regression fixture rejects double escaping, Rust 16/16 and strict Clippy pass. Re-run CI on new exact head; do not claim systemd READY verified before it passes.
 - A newly pinned native crate sd-notify 0.5.0 increases Cargo.lock to 227 resolved packages, 215 registry dependencies, 219 external and 213 with bundled license/notice source. Regenerated unsigned SPDX 2.3 source graph (227 packages, 526 edges) and updated six historical upstream license receipts ONLY to the new Cargo.lock SHA. Legal redistribution/signed product compliance are still NOT certified.
+
+## P8an — real QEMU crash with automatic systemd recovery (CI pending)
+
+P8am #115 native Type=notify + watchdog and 16 Rust tests passed, official
+HAOS 18.3 systemd/QMP readiness and heartbeat twice, GitHub 40261132205.
+At exact PR head d5849dd71b4cc36b10f8eefe1a58ab6488a27cdf, 26/26
+applicable checks passed; merged 01265a99a8548274fd454fdc81b5037ff299c60e.
+
+P8an adds an independent actual crash validation: ONLY in disposable
+GitHub Ubuntu KVM, after proving clean stop cycles, send SIGKILL to the
+real QEMU child (not Rust), verify Rust returns failed/cleans up, systemd
+Restart=on-failure launches an entirely new Rust/QEMU process and
+systemctl acknowledges active new process with genuine private QMP.
+The original QCOW2 overlay inode and SHA256-pinned base image must be
+unchanged. The fault is introduced only on a CI-created fictional guest;
+real household HAOS/physical radios are not connected.
+
+This does not prove all Apps/DBs are transactionally consistent after
+crash or actual Core entity restoration. It is one negative failure mode,
+not 72h endurance or full product certification (0/15).

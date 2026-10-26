@@ -252,3 +252,7 @@ All six are MERGED, latest main a756696b60081d641ad7ec9cf43144f3361a201b. Do NOT
 
 - At first PR #115 head 304c848, official HAOS systemd Type=notify test timed out before READY. Root cause: the new QMP detection used literal escaped quote bytes instead of normal JSON quote bytes. Readiness now calls the SAME QMP greeting parser as the previously certified shutdown path; new regression fixture rejects double escaping, Rust 16/16 and strict Clippy pass. Re-run CI on new exact head; do not claim systemd READY verified before it passes.
 - A newly pinned native crate sd-notify 0.5.0 increases Cargo.lock to 227 resolved packages, 215 registry dependencies, 219 external and 213 with bundled license/notice source. Regenerated unsigned SPDX 2.3 source graph (227 packages, 526 edges) and updated six historical upstream license receipts ONLY to the new Cargo.lock SHA. Legal redistribution/signed product compliance are still NOT certified.
+
+## 2026-10-26 — P8an fail-closed systemd recovery after genuine QEMU SIGKILL (CI pending)
+
+P8am #115 successfully certified Type=notify/watchdog 26/26 CI, merged 01265a99a8548274fd454fdc81b5037ff299c60e. Separate P8an branch does not rerun these as new evidence. New opt-in fake-guest-only SIGKILL mode in existing real official HAOS systemd QEMU fixture; watches native systemd Restart=on-failure, distinct Rust MainPID, same persistent QCOW2 inode, no orphan after recovery stop and original backing hash. New pinned KVM workflow p8an-crash-restart.yml required at exact SHA. NO family host changes, 0/15 production.
