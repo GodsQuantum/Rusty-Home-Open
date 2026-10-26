@@ -5,6 +5,8 @@ on:
       - ".github/workflows/p8aw-custom-volume-registry.yml"
       - "scripts/test_p8aw_data_path_contract.py"
       - "scripts/test_p8aw_real_registry_custom_volume.sh"
+      - "scripts/test_p8ax_registry_independent_restore.sh"
+      - "scripts/test_p8ax_independent_registry_restore_contract.py"
       - "scripts/p8aw_registry_http_proof.py"
       - "scripts/test_p8ar_native_oci_manager.sh"
       - "scripts/test_p8ar_manager_contract.py"
@@ -27,10 +29,12 @@ jobs:
         run: |
           python3 scripts/test_p8ar_manager_contract.py
           python3 scripts/test_p8aw_data_path_contract.py
+          python3 scripts/test_p8ax_independent_registry_restore_contract.py
           cargo fmt --all -- --check
           cargo test --locked -p hars-native-hub --all-targets
           cargo clippy --locked -p hars-native-hub --all-targets -- -D warnings
           bash -n scripts/test_p8aw_real_registry_custom_volume.sh
+          bash -n scripts/test_p8ax_registry_independent_restore.sh
           python3 -m py_compile scripts/p8aw_registry_http_proof.py
       - name: Install official rootless Podman and user systemd
         run: |
