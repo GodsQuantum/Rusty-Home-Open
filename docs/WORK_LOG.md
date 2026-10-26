@@ -263,3 +263,5 @@ All six are MERGED, latest main a756696b60081d641ad7ec9cf43144f3361a201b. Do NOT
 ## 2026-10-26 — P8an fail-closed systemd recovery after genuine QEMU SIGKILL (CI pending)
 
 P8am #115 successfully certified Type=notify/watchdog 26/26 CI, merged 01265a99a8548274fd454fdc81b5037ff299c60e. Separate P8an branch does not rerun these as new evidence. New opt-in fake-guest-only SIGKILL mode in existing real official HAOS systemd QEMU fixture; watches native systemd Restart=on-failure, distinct Rust MainPID, same persistent QCOW2 inode, no orphan after recovery stop and original backing hash. New pinned KVM workflow p8an-crash-restart.yml required at exact SHA. NO family host changes, 0/15 production.
+
+P8ao official Podman 4.9.3 real generator rejected [Container] Memory (newer Podman key). Moved memory budget to native systemd [Service] MemoryMax (supported on Ubuntu 24.04) while preserving PidsLimit, capabilities and read-only root; exact-head CI rerun required.

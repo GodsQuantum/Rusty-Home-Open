@@ -63,8 +63,8 @@ impl OciApp<'_> {
              [Container]\nImage={image}\nContainerName={container_name}\n\
              Volume={volume_name}.volume:/data\nNetwork=none\nPull=never\n\
              NoNewPrivileges=true\nDropCapability=all\nReadOnly=true\n\
-             PidsLimit={pids}\nMemory={memory}m\n\n\
-             [Service]\nRestart=on-failure\nRestartSec=5s\nTimeoutStartSec=180s\n",
+             PidsLimit={pids}\n\n\
+             [Service]\nMemoryMax={memory}M\nRestart=on-failure\nRestartSec=5s\nTimeoutStartSec=180s\n",
             image = self.image,
             pids = self.pids_limit,
             memory = self.memory_mib

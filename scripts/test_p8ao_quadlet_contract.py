@@ -5,7 +5,7 @@ s=(r/"crates/native-hub/src/oci_quadlet.rs").read_text()
 cli=(r/"crates/native-hub/src/bin/oci_quadlet_lab.rs").read_text()
 w=(r/".github/workflows/p8ao-oci-quadlet.yml").read_text()
 for token in ("Network=none","Pull=never","NoNewPrivileges=true",
-              "DropCapability=all","ReadOnly=true","PidsLimit=","Memory=",
+              "DropCapability=all","ReadOnly=true","PidsLimit=","MemoryMax=",
               "VolumeName=","@sha256:"):
  assert token in s,token
 assert "[Install]" not in s.split("#[cfg(test)]",1)[0]
