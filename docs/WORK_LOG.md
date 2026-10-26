@@ -1,5 +1,12 @@
 # Rusty Home — journal de développement et de certification
 
+## 2026-10-26 — P8am native Type=notify and QMP heartbeat (CI pending)
+
+- Type=exec reported active before QEMU control was ready. Prior P8aj real HAOS systemd and P8ak package proofs are complete and not retested as new results.
+- Rust uses pinned sd-notify 0.5.0; Type=notify READY after real QMP greeting, WatchdogSec=30s heartbeat conditional on QMP, STOPPING on shutdown. Failed notify returns via QEMU cleanup.
+- New official HAOS KVM CI checks WatchdogTimestampMonotonic advancement during two systemd start/stop cycles and unchanged private QCOW2 backing. CI must pass at exact SHA; no household installation, 0/15 gates.
+
+
 ## 2026-10-26 — P8al real guest manager in signed APT index (CI pending)
 
 - First exact-head CI found test-fixture APT source mismatch: apt-get used a temporary isolated sources.list, while the newly added apt-cache probe consulted default sources and returned "No packages found". Fixed apt-cache to use the SAME explicit trusted source options. Retest required; package index was already verified to contain both native versions.

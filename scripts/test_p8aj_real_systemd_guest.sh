@@ -42,6 +42,17 @@ for round in 1 2; do
     sleep 0.2
   done
   sudo test -S /var/lib/rusty-home-lab/rusty-haos-lab-qmp.sock
+  # Native Type=notify means systemctl start returned ONLY after Rust
+  # received a real private QMP greeting; not merely process exec().
+  [[ "$(sudo systemctl show -P Type "$unit")" == "notify" ]]
+  [[ "$(sudo systemctl show -P NotifyAccess "$unit")" == "main" ]]
+  [[ "$(sudo systemctl show -P WatchdogUSec "$unit")" != "0" ]]
+  stamp_before="$(sudo systemctl show -P WatchdogTimestampMonotonic "$unit")"
+  sleep 12
+  stamp_after="$(sudo systemctl show -P WatchdogTimestampMonotonic "$unit")"
+  [[ "$stamp_before" =~ ^[0-9]+$ && "$stamp_after" =~ ^[0-9]+$ ]]
+  (( stamp_after > stamp_before ))
+  echo "P8AM_GENUINE_SYSTEMD_NOTIFY_QMP_READY_AND_WATCHDOG_BEAT_PASS round=$round"
   main_pid="$(sudo systemctl show -P MainPID "$unit")"
   [[ "$main_pid" =~ ^[0-9]+$ && "$main_pid" != "0" ]]
   sudo pgrep -u rusty-home-lab -f qemu-system-x86_64 >/dev/null

@@ -180,3 +180,20 @@ release signing key, safe distribution, Core/Apps operational readiness and
 - P8al PR #113: 9/9 exact feature-head GitHub CI, run 40257162323; offline signed APT index and tamper refusal.
 
 All six are MERGED, latest main a756696b60081d641ad7ec9cf43144f3361a201b. Do NOT rerun as newly unproved work. Machine-readable source config/haos-rust-guest-evidence.json keeps each exact original feature SHA, merge SHA and workflow marker source. P8ag–P8aj official HAOS 18.3 QEMU/KVM is an isolated genuine guest; P8ak real Ubuntu dpkg and P8al cryptographic offline APT use disposable CI runners. No household deployment, no signed production trust key, no actual App service parity, no physical radios, no whole-host backwards cutover or endurance qualification. Production remains **0/15** fully certified.
+
+## P8am — native systemd READY and watchdog driven by QMP (CI pending)
+
+Earlier genuine systemd lab P8aj proved two real start/stop cycles, but
+Type=exec reported active before QEMU control was ready. P8am adds standard
+native Rust sd-notify 0.5.0, Type=notify, NotifyAccess=main and
+WatchdogSec=30s. Rust emits READY only after it receives an actual JSON
+QMP greeting over the private local UNIX socket, then emits WATCHDOG only
+if QMP continues responding. STOPPING is sent on graceful shutdown.
+Notification errors use the common QEMU reap path, without guest orphan.
+
+Actual disposable official HAOS 18.3 KVM/systemd CI MUST prove systemctl
+start returns after QMP becomes responsive, watchdog timestamps move
+during both genuine Rust/QEMU service lifetimes and no QEMU persists after
+stop. This does not prove HAOS Core or App readiness, 72h endurance,
+real device ownership, or secure unattended upgrades. No household
+system modified; production 0/15.

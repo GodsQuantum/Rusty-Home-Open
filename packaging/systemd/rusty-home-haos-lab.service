@@ -12,7 +12,9 @@ StartLimitIntervalSec=180
 StartLimitBurst=3
 
 [Service]
-Type=exec
+Type=notify
+NotifyAccess=main
+WatchdogSec=30s
 User=rusty-home-lab
 Group=kvm
 Environment=HARS_DISPOSABLE_KVM_LAB=1
@@ -22,7 +24,7 @@ StateDirectoryMode=0700
 ExecStart=/usr/libexec/rusty-home/haos_guest_service_lab --lab-service-run /usr/bin/qemu-system-x86_64 /usr/share/ovmf/OVMF.fd /var/lib/rusty-home-lab/haos-base.qcow2 ${HAOS_BASE_SHA256} /var/lib/rusty-home-lab
 Restart=on-failure
 RestartSec=10s
-TimeoutStartSec=120s
+TimeoutStartSec=150s
 TimeoutStopSec=45s
 KillMode=control-group
 NoNewPrivileges=yes

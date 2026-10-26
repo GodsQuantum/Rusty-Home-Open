@@ -448,6 +448,24 @@ fn local_core_frontend_responded() -> bool {
         || response.starts_with(b"HTTP/1.1 302 ")
         || response.starts_with(b"HTTP/1.1 307 ")
 }
+/// Read-only QMP control greeting, the host-side readiness marker.
+/// This does NOT imply Core, Apps, automations or radios have booted.
+fn local_qmp_responsive(socket: &Path) -> bool {
+    let Ok(mut conn) = UnixStream::connect(socket) else {
+        return false;
+    };
+    if conn
+        .set_read_timeout(Some(Duration::from_millis(300)))
+        .is_err()
+    {
+        return false;
+    }
+    let mut buf = [0u8; 512];
+    let Ok(n) = conn.read(&mut buf) else {
+        return false;
+    };
+    buf[..n].windows(5).any(|p| p == b"\\\"QMP\\\"")
+}
 pub struct GuestServiceOutcome {
     pub guest_process_reaped: bool,
     pub base_image_unchanged: bool,
@@ -545,7 +563,41 @@ fn run_guest_service_inner_lab(
     let mut core_frontend_http_responded = false;
     let mut last_http_probe = Instant::now() - Duration::from_secs(3);
     let mut unexpectedly_exited = false;
+    let mut notified_ready = false;
+    let watchdog_period =
+        sd_notify::watchdog_enabled().filter(|time| *time >= Duration::from_millis(150));
+    let mut last_watchdog = Instant::now();
     while !SERVICE_STOP.load(Ordering::SeqCst) {
+        if !notified_ready && local_qmp_responsive(&qmp) {
+            if sd_notify::notify(&[
+                sd_notify::NotifyState::Ready,
+                sd_notify::NotifyState::Status(
+                    "Native Rust owns responsive private QMP; HAOS Core readiness not claimed",
+                ),
+            ])
+            .is_err()
+            {
+                // Always reap QEMU through the shared exit path; never return
+                // early on systemd notification failure and orphan the VM.
+                unexpectedly_exited = true;
+                break;
+            }
+            notified_ready = true;
+        }
+        if let Some(period) = watchdog_period
+            && notified_ready
+            && last_watchdog.elapsed() >= period / 3
+        {
+            // No heartbeat when QMP stops responding: systemd's native
+            // watchdog terminates/restarts the failed manager/cgroup.
+            if local_qmp_responsive(&qmp)
+                && sd_notify::notify(&[sd_notify::NotifyState::Watchdog]).is_err()
+            {
+                unexpectedly_exited = true;
+                break;
+            }
+            last_watchdog = Instant::now();
+        }
         if must_verify_frontend
             && !core_frontend_http_responded
             && last_http_probe.elapsed() >= Duration::from_secs(3)
@@ -571,6 +623,9 @@ fn run_guest_service_inner_lab(
             }
             Ok(None) => thread::sleep(Duration::from_millis(150)),
         }
+    }
+    if notified_ready {
+        let _ = sd_notify::notify(&[sd_notify::NotifyState::Stopping]);
     }
     let mut acpi = false;
     if !unexpectedly_exited {

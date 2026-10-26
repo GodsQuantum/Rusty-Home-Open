@@ -5,7 +5,7 @@ unit=(r/'packaging/systemd/rusty-home-haos-lab.service').read_text()
 script=(r/'scripts/test_p8aj_real_systemd_guest.sh').read_text()
 workflow=(r/'.github/workflows/p8aj-real-systemd.yml').read_text()
 active=[line.strip() for line in unit.splitlines() if line.strip() and not line.lstrip().startswith('#')]
-for x in ('User=rusty-home-lab','Group=kvm','Type=exec','Environment=HARS_DISPOSABLE_KVM_LAB=1',
+for x in ('User=rusty-home-lab','Group=kvm','Type=notify','NotifyAccess=main','WatchdogSec=30s','Environment=HARS_DISPOSABLE_KVM_LAB=1',
  'StateDirectoryMode=0700','Restart=on-failure','StartLimitBurst=3',
  'TimeoutStopSec=45s','KillMode=control-group','NoNewPrivileges=yes',
  'ProtectSystem=strict','ProtectHome=yes','DevicePolicy=closed',
