@@ -27,6 +27,8 @@ pub struct ReconcileReport {
     pub received: usize,
     pub retained_configs: usize,
     pub retained_tombstones: usize,
+    pub same_id_readd_verified: bool,
+    pub old_state_cleared_before_readd: bool,
     pub ignored_unretained_empty: usize,
     pub sensor_packets: usize,
     pub recovered_stale_on_open: usize,
@@ -43,6 +45,24 @@ pub struct ReconcileReport {
 /// from recovered redb: it is permanently stale until each live packet proves
 /// the configuration. A SUBACK does NOT delimit the retained replay.
 pub async fn observe(root: &Path, expected: usize) -> Result<ReconcileReport> {
+    observe_inner(root, expected, false).await
+}
+
+/// P2k: different threat scenario than P2i broker restart. One still-running
+/// upstream Moli Hub must accept a second, retained discovery with the SAME
+/// stable unique_id only after genuine broker tombstone and state deletion.
+pub async fn observe_same_id_readd(root: &Path, expected: usize) -> Result<ReconcileReport> {
+    if expected != 5 {
+        bail!("P2k expects exact five live MQTT5 publications");
+    }
+    observe_inner(root, expected, true).await
+}
+
+async fn observe_inner(
+    root: &Path,
+    expected: usize,
+    same_id_readd: bool,
+) -> Result<ReconcileReport> {
     require_network_none()?;
     if root != Path::new("/state") || expected > 8 {
         bail!("P2h lab accepts /state private bind and at most 8 synthetic packets");
@@ -136,6 +156,27 @@ pub async fn observe(root: &Path, expected: usize) -> Result<ReconcileReport> {
                             tx.send(DiscoveryEvent::Config(intent)).await?;
                             active = true;
                             report.retained_configs += 1;
+                            if same_id_readd && report.retained_configs == 2 {
+                                // Wait for the REAL upstream Moli worker to
+                                // re-register the formerly deleted ID, while
+                                // preserving absolutely NO previous state.
+                                let mut clean = false;
+                                for _ in 0..150 {
+                                    let snapshot = hub.snapshot();
+                                    if snapshot.devices.len() == 1 {
+                                        let id = &snapshot.devices[0].device.id;
+                                        if hub.state(&PointId::new(id, "state")).is_none() {
+                                            clean = true;
+                                            break;
+                                        }
+                                    }
+                                    tokio::time::sleep(Duration::from_millis(10)).await;
+                                }
+                                if !clean {
+                                    bail!("same-ID rediscovery either failed or inherited state");
+                                }
+                                report.old_state_cleared_before_readd = true;
+                            }
                         }
                         (true, true) => {
                             let removed = registry.remove_retained(topic, true)?;
@@ -148,6 +189,21 @@ pub async fn observe(root: &Path, expected: usize) -> Result<ReconcileReport> {
                             .await?;
                             active = false;
                             report.retained_tombstones += 1;
+                            if same_id_readd {
+                                let mut cleared = false;
+                                for _ in 0..150 {
+                                    if hub.snapshot().devices.is_empty()
+                                        && registry.recover_unverified()?.is_empty()
+                                    {
+                                        cleared = true;
+                                        break;
+                                    }
+                                    tokio::time::sleep(Duration::from_millis(10)).await;
+                                }
+                                if !cleared {
+                                    bail!("genuine tombstone did not clear native Hub and redb");
+                                }
+                            }
                         }
                         (false, true) => {
                             report.ignored_unretained_empty += 1;
@@ -165,6 +221,26 @@ pub async fn observe(root: &Path, expected: usize) -> Result<ReconcileReport> {
                     })
                     .await?;
                     report.sensor_packets += 1;
+                    if same_id_readd && report.sensor_packets == 1 {
+                        let mut initial = false;
+                        for _ in 0..150 {
+                            let snapshot = hub.snapshot();
+                            if snapshot.devices.len() == 1 {
+                                let id = &snapshot.devices[0].device.id;
+                                if hub
+                                    .state(&PointId::new(id, "state"))
+                                    .is_some_and(|v| v.value == Value::Text("21.5".into()))
+                                {
+                                    initial = true;
+                                    break;
+                                }
+                            }
+                            tokio::time::sleep(Duration::from_millis(10)).await;
+                        }
+                        if !initial {
+                            bail!("original MQTT5 sensor never reached native Moli");
+                        }
+                    }
                 } else {
                     bail!("unexpected MQTT5 topic");
                 }
@@ -194,7 +270,7 @@ pub async fn observe(root: &Path, expected: usize) -> Result<ReconcileReport> {
                 bail!("Moli MQTT lab must never expose write access");
             }
             if let Some(sample) = hub.state(&PointId::new(&view.device.id, "state"))
-                && sample.value == Value::Text("21.5".into())
+                && sample.value == Value::Text((if same_id_readd { "31.2" } else { "21.5" }).into())
             {
                 states += 1;
             }
@@ -213,9 +289,20 @@ pub async fn observe(root: &Path, expected: usize) -> Result<ReconcileReport> {
     if !converged
         || report.moli_devices != wanted
         || (active && report.durable_entries != 1)
-        || (report.retained_tombstones > 0 && report.durable_entries != 0)
+        || (report.retained_tombstones > 0 && !same_id_readd && report.durable_entries != 0)
+        || (same_id_readd
+            && (report.retained_configs != 2
+                || report.retained_tombstones != 1
+                || report.sensor_packets != 2
+                || report.durable_entries != 1
+                || report.moli_devices != 1
+                || report.moli_states != 1
+                || !report.old_state_cleared_before_readd))
     {
         bail!("Moli / durable registry mismatch; no authorization");
+    }
+    if same_id_readd {
+        report.same_id_readd_verified = true;
     }
     Ok(report)
 }

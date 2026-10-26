@@ -48,7 +48,11 @@ with tempfile.TemporaryDirectory(prefix="hars-p2i-", dir=runtime) as tmp:
     }))
     sensor = folder / "state.txt"
     sensor.write_text("21.5")
-    for file in (conf, sensor):
+    newer = folder / "new_state.txt"
+    newer.write_text("31.2")
+    removed = folder / "tombstone.txt"
+    removed.write_bytes(b"")
+    for file in (conf, sensor, newer, removed):
         file.chmod(0o600)
     name = f"hars-p2i-{os.getpid()}"
     user = f"{os.geteuid()}:{os.getegid()}"
@@ -80,10 +84,11 @@ with tempfile.TemporaryDirectory(prefix="hars-p2i-", dir=runtime) as tmp:
             ))
             assert data["published"] and not data["production_ready"]
 
-        def spawn(expected: int) -> subprocess.Popen:
+        def spawn(expected: int, *, readd: bool = False) -> subprocess.Popen:
+            op = "--lab-mqtt5-registry-readd" if readd else "--lab-mqtt5-registry-observe"
             p = subprocess.Popen(
                 ["docker", "exec", "--user", user, name, "/opt/hars-native-kernel",
-                 "--lab-mqtt5-registry-observe", "/state", str(expected)],
+                 op, "/state", str(expected)],
                 cwd=ROOT, text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
             )
             ready, _, _ = select.select([p.stdout], [], [], 10)
@@ -156,6 +161,25 @@ with tempfile.TemporaryDirectory(prefix="hars-p2i-", dir=runtime) as tmp:
         assert final["retained_configs"] == final["sensor_packets"] == 1
         assert final["durable_entries"] == final["moli_devices"] == final["moli_states"] == 1
         print("P2I_FRESH_BROKER_REATTESTATION_RECOVERS_READONLY_MOLI_PASS", flush=True)
+
+        # NEW independent P2k scenario: broker stays alive and the SAME Moli
+        # process observes config -> state -> tombstone -> SAME-ID config ->
+        # new state. No false claim from just P2j in-memory event testing.
+        p2k = spawn(5, readd=True)
+        publish("state.txt", "lab/readonly/p2h", False)
+        publish("tombstone.txt", topic, True)
+        publish("config.json", topic, True)
+        publish("new_state.txt", "lab/readonly/p2h", False)
+        readd = finish(p2k)
+        assert readd["received"] == 5
+        assert readd["retained_configs"] == 2
+        assert readd["retained_tombstones"] == 1
+        assert readd["sensor_packets"] == 2
+        assert readd["old_state_cleared_before_readd"]
+        assert readd["same_id_readd_verified"]
+        assert readd["durable_entries"] == readd["moli_devices"] == readd["moli_states"] == 1
+        print("P2K_GENUINE_MQTT5_BROKER_RETAINED_DELETE_READD_SAME_MOLI_ID_PASS", flush=True)
+        print("P2K_NATIVE_MOLI_OLD_STATE_CLEARED_NEW_VALUE_READONLY_PASS", flush=True)
     finally:
         subprocess.run(["docker", "rm", "-f", name], cwd=ROOT,
                        capture_output=True, text=True, timeout=20)

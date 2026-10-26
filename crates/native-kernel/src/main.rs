@@ -268,6 +268,16 @@ async fn main() -> anyhow::Result<()> {
         return Ok(());
     }
     let args: Vec<_> = std::env::args().collect();
+    if args.len() == 4 && args[1] == "--lab-mqtt5-registry-readd" {
+        let packets: usize = args[3].parse()?;
+        let report = hars_native_kernel::mqtt5_reconcile::observe_same_id_readd(
+            std::path::Path::new(&args[2]),
+            packets,
+        )
+        .await?;
+        println!("{}", serde_json::to_string(&report)?);
+        return Ok(());
+    }
     if args.len() == 4 && args[1] == "--lab-mqtt5-registry-observe" {
         let packets: usize = args[3].parse()?;
         let report =
