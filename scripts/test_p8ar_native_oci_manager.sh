@@ -128,6 +128,56 @@ PYTHON
   echo P8AS_REAL_ROOTLESS_REDIS_LOCALHOST_ONLY_TCP_PASS
 fi
 
+if [[ "$(printenv HARS_HEALTH_ROLLBACK_LAB || true)" == 1 ]]; then
+  podman pull --quiet docker.io/library/redis:7.4-bookworm
+  GOOD_NEXT="$(podman image inspect docker.io/library/redis:7.4-bookworm --format '{{index .RepoDigests 0}}')"
+  podman pull --quiet docker.io/library/busybox:1.36
+  BROKEN_NEXT="$(podman image inspect docker.io/library/busybox:1.36 --format '{{index .RepoDigests 0}}')"
+  if HARS_DISPOSABLE_OCI_LAB=1 "$BIN" --install-health-lab poison       "$SOURCE" 999 'redis-cli; rm -rf /data'; then exit 1; fi
+  test ! -e "$QUADLETS/rh-poison.container"
+
+  # Replace the original offline app definition with native Podman health
+  # checks while retaining the pre-existing private named data volume.
+  HARS_DISPOSABLE_OCI_LAB=1 "$BIN" --remove-lab managedredis
+  HARS_DISPOSABLE_OCI_LAB=1 "$BIN" --install-health-lab managedredis "$SOURCE" 999 'redis-cli ping'
+  HARS_DISPOSABLE_OCI_LAB=1 "$BIN" --start-lab managedredis
+  for i in $(seq 1 90); do
+    if podman healthcheck run rh-managedredis >/dev/null 2>&1; then break; fi
+    sleep .5
+  done
+  podman healthcheck run rh-managedredis
+  test "$(podman exec rh-managedredis redis-cli GET manager-proof)" = stable
+  original_id="$(podman image inspect "$SOURCE" --format '{{.Id}}')"
+  before="$(sha256sum "$QUADLETS/rh-managedredis.container" | cut -d' ' -f1)"
+  echo P8AU_NATIVE_GENERIC_HEALTHCHECK_ON_REAL_REDIS_PASS
+
+  # A cached but incompatible digest (BusyBox) cannot pass the configured
+  # Redis-specific health command. Native Rust must recover original image.
+  if HARS_DISPOSABLE_OCI_LAB=1 "$BIN" --switch-image-lab       managedredis "$SOURCE" "$BROKEN_NEXT"; then
+     echo 'Bad image erroneously passed healthcheck' >&2; exit 1
+  fi
+  for i in $(seq 1 90); do
+    if podman exec rh-managedredis redis-cli ping 2>/dev/null | grep -Fx PONG; then break; fi
+    sleep .5
+  done
+  test "$(podman inspect rh-managedredis --format '{{.Image}}')" = "$original_id"
+  test "$(podman exec rh-managedredis redis-cli GET manager-proof)" = stable
+  test "$(sha256sum "$QUADLETS/rh-managedredis.container" | cut -d' ' -f1)" = "$before"
+  echo P8AU_UNHEALTHY_OCI_APP_AUTO_IMAGE_RECOVERY_PASS
+
+  # The failure leaves an owner-private retained rollback record; explicit
+  # operator reconciliation restores clean upgrade state.
+  HARS_DISPOSABLE_OCI_LAB=1 "$BIN" --rollback-image-lab managedredis
+  ! test -e "$QUADLETS/rh-managedredis.rollback"
+  HARS_DISPOSABLE_OCI_LAB=1 "$BIN" --switch-image-lab       managedredis "$SOURCE" "$GOOD_NEXT"
+  podman healthcheck run rh-managedredis
+  test "$(podman exec rh-managedredis redis-cli GET manager-proof)" = stable
+  HARS_DISPOSABLE_OCI_LAB=1 "$BIN" --rollback-image-lab managedredis
+  podman healthcheck run rh-managedredis
+  test "$(podman exec rh-managedredis redis-cli GET manager-proof)" = stable
+  echo P8AU_REAL_NATIVE_OCI_HEALTHY_UPGRADE_AND_EXPLICIT_REVERT_PASS
+fi
+
 # Install/remove are deliberately distinct from persistent Podman data.
 HARS_DISPOSABLE_OCI_LAB=1 "$BIN" --remove-lab managedredis
 ! test -e "$QUADLETS/rh-managedredis.container"

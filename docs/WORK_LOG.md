@@ -324,3 +324,5 @@ App/HACS parity, real physical radios, operator-authenticated production
 writes, security/availability endurance, secure signed distribution or a
 complete HAOS→Rust→HAOS household cutover. Product 0/15 fully certified;
 no family HAOS system modified or rebooted.
+
+- P8at PR #124 is now MERGED after all 25/25 CI, commit 42db2dc1f1bf53873b37a95e83b88c6dfd5bd658. P8au is rebased on that exact main and preserves previous evidence. P8au opted native HealthOnFailure=kill (Podman Quadlet 4.9) for subsequent asynchronous unhealthy states to request systemd restart; the bounded Rust upgrade health loop is still responsible only for immediate image rollback, not infinite-uptime rollback.
