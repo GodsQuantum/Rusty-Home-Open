@@ -261,3 +261,12 @@ App/HACS parity, real physical radios, operator-authenticated production
 writes, security/availability endurance, secure signed distribution or a
 complete HAOS→Rust→HAOS household cutover. Product 0/15 fully certified;
 no family HAOS system modified or rebooted.
+
+## P8at — native OCI image rollback (CI pending)
+
+Rust OCI manager now supports explicit digest-pinned image switch and prior
+unit rollback using existing official Podman/systemd, with private locking,
+atomic manifest replacement, a single retained previous unit, and unchanged
+Podman data volume. Real Redis 7.4 Alpine/Bookworm switching CI is required.
+This verifies image/unit rollback, not automatic application health or data
+schema migration rollback. No family HAOS or production deployment.

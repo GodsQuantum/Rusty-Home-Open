@@ -134,6 +134,10 @@ P8ap #118 real Redis rootless systemd App persisted data test 21/21 CI merged 07
 
 P8ar #121 native Rust App install/start/stop/remove real Redis 23/23 green merged 5af8dc1a268c7316bfe99eb50290f94726a57541, run 40291069681; DO NOT REDO. New branch feat/oci-app-localhost-tcp-20261026, separate worktree Rusty-Home-OCI-Loopback-20261026. Builds on P8ar with generic AppNetwork Offline default or operator opted LocalTcp 127.0.0.1 only (never wildcard), native rootless Podman slirp4netns and PublishPort. Rust manager accepts --local-tcp 18879:6379 in disposable CI. Real P8as CI must verify Podman port 127.0.0.1:18879 and connect via host socket, no public binding. Critically slirp4netns permits outbound egress: not an outbound network firewall and not production remote auth. No household changes. Product 0/15.
 
+## P8at — OCI digest switch and rollback (26 Oct)
+
+P8ar native OCI manager #121 23/23 checks merged 5af8dc1 and P8as localhost-only ingress #122 24/24 checks merged 95123e0. DO NOT REDO. Branch feat/native-oci-app-rollback-20261026 and separate worktree Rusty-Home-OCI-Upgrade-20261026 add Rust manager explicit digest upgrade and manual rollback. Only pre-pulled sha256 images; old digest compare-and-swap; per-App private file lock and owner-private copy; atomic manifest swap; systemd restart and automatic previous manifest recovery on startup failure; preserve Podman named volume and refuse uninstall with pending rollback. Genuine Ubuntu CI p8at-image-rollback.yml compares Redis 7.4 Alpine and Bookworm images, image IDs and persistent state after switch and rollback. Exact head CI MANDATORY. NOT a universal application-specific healthcheck, transactional database schema rollback or production release. Family HAOS untouched. 0/15.
+
 ## Reprise obligatoire
 
 1. Lire ces sources, vérifier le SHA actuel de GitHub, les PR ouvertes, les preuves et la CI avant de relancer des travaux.
