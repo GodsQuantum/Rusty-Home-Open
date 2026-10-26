@@ -45,3 +45,16 @@ Native Rust now keeps a bounded QEMU guest process and drives its actual HAOS se
 ## P8ae — persistent Rust-managed guest COW disk (CI pending)
 
 Rust now provisions a fixed owner-private qcow2 guest-overlay image using the official qemu-img binary with explicit QCOW2 backing pinned to the source image. A nonblocking Linux flock prevents dual VM orchestrators. Rust boots official HAOS twice without -snapshot, writes an invented share marker and syncs inside first guest, forcefully terminates QEMU, boots a second independent QEMU process using the **same overlay** and compares a checksum of the marker read from guest. The original base image hash is checked before and after. This directly exercises persistent guest configuration and crash recovery while preserving the previously certified ephemeral boot and Supervisor CLI health paths. Tests are lab-only: no real Apps data, no physical radio ownership, no host migration. Until real GitHub CI at exact head passes, this is code only.
+
+
+## P8af: native Rust manager restart recovery (CI pending)
+
+P8ae proved two QEMU boots from a single Rust manager. New P8af ensures a
+SECOND independent Rust process can reattach to the same private qcow2 guest
+disk after the first Rust manager quits. It checks owner/mode/single link,
+no symlink, exact backing path and qcow2 format using official qemu-img,
+holds a cross-process Linux flock to deny dual writers, and proves the
+fake HAOS share marker with two genuine QEMU guests in pinned KVM CI.
+No running-process adoption, auto-start system service or radio takeover
+is implied. Until exact GitHub CI and merge, this is unverified code.
+Production remains 0/15.
