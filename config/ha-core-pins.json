@@ -9,5 +9,10 @@
     "version": "2026.11.0dev0",
     "oci_index": "sha256:ab9a72edb5cf22bc43047a58a62805bb4d378a6fb85dc5178ee3476eb0523f27"
   },
-  "disclaimer": "Official SHA256 pinned OCI manifests for disposable GitHub CI only, no production deployments"
+  "disclaimer": "Official SHA256 pinned OCI manifests for disposable GitHub CI only, no production deployments",
+  "stable_candidate": {
+    "version": "2026.10.4",
+    "oci_index": "sha256:23f4dfbb69ce76315dbc4de7915504f1c2dcecd7ca2648113a493a385972e133",
+    "qualification": "pending_disposable_real_core_ci"
+  }
 }

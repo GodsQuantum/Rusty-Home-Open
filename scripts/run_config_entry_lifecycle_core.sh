@@ -9,6 +9,23 @@ cd "$ROOT"
   exit 2
 }
 IMAGE='ghcr.io/home-assistant/home-assistant@sha256:33afb0659d786213264c2211f8d91c5fe87461c56eba6a3a546eb05fc71e89f4'
+# Opt-in second version; never replace the previously verified baseline.
+EXPECTED_CORE_VERSION="2026.10.2"
+if [[ "${HARS_CURRENT_CORE_LAB:-}" == "2026.10.4" ]]; then
+  IMAGE="$(python3 - <<'PYIMAGE'
+import json
+from pathlib import Path
+x=json.loads(Path("config/ha-core-pins.json").read_text())["stable_candidate"]
+assert x["version"]=="2026.10.4"
+assert x["oci_index"]=="sha256:23f4dfbb69ce76315dbc4de7915504f1c2dcecd7ca2648113a493a385972e133"
+print("ghcr.io/home-assistant/home-assistant@"+x["oci_index"])
+PYIMAGE
+  )"
+  EXPECTED_CORE_VERSION="2026.10.4"
+elif [[ -n "${HARS_CURRENT_CORE_LAB:-}" ]]; then
+  echo "Unknown Core candidate rejected" >&2
+  exit 2
+fi
 if ! docker image inspect "$IMAGE" >/dev/null 2>&1; then
     docker pull "$IMAGE" >/dev/null
 fi
@@ -33,6 +50,7 @@ docker run --rm --network none --user "$(id -u):$(id -g)" --read-only \
   --tmpfs /tmp:rw,nosuid,nodev,size=96m \
   --tmpfs /run:rw,nosuid,nodev,size=48m \
   --env PYTHONDONTWRITEBYTECODE=1 --env TZ=Europe/Paris \
+  --env "HARS_EXPECTED_CORE_VERSION=$EXPECTED_CORE_VERSION" \
   --mount "type=bind,src=$TMP/config,dst=/config" \
   --mount "type=bind,src=$ROOT/scripts/test_config_entry_lifecycle_core.py,dst=/hars-lifecycle.py,readonly" \
   --entrypoint python3 "$IMAGE" /hars-lifecycle.py >"$TMP/docker-output.log" 2>&1 || {

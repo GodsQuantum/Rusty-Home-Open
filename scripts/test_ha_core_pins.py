@@ -8,6 +8,13 @@ root=Path(__file__).resolve().parent.parent
 pins=json.loads((root/"config/ha-core-pins.json").read_text())
 stable=pins["stable"]; dev=pins["upcoming_dev"]
 assert stable["version"]=="2026.10.2"
+candidate=pins["stable_candidate"]
+assert candidate=={
+ "version":"2026.10.4",
+ "oci_index":"sha256:23f4dfbb69ce76315dbc4de7915504f1c2dcecd7ca2648113a493a385972e133",
+ "qualification":"pending_disposable_real_core_ci",
+}
+assert candidate["oci_index"]!=stable["oci_index"]
 assert dev["version"].startswith("2026.11.")
 assert re.fullmatch(r"sha256:[0-9a-f]{64}",stable["oci_index"])
 assert re.fullmatch(r"sha256:[0-9a-f]{64}",dev["oci_index"])
@@ -29,4 +36,7 @@ assert dev["oci_index"] in marketplace
 assert stable["oci_index"] in marketplace
 assert (root/"docs/MARKETPLACE_CORE_2026_11_ARCHITECTURE.md").is_file()
 print("PASS: ",len(all_references),"real-Core lab scripts pinned to official stable",stable["version"])
+assert "HARS_CURRENT_CORE_LAB" in (root/"scripts/run_config_entry_lifecycle_core.sh").read_text()
+assert "HARS_EXPECTED_CORE_VERSION" in (root/"scripts/test_config_entry_lifecycle_core.py").read_text()
+print("PASS: official 2026.10.4 candidate separately pinned with strict runtime version and original baseline unchanged")
 print("PASS: upcoming Marketplace dev image pinned independently, no version mixing")

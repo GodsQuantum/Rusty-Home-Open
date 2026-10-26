@@ -267,3 +267,13 @@ CI now compares the CURRENT release gate manifest and its independently verified
 ## 26 Oct P8bb — remaining historical suites migrated to live proof authority
 
 Four ancillary suites (historic source-licence receipt, fuzz CI, signed APT, genuine HAOS archive escrow) no longer freeze live gate statuses; they use check_release_gate.audit for per-criterion independently signed promotion, while preserving their immutable laboratory attestations. Targeted old-license and fuzz transition tests + complete APT/escrow and public gate/attestation tests PASSED locally. Inactive legacy Codespaces suite refers to files missing in public repository; it is unchanged, not a new certification claim. CI exact final SHA required; release 0/15.
+
+## 26 October P8bd — official Core 2026.10.4 isolated ABI lifecycle [IN PROGRESS]
+
+Owner: SentinelX Cloud9 LXC700, isolated branch test/core-2026-10-4-20261026, base main 6ee9e7e. Current upstream official Core stable 2026.10.4 (released 24 October) Docker GHCR OCI index sha256:23f4dfbb69ce76315dbc4de7915504f1c2dcecd7ca2648113a493a385972e133 checked with docker buildx manifest only. Existing verified 2026.10.2 baseline and 2026.11-dev marketplace lab remain immutable, no rerun as new proof. Add separate disposable CI using same native synthetic Core config-entry lifecycle with dynamically selected strictly pinned 2026.10.4 candidate, assert actual runtime version and full create/unload/reload/remove. No HAOS family VM100 data or drivers. Rollback: revert branch, leave current release 0/15.
+
+## 26 Oct P8bd — Core 2026.10.4 candidate implemented, CI mandatory
+
+The independent Core 2026.10.4 GHCR OCI index was verified upstream; new opt-in P8bd GitHub workflow runs actual Core config-entry create/unload/reload/remove and runtime version verification without changing original 2026.10.2 pinned baseline or Marketplace dev. Strict external, network-none, read-only, nonroot fixture continues. GH exact-SHA proof still required; no current 29-integration hardware/API parity, release 0/15.
+
+P8bd CI first exact head 2854e3c failed: the new version assertion incorrectly imported `__version__` from top-level homeassistant (ImportError). Existing already proven Core scripts import from `homeassistant.const`. Corrected to same official API; this is a fixture import error, NOT yet a Core interoperability failure. New head must run real 2026.10.4 again; older 2026.10.2 baseline remains untouched.

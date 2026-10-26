@@ -377,3 +377,9 @@ Discovered an accidental forever-0/15 condition in five CI scripts: they rejecte
 ## 2026-10-26 P8bb supplement
 
 Located four more secondary test assertions coupled to current literal 0/15. Replaced status assertions with release gate audit, preserving frozen original data in source-licence, fuzz, APT and QEMU escrow evidence. Relevant direct tests and targeted unittest variants PASSED. An obsolete Codespaces test references absent original files and was intentionally left unchanged rather than adding fictional replacements. No deployment, 0/15 release.
+
+## 26 October 2026 — P8bd latest official Core compatibility CI candidate
+
+Official upstream Core stable 2026.10.4 dated 24 October (GHCR manifest digest sha256:23f4dfbb69ce76315dbc4de7915504f1c2dcecd7ca2648113a493a385972e133). Added independent workflow using same real strict isolated config-entry lifecycle/negative/no-egress harness, actual version assertion and separate pin, keeping 2026.10.2 and 2026.11-dev originals untouched. CI pending; current 0/15 release, no family host.
+
+P8bd first GH run 40318906283 real Core 2026.10.4: FAIL at `/hars-lifecycle.py` line 22 before API testing due new test harness import from nonexistent top-level `homeassistant.__version__`. Matched the existing tested official `homeassistant.const.__version__` import in `scripts/test_stable_core_no_marketplace.py` and upstream Core versioning docs; exact new-head CI mandatory, no false claim of product incompatibility.

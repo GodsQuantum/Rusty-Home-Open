@@ -1,0 +1,40 @@
+name: P8bd Actual Core 2026.10.4 config-entry compatibility
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - ".github/workflows/p8bd-current-core.yml"
+      - "config/ha-core-pins.json"
+      - "scripts/run_config_entry_lifecycle_core.sh"
+      - "scripts/test_config_entry_lifecycle_core.py"
+      - "scripts/check_config_entry_lifecycle_report.py"
+      - "scripts/test_ha_core_pins.py"
+      - "scripts/fixtures/ha-config-lifecycle/**"
+permissions:
+  contents: read
+jobs:
+  genuine-latest-core:
+    name: Real 2026.10.4 Core config flow, CRUD and restart-safe synthetic state
+    runs-on: ubuntu-24.04
+    timeout-minutes: 27
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - name: Assert old immutable baseline and new release candidate are separately pinned
+        run: |
+          python3 scripts/test_ha_core_pins.py
+          python3 scripts/test_p6c_config_entry_lifecycle_contract.py
+          python3 scripts/test_public_redaction.py
+          bash -n scripts/run_config_entry_lifecycle_core.sh
+      - name: Genuine isolated official Core 2026.10.4 config-entry lifecycle
+        timeout-minutes: 18
+        env:
+          HARS_CURRENT_CORE_LAB: '2026.10.4'
+        run: bash scripts/run_config_entry_lifecycle_core.sh
+      - name: Synthetic disposable Core container cleanup
+        if: always()
+        run: |
+          if docker ps -a --format '{{.Names}}' | grep '^hars-config-lifecycle-'; then
+            echo 'Disposable test container unexpectedly left behind'; exit 1
+          fi
