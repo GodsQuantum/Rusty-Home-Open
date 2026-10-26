@@ -154,6 +154,7 @@ fn install(
     uid: u32,
     network: AppNetwork,
     health: Option<&str>,
+    data_destination: Option<&str>,
 ) -> io::Result<()> {
     if uid == 0 || uid > 65533 {
         return Err(bad());
@@ -166,7 +167,11 @@ fn install(
         run_uid: Some(uid),
         network,
     };
-    let mut q = decl.render().map_err(|_| bad())?;
+    let mut q = if let Some(path) = data_destination {
+        decl.render_at(path).map_err(|_| bad())?
+    } else {
+        decl.render().map_err(|_| bad())?
+    };
     if let Some(healthcmd) = health {
         q.container = with_health(&q.container, healthcmd)?;
     }
@@ -368,7 +373,7 @@ fn execute() -> io::Result<()> {
             } else {
                 AppNetwork::Offline
             };
-            install(&dir, &args[2], &args[3], uid, net, None)
+            install(&dir, &args[2], &args[3], uid, net, None, None)
         }
         "--start-lab" if args.len() == 3 => {
             let unit = require_installed(&dir, &args[2])?;
@@ -387,7 +392,21 @@ fn execute() -> io::Result<()> {
                 uid,
                 AppNetwork::Offline,
                 Some(&args[5]),
+                None,
             )
+        }
+        "--install-path-lab" if args.len() == 6 || args.len() == 7 => {
+            let uid = args[4].parse::<u32>().map_err(|_| bad())?;
+            let network = if args.len() == 7 {
+                let (host, container) = args[6].split_once(':').ok_or_else(bad)?;
+                AppNetwork::LoopbackTcp {
+                    host_port: host.parse::<u16>().map_err(|_| bad())?,
+                    container_port: container.parse::<u16>().map_err(|_| bad())?,
+                }
+            } else {
+                AppNetwork::Offline
+            };
+            install(&dir, &args[2], &args[3], uid, network, None, Some(&args[5]))
         }
         "--switch-image-lab" if args.len() == 5 => switch_image(&dir, &args[2], &args[3], &args[4]),
         "--rollback-image-lab" if args.len() == 3 => rollback_image(&dir, &args[2]),

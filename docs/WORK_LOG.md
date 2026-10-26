@@ -1,5 +1,12 @@
 # Rusty Home — journal de développement et de certification
 
+## 2026-10-26 — P8aw custom safe App volume path, real HTTP registry state (CI pending)
+
+- P8av #126 real Redis and Memcached independent rootless OCI lifecycles 10/10 GitHub checks MERGED 6ed03afa6d9a55a28cd4a51d28d48c21480fe57d. Prior proof preserved, no redundant re-certification.
+- Native generic OciApp now supports validated configurable absolute container data volume destination via render_at, still Podman-managed named volume only and mandatory non-root UID. Refuses relative/traversal/control strings and mount over sensitive system locations. Existing default /data remains unchanged and old fixtures pass.
+- P8aw tests genuine official CNCF Distribution Registry 3.1.2 running nonroot under native Rust management: optional 127.0.0.1:18884 mapping to internal 5000 only; named volume mounted /var/lib/registry; real Docker Registry HTTP blob upload, digest verification/GET and persistence after systemd-managed stop/restart. Requires real exact-feature GitHub CI. NOT a live family registry, authentication/remote network release, encrypted offsite backup, complete App Store support or HAOS replacement. 0/15.
+
+
 ## 2026-10-26 — P8av two genuinely distinct simultaneous OCI Apps (CI pending)
 
 - P8au #125 genuine Redis + incompatible BusyBox healthcheck automatic image rollback 26/26 CI green, merged 05008d4cb9d2d577bec1567ea3bcda67f1faaa2e. Prior evidence pinned, do not repeat as new proof.
