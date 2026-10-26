@@ -1,5 +1,12 @@
 # Rusty Home — journal de développement et de certification
 
+## 2026-10-26 — pinned results of P8ac–P8af (all green and merged)
+
+- Four non-duplicative official pinned HAOS 18.3 KVM proofs: Rust QEMU boot (P8ac, 18/18), actual Supervisor and Core CLI health (P8ad, 11/11), persistence of COW data across QEMU hard restart (P8ae, 12/12), and an entirely new Rust process reattaching the old guest storage while rejecting concurrent ownership (P8af, 13/13).
+- Exact runs 40243098816, 40243728521, 40247000475 and 40247834775; PRs #103–#106 all merged at main d8c5bee817c7b7e8ef5ea6af24d62d366fbe610a. Preserve outcomes and do not retest as new certifications. Exact feature SHA, immutable CI markers and limits in config/haos-rust-guest-evidence.json.
+- No changes on the family HAOS/Cloud9 host deployment or actual radios. Full Core API, Apps lifecycle, native Rust service daemon, signed distribution, real radio fencing, 72h soak and independent review still missing. Release 0/15.
+
+
 ## 2026-10-26 — P8af Rust process reattachment (CI pending)
 
 New resume command reopens exact QCOW2 backing source and tests exclusive Rust manager ownership. Independent genuine KVM two-process proof and negative flock test must pass GitHub. Not production.

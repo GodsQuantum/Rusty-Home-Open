@@ -82,6 +82,10 @@ P8ac PR #103 KVM boot and P8ad PR #104 real Supervisor/Core CLI result=ok alread
 
 P8ae PR #105 12/12 GitHub CI SUCCESS at feature 4534b23, merged 45811bcefa791544d7a016dc331d140fc585e120. Preserve this completed evidence; no repeat under P8af. Branch feat/rust-manager-recovery-20261026 in separate worktree Rusty-Home-Guest-Reattach-Main-20261026 adds verified_existing_overlay and two separate Rust manager commands to prove genuine HAOS marker retention across both manager and QEMU process restarts; separate CI p8af-rust-reattach.yml. Refuse duplicate owners, symlinks and altered QCOW2 backing path. Not production or real device ownership; 0/15 gates.
 
+## Verified P8ac–P8af Rust host / genuine official HAOS guest (26 October)
+
+PR #103 P8ac real serial boot 18/18, run 40243098816; PR #104 P8ad genuine official Supervisor+Core CLI health 11/11, run 40243728521; PR #105 P8ae persistent QEMU guest disk hard restart 12/12, run 40247000475; PR #106 P8af separate Rust manager disk reattachment and double-owner denial 13/13, run 40247834775. ALL FOUR MERGED on main: d8c5bee817c7b7e8ef5ea6af24d62d366fbe610a. Exact feature SHAs, run markers and limits in config/haos-rust-guest-evidence.json and docs/HAOS_RUST_GUEST_COMPAT_2026-10-25.md. These official HAOS 18.3 isolated KVM proofs are COMPLETE; DO NOT RE-RUN by hand or substitute for production certification. Next nonredundant gaps: installable long-running Rust guest host service/secure networking and Core/API+Apps lifecycle; independent proof of real device/radio ownership, full rollback and 72h reliability soak. Zero production gates certified, never touch household HAOS.
+
 ## Reprise obligatoire
 
 1. Lire ces sources, vérifier le SHA actuel de GitHub, les PR ouvertes, les preuves et la CI avant de relancer des travaux.

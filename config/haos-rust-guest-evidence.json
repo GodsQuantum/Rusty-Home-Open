@@ -1,0 +1,74 @@
+{
+  "schema_version": 1,
+  "verified_as_of": "2026-10-26",
+  "environment": "official pinned HAOS 18.3 QEMU/KVM on isolated disposable GitHub runner; explicitly fictional guest data and no host/USB/radios",
+  "cases": [
+    {
+      "case_id": "p8ac",
+      "scope": "genuine_official_haos_guest_os_boot_via_rust",
+      "status": "VERIFIED_IN_DISPOSABLE_REAL_HAOS_KVM_LAB_ONLY",
+      "pr": 103,
+      "feature_head_sha": "29f9a45db72e4ef69aa0abed00dda17483d7133e",
+      "merged_commit_sha": "ac76a85dbeadc1456968e5912eb7ddf32c9ba2a3",
+      "github_actions_run_id": 40243098816,
+      "github_actions_run_url": "https://github.com/GodsQuantum/Rusty-Home-Open/actions/runs/40243098816",
+      "checks_passed": 18,
+      "checks_failed": 0,
+      "verified_marker": "P8AC_NATIVE_RUST_REAL_OFFICIAL_HAOS_KVM_SERIAL_BOOT_PASS",
+      "github_workflow": ".github/workflows/p8ac-rust-guest.yml"
+    },
+    {
+      "case_id": "p8ad",
+      "scope": "genuine_official_supervisor_and_core_cli_health_via_rust",
+      "status": "VERIFIED_IN_DISPOSABLE_REAL_HAOS_KVM_LAB_ONLY",
+      "pr": 104,
+      "feature_head_sha": "73f91ea3330adfa642e40c0854a001a4eabf206d",
+      "merged_commit_sha": "230a5964090af47d3a5d06b83c89f8527d868c1c",
+      "github_actions_run_id": 40243728521,
+      "github_actions_run_url": "https://github.com/GodsQuantum/Rusty-Home-Open/actions/runs/40243728521",
+      "checks_passed": 11,
+      "checks_failed": 0,
+      "verified_marker": "P8AD_NATIVE_RUST_OFFICIAL_SUPERVISOR_AND_CORE_LIVE_HEALTH_PASS",
+      "github_workflow": ".github/workflows/p8ad-rust-health.yml"
+    },
+    {
+      "case_id": "p8ae",
+      "scope": "genuine_persistent_haos_guest_disk_across_qemu_process_restart",
+      "status": "VERIFIED_IN_DISPOSABLE_REAL_HAOS_KVM_LAB_ONLY",
+      "pr": 105,
+      "feature_head_sha": "4534b23a4b2f0913430251dfe4b32d75fa788c94",
+      "merged_commit_sha": "45811bcefa791544d7a016dc331d140fc585e120",
+      "github_actions_run_id": 40247000475,
+      "github_actions_run_url": "https://github.com/GodsQuantum/Rusty-Home-Open/actions/runs/40247000475",
+      "checks_passed": 12,
+      "checks_failed": 0,
+      "verified_marker": "P8AE_REAL_HAOS_RUST_GUEST_STATE_PERSISTS_AFTER_HARD_RESTART_PASS",
+      "github_workflow": ".github/workflows/p8ae-rust-persistent.yml"
+    },
+    {
+      "case_id": "p8af",
+      "scope": "genuine_haos_guest_disk_reattached_by_separate_rust_manager",
+      "status": "VERIFIED_IN_DISPOSABLE_REAL_HAOS_KVM_LAB_ONLY",
+      "pr": 106,
+      "feature_head_sha": "267e0fb0e287bb0072a0d933dc6365526f64e4e3",
+      "merged_commit_sha": "d8c5bee817c7b7e8ef5ea6af24d62d366fbe610a",
+      "github_actions_run_id": 40247834775,
+      "github_actions_run_url": "https://github.com/GodsQuantum/Rusty-Home-Open/actions/runs/40247834775",
+      "checks_passed": 13,
+      "checks_failed": 0,
+      "verified_marker": "P8AF_SECOND_RUST_PROCESS_REATTACHED_REAL_HAOS_STATE_PASS",
+      "github_workflow": ".github/workflows/p8af-rust-reattach.yml"
+    }
+  ],
+  "critical_limits": [
+    "P8ac OS boot not proof of Supervisor/Core health (separately P8ad)",
+    "P8ad Supervisor/Core CLI only, not full Core HTTP WebSocket or Apps lifecycle",
+    "P8ae persistent host guest disk without host service distribution",
+    "P8af new Rust manager process reattach but not adoption of a running QEMU process",
+    "No real household HAOS migration/cutover, network or radio ownership",
+    "No actual third-party App databases/lifecycle under a Rust host, no 72-hour endurance or independent security review"
+  ],
+  "production_release": "NOT_PRODUCTION_READY",
+  "total_production_gates": 15,
+  "fully_certified_production_gates": 0
+}
