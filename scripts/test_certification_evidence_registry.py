@@ -27,7 +27,12 @@ def main() -> None:
     }
     gates = json.loads((ROOT / "config/release-gates.json").read_text())["required_gates"]
     assert len(gates) == 15
-    assert all(row["status"] in ("blocked", "lab_partial") for row in gates)
+    # Historical HAOS proofs remain fixed even if the independently reviewed
+    # CURRENT product release gate matrix legitimately advances later.
+    from check_release_gate import audit as check_live_release
+    current = check_live_release({"required_gates": gates})
+    assert current["total_gates"] == 15 and current["deployment_authorized"] is False
+    assert all(row["status"] != "certified" or row["id"] not in current["blocked_ids"] for row in gates)
 
     proof = entry["verification"]
     assert proof["junit_case_count"] == 17 and proof["all_junit_passed"] is True

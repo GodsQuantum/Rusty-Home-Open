@@ -369,3 +369,7 @@ These six distinct cases were already completed in real, disposable GitHub CI an
 | P8AZ | #131 | `ddcd3550` | `a351529c` | 40315761886 | 20/20 | native podman secret reference real rootless redis sha256 mount |
 
 The existing five P8ao–P8as immutable proofs remain intact. The test suite verifies all eleven cases and their exact original sources; production still has 0/15 accepted independent gates.
+
+## 26 October 2026 — progressive independent release certification contract
+
+Discovered an accidental forever-0/15 condition in five CI scripts: they rejected all future legitimate gate certifications, even though the actual release checker supported double-signed Ed25519 scope-specific per-criterion proof. Changed CI tests to derive counts and accepted gates from the real checker, while retaining historical 24 October planning and HAOS laboratory snapshot invariants; unsigned/tampered/fake certifications still fail. Verification: local gate, attestation, evidence truth, public ledger, masterplan and historical QEMU evidence scripts PASS; production signoff and deployment remain false. Current release remains 0/15.
