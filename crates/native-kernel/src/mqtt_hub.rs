@@ -61,7 +61,8 @@ impl Driver for DiscoveryDriver {
             let mut rx = self.events.lock().await;
             // Per-config registered devices with exact topics and type; never
             // bind an MQTT payload to a device that has not been discovered.
-            let mut configs: HashMap<String, Vec<(DeviceId, String, String)>> = HashMap::new();
+            let mut configs: HashMap<String, Vec<(DeviceId, String, String, String)>> =
+                HashMap::new();
             let mut globally_known: HashSet<String> = HashSet::new();
             while let Some(msg) = rx.recv().await {
                 match msg {
@@ -109,18 +110,25 @@ impl Driver for DiscoveryDriver {
                                     semantic: Semantic::Other,
                                 }],
                             });
-                            globally_known.insert(sensor.unique_id);
-                            registered.push((device_id, sensor.state_topic, sensor.platform));
+                            globally_known.insert(sensor.unique_id.clone());
+                            registered.push((
+                                device_id,
+                                sensor.state_topic,
+                                sensor.platform,
+                                sensor.unique_id,
+                            ));
                         }
                         configs.insert(id, registered);
                     }
                     DiscoveryEvent::Config(Intent::Remove { id } | Intent::Migrate { id }) => {
                         if let Some(devices) = configs.remove(&id) {
-                            for (device, _, _) in devices {
-                                // Only our own synthetic instance device IDs.
+                            for (device, _, _, unique_id) in devices {
+                                // Release only IDs owned by this removed config.
+                                // A fresh retained discovery can re-register them,
+                                // but cannot inherit any of their previous state.
+                                globally_known.remove(&unique_id);
                                 ctx.remove_device(&device);
                             }
-                            // No reassignment of IDs within this short lab.
                         }
                     }
                     DiscoveryEvent::SensorState { topic, payload } => {
@@ -128,7 +136,7 @@ impl Driver for DiscoveryDriver {
                             continue;
                         }
                         for sensors in configs.values() {
-                            for (device, state_topic, platform) in sensors {
+                            for (device, state_topic, platform, _) in sensors {
                                 if state_topic == &topic
                                     && let Some(value) = state_value(platform, &payload)
                                 {
@@ -170,5 +178,124 @@ mod tests {
         assert!(!safe_sensor_id("device/other"));
         assert!(!safe_sensor_id(""));
         assert!(!safe_sensor_id("éclairage"));
+    }
+}
+
+#[cfg(test)]
+mod p2j_tombstone_readd_tests {
+    use super::*;
+    use crate::mqtt_discovery::Sensor;
+    use moli_core::{InstanceId, PointId, Value};
+    use moli_runtime::{Hub, HubOptions, spawn_driver};
+    use std::sync::Arc;
+    use std::time::Duration;
+    use tokio::sync::mpsc;
+    use tokio_util::sync::CancellationToken;
+
+    async fn wait_devices(hub: &Hub, count: usize) {
+        for _ in 0..150 {
+            if hub.snapshot().devices.len() == count {
+                return;
+            }
+            tokio::time::sleep(Duration::from_millis(10)).await;
+        }
+        panic!("Moli never converged to {count} devices");
+    }
+
+    async fn wait_state(hub: &Hub, point: &PointId, expected: &str) {
+        for _ in 0..150 {
+            if hub.state(point).map(|s| s.value) == Some(Value::Text(expected.into())) {
+                return;
+            }
+            tokio::time::sleep(Duration::from_millis(10)).await;
+        }
+        panic!("Moli never reached expected new state");
+    }
+
+    #[tokio::test]
+    async fn live_tombstone_readd_same_id_clears_state_and_old_topic() {
+        let hub = Hub::new(HubOptions::default()).unwrap();
+        let cancel = CancellationToken::new();
+        let (tx, rx) = mpsc::channel(16);
+        let worker = spawn_driver(
+            &hub,
+            InstanceId::from("hars-p2j-isolated"),
+            Arc::new(DiscoveryDriver::new(rx)),
+            cancel.clone(),
+        );
+        let config = |topic: &str| Intent::Preview {
+            id: "p2j_probe".into(),
+            device_id: None,
+            sensors: vec![Sensor {
+                platform: "sensor".into(),
+                unique_id: "lab_p2j_probe".into(),
+                state_topic: topic.into(),
+            }],
+        };
+        tx.send(DiscoveryEvent::Config(config("lab/readonly/old")))
+            .await
+            .unwrap();
+        wait_devices(&hub, 1).await;
+        let id = hub.snapshot().devices[0].device.id.clone();
+        let point = PointId::new(&id, "state");
+        tx.send(DiscoveryEvent::SensorState {
+            topic: "lab/readonly/old".into(),
+            payload: b"21.5".to_vec(),
+        })
+        .await
+        .unwrap();
+        wait_state(&hub, &point, "21.5").await;
+        tx.send(DiscoveryEvent::Config(Intent::Remove {
+            id: "p2j_probe".into(),
+        }))
+        .await
+        .unwrap();
+        wait_devices(&hub, 0).await;
+        assert!(hub.state(&point).is_none(), "tombstone must clear state");
+        tx.send(DiscoveryEvent::SensorState {
+            topic: "lab/readonly/old".into(),
+            payload: b"99".to_vec(),
+        })
+        .await
+        .unwrap();
+        tx.send(DiscoveryEvent::Config(config("lab/readonly/new")))
+            .await
+            .unwrap();
+        wait_devices(&hub, 1).await;
+        assert!(
+            hub.state(&point).is_none(),
+            "re-add must start without state"
+        );
+        tx.send(DiscoveryEvent::SensorState {
+            topic: "lab/readonly/old".into(),
+            payload: b"88".to_vec(),
+        })
+        .await
+        .unwrap();
+        tokio::time::sleep(Duration::from_millis(80)).await;
+        assert!(
+            hub.state(&point).is_none(),
+            "old topic cannot update new identity"
+        );
+        tx.send(DiscoveryEvent::SensorState {
+            topic: "lab/readonly/new".into(),
+            payload: b"31.2".to_vec(),
+        })
+        .await
+        .unwrap();
+        wait_state(&hub, &point, "31.2").await;
+        assert!(
+            hub.snapshot().devices[0]
+                .device
+                .points
+                .iter()
+                .all(|p| !p.access.write)
+        );
+        cancel.cancel();
+        drop(tx);
+        tokio::time::timeout(Duration::from_secs(3), worker)
+            .await
+            .unwrap()
+            .unwrap();
     }
 }
