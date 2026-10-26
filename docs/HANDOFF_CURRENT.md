@@ -78,6 +78,10 @@ P8ac native Rust HAOS KVM serial boot was proven in GitHub run 40243098816, feat
 
 P8ac PR #103 KVM boot and P8ad PR #104 real Supervisor/Core CLI result=ok already merged; DO NOT REDO those. P8ae branch feat/haos-rust-persistent-guest-20261025/worktree Rusty-Home-Guest-Persist-20261025 adds Rust-owned persistent official HAOS QCOW2 overlay, single-writer flock, genuine KVM guest marker persisted across abrupt QEMU process restart, official base SHA pinned. New workflow .github/workflows/p8ae-rust-persistent.yml. Its new independent two-boot CI at exact feature SHA is mandatory before certification; no family HAOS devices, full Apps compatibility or field rollback implied. 0/15 production gates.
 
+## P8af — Rust process independently resumes HAOS guest (26 Oct)
+
+P8ae PR #105 12/12 GitHub CI SUCCESS at feature 4534b23, merged 45811bcefa791544d7a016dc331d140fc585e120. Preserve this completed evidence; no repeat under P8af. Branch feat/rust-manager-recovery-20261026 in separate worktree Rusty-Home-Guest-Reattach-Main-20261026 adds verified_existing_overlay and two separate Rust manager commands to prove genuine HAOS marker retention across both manager and QEMU process restarts; separate CI p8af-rust-reattach.yml. Refuse duplicate owners, symlinks and altered QCOW2 backing path. Not production or real device ownership; 0/15 gates.
+
 ## Reprise obligatoire
 
 1. Lire ces sources, vérifier le SHA actuel de GitHub, les PR ouvertes, les preuves et la CI avant de relancer des travaux.

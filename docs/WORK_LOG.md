@@ -1,5 +1,10 @@
 # Rusty Home — journal de développement et de certification
 
+## 2026-10-26 — P8af Rust process reattachment (CI pending)
+
+New resume command reopens exact QCOW2 backing source and tests exclusive Rust manager ownership. Independent genuine KVM two-process proof and negative flock test must pass GitHub. Not production.
+
+
 ## 2026-10-25 — P8ae persistent HAOS guest under Rust (CI pending)
 
 - New Rust stateful guest orchestration: atomic/private fixed qcow2 COW overlay from immutable official HAOS backing image, flock exclusive single owner, repeated KVM guests without ephemeral -snapshot, same real official HAOS guest data disk.

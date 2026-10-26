@@ -287,6 +287,99 @@ fn make_overlay(spec: &GuestSpec, dir: &Path) -> Result<PathBuf, GuestError> {
         .map_err(|_| GuestError::UnsafeImage)?;
     Ok(out)
 }
+
+/// Read-only admission of an EXISTING overlay after the Rust owner exited.
+/// Check both the inode and its qcow2 backing reference; no new guest state
+/// is created during recovery. The base image is SHA-pinned separately.
+fn verified_existing_overlay(spec: &GuestSpec, dir: &Path) -> Result<PathBuf, GuestError> {
+    private_owner_dir(dir)?;
+    if !dir.is_absolute()
+        || dir
+            .to_string_lossy()
+            .chars()
+            .any(|c| c == ',' || c.is_control())
+        || dir
+            .components()
+            .any(|c| c == std::path::Component::ParentDir)
+    {
+        return Err(GuestError::InvalidArguments);
+    }
+    let overlay = dir.join("guest-overlay.qcow2");
+    let file = OpenOptions::new()
+        .read(true)
+        .custom_flags(nix::libc::O_NOFOLLOW | nix::libc::O_CLOEXEC | nix::libc::O_NONBLOCK)
+        .open(&overlay)
+        .map_err(|_| GuestError::UnsafeImage)?;
+    let m = file.metadata().map_err(|_| GuestError::UnsafeImage)?;
+    if !m.is_file()
+        || m.nlink() != 1
+        || m.uid() != nix::unistd::Uid::current().as_raw()
+        || m.permissions().mode() & 0o077 != 0
+        || m.len() < 1024
+        || m.len() > IMAGE_MAX
+    {
+        return Err(GuestError::UnsafeImage);
+    }
+    let output = Command::new("/usr/bin/qemu-img")
+        .arg("info")
+        .arg("-f")
+        .arg("qcow2")
+        .arg("--output=json")
+        .arg(&overlay)
+        .stdin(Stdio::null())
+        .output()
+        .map_err(|_| GuestError::UnsafeImage)?;
+    if !output.status.success() || output.stdout.len() > 65536 || !output.stderr.is_empty() {
+        return Err(GuestError::UnsafeImage);
+    }
+    let json: serde_json::Value =
+        serde_json::from_slice(&output.stdout).map_err(|_| GuestError::UnsafeImage)?;
+    let base = spec.source_image.to_string_lossy();
+    if json.get("format").and_then(|x| x.as_str()) != Some("qcow2")
+        || json.get("backing-filename").and_then(|x| x.as_str()) != Some(base.as_ref())
+        || json.get("backing-filename-format").and_then(|x| x.as_str()) != Some("qcow2")
+    {
+        return Err(GuestError::UnsafeImage);
+    }
+    Ok(overlay)
+}
+/// Separate Rust process entrypoints: the first one persists a guest marker,
+/// exits and relinquishes flock; a new Rust process later reattaches only to
+/// the already-pinned owner-private overlay and checks the real guest marker.
+/// All data is fictional and disposable on isolated CI KVM.
+pub fn guest_marker_in_separate_manager_lab(
+    spec: &GuestSpec,
+    dir: &Path,
+    create: bool,
+) -> Result<(), GuestError> {
+    if std::env::var("HARS_DISPOSABLE_KVM_LAB").as_deref() != Ok("1") {
+        return Err(GuestError::InvalidArguments);
+    }
+    spec.validate()?;
+    let _lease = private_vm_lock(dir)?;
+    let overlay = if create {
+        make_overlay(spec, dir)?
+    } else {
+        verified_existing_overlay(spec, dir)?
+    };
+    let digest = format!(
+        "{:x}",
+        Sha256::digest(format!("{TEST_MARKER}\n").as_bytes())
+    );
+    session_verify_guest_marker(spec, &overlay, create, &digest)?;
+    File::open(&overlay)
+        .and_then(|f| f.sync_all())
+        .map_err(|_| GuestError::UnsafeImage)?;
+    File::open(dir)
+        .and_then(|f| f.sync_all())
+        .map_err(|_| GuestError::UnsafeImage)?;
+    verified_existing_overlay(spec, dir)?;
+    if sha256_file(&spec.source_image)? != spec.image_sha256 {
+        return Err(GuestError::ImageDigestMismatch);
+    }
+    Ok(())
+}
+
 fn overlay_args(spec: &GuestSpec, overlay: &Path) -> Vec<String> {
     let mut args = spec.qemu_args();
     let position = args
@@ -586,6 +679,23 @@ pub fn boot_guest_in_isolated_lab(spec: &GuestSpec) -> Result<(), GuestError> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn second_manager_rejects_missing_or_replaced_overlay() {
+        let base = tempfile::tempdir().unwrap();
+        let private = base.path().join("owner");
+        std::fs::create_dir(&private).unwrap();
+        std::fs::set_permissions(&private, std::fs::Permissions::from_mode(0o700)).unwrap();
+        let spec = GuestSpec {
+            emulator: "/usr/bin/qemu-system-x86_64".into(),
+            firmware: "/usr/share/ovmf/OVMF.fd".into(),
+            source_image: "/tmp/official-haos.qcow2".into(),
+            image_sha256: "a".repeat(64),
+        };
+        assert!(verified_existing_overlay(&spec, &private).is_err());
+        let fake = private.join("guest-overlay.qcow2");
+        std::os::unix::fs::symlink("/dev/null", &fake).unwrap();
+        assert!(verified_existing_overlay(&spec, &private).is_err());
+    }
     #[test]
     fn persistent_guest_arg_list_uses_cow_not_unsafe_ephemeral_switches() {
         let spec = GuestSpec {
