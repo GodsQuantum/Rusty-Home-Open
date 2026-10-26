@@ -1,5 +1,10 @@
 # Rusty Home — handoff permanent
 
+## P2k - real broker same-ID tombstone/readd (26 October 2026, VERIFIED LAB)
+
+PR #157 merged `56623b12a42ece6ceb6a148208e44d88d805529b` after **11/11 exact-HEAD CI** at `bae1ee85596c7d2004bda91d2281b2a091c20303`. Real isolated Mosquitto MQTT5 run 40397842879, job 121835521396, both new P2K markers confirmed in logs: retained deletion empties redb and upstream Moli, same unique_id re-add has no stale state, new 31.2 read-only value arrives. LXC700 real broker regression passed; previous P2i/P2j/P2l evidence unchanged. Additional OCI unit-test fixture portability fix under umask 0002: owner-private mode 0600, 311/311 workspace tests and strict Clippy local PASS; exact CI for that follow-up remains required. Lab only; release 0/15, no VM100/radio/production changes.
+
+
 ## P2l - direct Moli discovery batch atomicity (26 October 2026, VERIFIED LAB)
 
 New distinct gap after P2j (same-ID re-add) and concurrent P2k (real broker): the public in-process Moli DiscoveryDriver accepted a directly supplied malformed Preview containing duplicate unique IDs, even though the JSON MQTT parser would normally reject that input. Genuine upstream Moli Hub RED: two devices instead of one after malformed batch plus a valid owner. Fixed by prevalidating the COMPLETE batch (1-32, unique safe IDs, read-only sensor kinds, isolated state topics) before any Moli upsert. GREEN: actual Moli Hub refuses the malformed batch, rejects another config attempting partial owner-ID theft, keeps owner state across rejected tombstones, and clears state on legitimate removal/re-add. LXC700 targeted 1/1 PASS; native-kernel 56/56 PASS, strict Clippy/fmt/diff PASS. No broker, real radio, VM100, user secrets or production write access; NOT_PRODUCTION_READY, 0/15. PR #158 merged 6d13d8b61dfdc9ec606f70ef528a9f8b3a1a6593 after 11/11 SUCCESS at exact feature HEAD 6c2d061f251149b1a9afa1424a8971c218bf0b78. Dedicated GitHub run 40389728103, job 121807245943 PASS: targeted 1/1 and native-kernel 56/56, strict Clippy and fmt. Claim pinned in config/lab-evidence.json; preserve existing P2j/P2k receipts.
