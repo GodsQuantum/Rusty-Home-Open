@@ -14,6 +14,9 @@ on:
       - "crates/supervisor-apps/src/operation_preflight.rs"
       - "crates/supervisor-apps/src/store_availability.rs"
       - "scripts/test_p15_fuzz_workflow_contract.py"
+      - "scripts/test_p15_haos_backup_fuzz_contract.py"
+      - "crates/interop-moli/src/ha_backup_import.rs"
+      - "crates/interop-moli/src/registry_stage.rs"
 
 permissions:
   contents: read
@@ -39,11 +42,13 @@ jobs:
       - name: Ensure synthetic corpus only, without production secrets
         run: |
           python3 scripts/test_p15_fuzz_workflow_contract.py
+          python3 scripts/test_p15_haos_backup_fuzz_contract.py
           test -f fuzz/corpus/core_user_snapshot/valid-admin-user.json
           test -f fuzz/corpus/ingress_http/trusted-read.bin
           test -f fuzz/corpus/supervisor_store/v2-installed.bin
           test -f fuzz/corpus/lifecycle_preflight/consistent-install.bin
           test -f fuzz/Cargo.lock
+          test -f fuzz/corpus/haos_backup_import/synthetic-valid-full.bin
       - name: Execute real sanitizer-instrumented libFuzzer smoke
         working-directory: fuzz
         run: |
@@ -51,6 +56,7 @@ jobs:
           cargo +nightly-2026-10-15 fuzz run ingress_http -- -max_total_time=45 -timeout=8 -rss_limit_mb=2048
           cargo +nightly-2026-10-15 fuzz run supervisor_store -- -max_total_time=45 -timeout=8 -rss_limit_mb=2048
           cargo +nightly-2026-10-15 fuzz run lifecycle_preflight -- -max_total_time=45 -timeout=8 -rss_limit_mb=2048
+          cargo +nightly-2026-10-15 fuzz run haos_backup_import -- -max_total_time=45 -timeout=8 -rss_limit_mb=2048
       - name: Extended sanitizer fuzz of all four protected surfaces
         if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
         working-directory: fuzz
@@ -59,6 +65,7 @@ jobs:
           cargo +nightly-2026-10-15 fuzz run ingress_http -- -max_total_time=180 -timeout=8 -rss_limit_mb=2048
           cargo +nightly-2026-10-15 fuzz run supervisor_store -- -max_total_time=180 -timeout=8 -rss_limit_mb=2048
           cargo +nightly-2026-10-15 fuzz run lifecycle_preflight -- -max_total_time=180 -timeout=8 -rss_limit_mb=2048
+          cargo +nightly-2026-10-15 fuzz run haos_backup_import -- -max_total_time=180 -timeout=8 -rss_limit_mb=2048
       - name: Attach crash artifacts only if instrumented run failed
         if: failure()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2 verified GitHub tag
@@ -69,5 +76,6 @@ jobs:
             fuzz/artifacts/ingress_http/
             fuzz/artifacts/supervisor_store/
             fuzz/artifacts/lifecycle_preflight/
+            fuzz/artifacts/haos_backup_import/
           retention-days: 7
           if-no-files-found: ignore

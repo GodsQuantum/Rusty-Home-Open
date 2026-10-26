@@ -2,3 +2,5 @@ fuzz/corpus/ingress_http/*.bin binary
 fuzz/corpus/supervisor_store/*.bin binary
 
 fuzz/corpus/lifecycle_preflight/*.bin binary
+
+fuzz/corpus/haos_backup_import/*.bin binary
