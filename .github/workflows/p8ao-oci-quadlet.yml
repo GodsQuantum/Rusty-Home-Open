@@ -58,8 +58,11 @@ jobs:
           cat "$RUNNER_TEMP/quadlet-gen.out"
           grep -F "rh-mealie" "$RUNNER_TEMP/quadlet-gen.out"
           grep -F "rh-zigbee2mqtt" "$RUNNER_TEMP/quadlet-gen.out"
-          grep -F -- "--network none" "$RUNNER_TEMP/quadlet-gen.out"
-          grep -F -- "--cap-drop all" "$RUNNER_TEMP/quadlet-gen.out"
+          grep -F -- "--network=none" "$RUNNER_TEMP/quadlet-gen.out"
+          grep -F -- "--cap-drop=all" "$RUNNER_TEMP/quadlet-gen.out"
+          grep -F -- "--security-opt=no-new-privileges" "$RUNNER_TEMP/quadlet-gen.out"
+          grep -F "MemoryMax=256M" "$RUNNER_TEMP/quadlet-gen.out"
+          grep -F -- "--pull never" "$RUNNER_TEMP/quadlet-gen.out"
           if HARS_DISPOSABLE_OCI_LAB=1 target/debug/oci_quadlet_lab --generate-lab evil               "registry.example.org/apps/evil:latest" "$APP_DIR"; then exit 1; fi
           if target/debug/oci_quadlet_lab --generate-lab third               "registry.example.org/apps/third@sha256:$DIGEST" "$APP_DIR"; then exit 1; fi
           test ! -e "$APP_DIR/rh-evil.container"
