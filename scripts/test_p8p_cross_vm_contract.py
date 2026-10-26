@@ -21,10 +21,14 @@ assert "-snapshot -accel kvm" in workflow
 assert "haos_ova-18.3.qcow2.xz" in workflow
 assert "fae6a728768cc10aff60d4820bfcd40d64cd77fab82c8bd92af13b3d9d414090" in workflow
 assert "90fa213c3441e585d5a60387e9244d0ed38efaf8" in workflow
-for marker in ("test_hars_cross_vm_source","test_hars_cross_vm_target","/proc/sys/kernel/random/boot_id","ha backups restore ","sha256sum ","test ! -e "):
+for marker in ("test_hars_cross_vm_source","test_hars_cross_vm_target","/proc/sys/kernel/random/boot_id","ha backups restore ","sha256sum ","test ! -e ",
+               "P8BF_ACTUAL_SECOND_HAOS_AUTOMATION_SOURCE_EXACT_BYTES_RESTORED_PASS",
+               "inert_automation()", "expected_automation_sha", "AUTOMATION_PATH"):
     assert marker in test,marker
 for safety in ("O_NOFOLLOW","O_EXCL","CAP=1024*1024*1024","os.fsync","os.replace"):
     assert safety in relay,safety
+assert "P8BF_DIRECT_HAOS_TO_FRESH_HAOS_AUTOMATION_SOURCE_RESTORED_PASS" in workflow
+assert "P8BF_HAOS_THROUGH_RUST_ESCROW_TO_FRESH_HAOS_AUTOMATIONS_RESTORED_PASS" in (root/".github/workflows/p8ab-native-escrow-rollback.yml").read_text()
 assert "qm " not in workflow and "pct " not in workflow
 spec=importlib.util.spec_from_file_location("junit",root/"scripts/check_p8p_cross_vm_junit.py")
 mod=importlib.util.module_from_spec(spec);spec.loader.exec_module(mod)

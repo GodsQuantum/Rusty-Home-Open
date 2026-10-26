@@ -5,6 +5,7 @@ on:
     paths:
       - ".github/workflows/p8ab-native-escrow-rollback.yml"
       - "scripts/p8p_cross_vm_backup_pytest.py"
+      - "scripts/fixtures/p8be_haos_automations.yaml"
       - "scripts/test_p8ab_backup_escrow.py"
       - "scripts/test_p8ab_escrow_relay_bridge.py"
       - "crates/interop-moli/**"
@@ -76,4 +77,5 @@ jobs:
           cd "$RUNNER_TEMP/haos-upstream/tests"
           ./run_tests.sh supervisor_test/test_supervisor.py::test_start_supervisor supervisor_test/test_supervisor.py::test_check_supervisor supervisor_test/test_supervisor.py::test_hars_cross_vm_target
           python3 "$GITHUB_WORKSPACE/scripts/check_p8p_cross_vm_junit.py" junit_reports/tests.xml target
+          echo P8BF_HAOS_THROUGH_RUST_ESCROW_TO_FRESH_HAOS_AUTOMATIONS_RESTORED_PASS
           echo P8AB_GENUINE_HAOS_RUST_ESCROW_FRESH_GUEST_RESTORED_PASS

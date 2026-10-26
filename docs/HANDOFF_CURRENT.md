@@ -296,3 +296,11 @@ Owner SentinelX Cloud9 / LXC700, branch feat/haos-automation-opaque-stage-202610
 ## 26 Oct 2026 P8be — actual disposable HAOS automation source fixture, CI pending
 
 The original P8aa real Supervisor backup QEMU scenario now includes an inert, **invented** YAML automation in the official guest Core directory before generating the same full archive; readback from a separate host Rust process checks SHA-256, byte size, private inactive state, archive+registry binding and rollback without executing it. The SHA from the generated real official archive must match that fixture. Original P8aa genuine-VM proof will be rerun because its archive contents and Rust parser actually changed, not as redundant certification; only the new P8be marker represents a new behavior. GitHub real runner/PR evidence pending, 0/15 production independent signoffs.
+
+## 26 October P8bf — real HAOS automation restore via Rust escrow [IN PROGRESS]
+
+Owner SentinelX Cloud9 LXC700, branch test/p8bf-automation-roundtrip-20261026, base main 004f2cb. Existing P8aa original Supervisor backup with inert automations fixture P8be passed GitHub run 40328174220; P8ab full HAOS→Rust escrow→fresh second HAOS and direct P8p backups already passed with synthetic marker. Missing distinct proof: after independent fresh-target HAOS restore, automation YAML source bytes remain exactly original. Extend existing upstream real QEMU two-guest scenario to write invented inert YAML into source and SHA-256 compare on new target, with no household access. Changes to existing scenarios justify rerun; no duplicate test infrastructure, 0/15 release.
+
+## 26 October 2026 P8bf — new independent round-trip verification on official HAOS KVM
+
+The already proven source→second HAOS and source→native Rust escrow→second HAOS scenarios now assert that the original invented, disabled automations.yaml is byte-for-byte restored on the independent clean target AFTER official Supervisor full restore. A fresh target may not contain the fixture beforehand. The original 2-guest boot, Supervisor/Core health, full tar SHA-256 and VM-identity JUnit gates are unchanged. Scope: *original automation file custody/restoration only*, not runtime translation, activation, custom HACS parity or production cutover. CI exact SHA pending. 0/15 production.
