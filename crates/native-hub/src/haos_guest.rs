@@ -5,7 +5,7 @@
 //! arguments, persistent image writes or family network controllers.
 use sha2::{Digest, Sha256};
 use std::{
-    fs::OpenOptions,
+    fs::{File, OpenOptions},
     io::{Read, Write},
     os::unix::fs::{FileTypeExt, MetadataExt, OpenOptionsExt, PermissionsExt},
     path::{Path, PathBuf},
@@ -181,6 +181,224 @@ fn watch_console(mut stream: impl Read + Send + 'static, tx: mpsc::Sender<()>) {
             }
         }
     });
+}
+
+/// P8ae: a *private lab-only* copy-on-write guest disk backed by the exact
+/// SHA256-pinned official immutable source. No external HASS configuration.
+const TEST_MARKER: &str = "HARS_P8AE_DURABLE_MARKER_20261025";
+fn private_owner_dir(path: &Path) -> Result<(), GuestError> {
+    let m = std::fs::symlink_metadata(path).map_err(|_| GuestError::UnsafeImage)?;
+    if !m.is_dir()
+        || m.file_type().is_symlink()
+        || m.uid() != nix::unistd::Uid::current().as_raw()
+        || m.permissions().mode() & 0o077 != 0
+    {
+        return Err(GuestError::UnsafeImage);
+    }
+    Ok(())
+}
+/// Fail closed on multiple concurrent VM managers. Lock remains held across
+/// both QEMU processes (including the simulated hard failure).
+fn private_vm_lock(dir: &Path) -> Result<File, GuestError> {
+    private_owner_dir(dir)?;
+    let lock = OpenOptions::new()
+        .read(true)
+        .write(true)
+        .create(true)
+        .mode(0o600)
+        .custom_flags(nix::libc::O_NOFOLLOW | nix::libc::O_CLOEXEC)
+        .open(dir.join(".single-owner-lock"))
+        .map_err(|_| GuestError::UnsafeImage)?;
+    let meta = lock.metadata().map_err(|_| GuestError::UnsafeImage)?;
+    if !meta.is_file()
+        || meta.nlink() != 1
+        || meta.uid() != nix::unistd::Uid::current().as_raw()
+        || meta.permissions().mode() & 0o077 != 0
+    {
+        return Err(GuestError::UnsafeImage);
+    }
+    let status = unsafe {
+        nix::libc::flock(
+            std::os::fd::AsRawFd::as_raw_fd(&lock),
+            nix::libc::LOCK_EX | nix::libc::LOCK_NB,
+        )
+    };
+    if status != 0 {
+        return Err(GuestError::UnsafeImage);
+    }
+    Ok(lock)
+}
+/// Rust directly invokes distro QEMU tools with fixed typed argv and verifies
+/// the backing base; it does not modify user-supplied images or launch shell.
+fn make_overlay(spec: &GuestSpec, dir: &Path) -> Result<PathBuf, GuestError> {
+    // QEMU -drive uses comma-separated options; reject injection via
+    // attacker-controlled owner-private directory names.
+    if !dir.is_absolute()
+        || dir
+            .to_string_lossy()
+            .chars()
+            .any(|c| c == ',' || c.is_control())
+        || dir
+            .components()
+            .any(|c| c == std::path::Component::ParentDir)
+    {
+        return Err(GuestError::InvalidArguments);
+    }
+    private_owner_dir(dir)?;
+    let out = dir.join("guest-overlay.qcow2");
+    // symlink_metadata also catches dangling symlinks that Path::exists()
+    // would incorrectly treat as absent.
+    match std::fs::symlink_metadata(&out) {
+        Ok(_) => return Err(GuestError::UnsafeImage),
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => {}
+        Err(_) => return Err(GuestError::UnsafeImage),
+    }
+    let source = spec.source_image.to_string_lossy().to_string();
+    let exit = Command::new("/usr/bin/qemu-img")
+        .args([
+            "create",
+            "-f",
+            "qcow2",
+            "-F",
+            "qcow2",
+            "-b",
+            source.as_str(),
+        ])
+        .arg(&out)
+        .stdin(Stdio::null())
+        .stdout(Stdio::null())
+        .stderr(Stdio::null())
+        .status()
+        .map_err(|_| GuestError::QemuStart)?;
+    if !exit.success() {
+        return Err(GuestError::QemuStart);
+    }
+    let meta = std::fs::symlink_metadata(&out).map_err(|_| GuestError::UnsafeImage)?;
+    if !meta.is_file() || meta.nlink() != 1 || meta.uid() != nix::unistd::Uid::current().as_raw() {
+        return Err(GuestError::UnsafeImage);
+    }
+    std::fs::set_permissions(&out, std::fs::Permissions::from_mode(0o600))
+        .map_err(|_| GuestError::UnsafeImage)?;
+    File::open(&out)
+        .and_then(|f| f.sync_all())
+        .map_err(|_| GuestError::UnsafeImage)?;
+    File::open(dir)
+        .and_then(|f| f.sync_all())
+        .map_err(|_| GuestError::UnsafeImage)?;
+    Ok(out)
+}
+fn overlay_args(spec: &GuestSpec, overlay: &Path) -> Vec<String> {
+    let mut args = spec.qemu_args();
+    let position = args
+        .iter()
+        .position(|arg| arg == "-drive")
+        .expect("base disk arg");
+    args[position + 1] = format!("file={},format=qcow2,if=virtio", overlay.display());
+    // Remove both ephemeral switches: the COW overlay now owns guest writes.
+    args.retain(|arg| arg != "-snapshot");
+    args
+}
+fn session_verify_guest_marker(
+    spec: &GuestSpec,
+    overlay: &Path,
+    write: bool,
+    expected_digest: &str,
+) -> Result<(), GuestError> {
+    let mut child = Command::new(&spec.emulator)
+        .args(overlay_args(spec, overlay))
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::null())
+        .spawn()
+        .map_err(|_| GuestError::QemuStart)?;
+    let mut stdin = child.stdin.take().ok_or(GuestError::QemuStart)?;
+    let (tx, rx) = mpsc::channel();
+    if let Some(console) = child.stdout.take() {
+        collect_console(console, tx)
+    } else {
+        stop_guest(&mut child);
+        return Err(GuestError::QemuStart);
+    }
+    let mut stage = 0u8;
+    let mut recent = Vec::<u8>::new();
+    let begun = Instant::now();
+    let expected = expected_digest.as_bytes();
+    let outcome = loop {
+        match child.try_wait() {
+            Ok(Some(_)) | Err(_) => break Err(GuestError::EarlyExit),
+            Ok(None) => {}
+        }
+        if begun.elapsed() > BOOT_MAX {
+            break Err(GuestError::GuestHealthTimeout);
+        }
+        if let Ok(part) = rx.recv_timeout(Duration::from_millis(200)) {
+            recent.extend_from_slice(&part);
+            if recent.len() > 16384 {
+                let remove = recent.len() - 4096;
+                recent.drain(..remove);
+            }
+        }
+        match stage {
+            0 if has_marker(&recent, PROMPT) => {
+                if let Err(e) = send_guest_line(&mut stdin, b"root\n") {
+                    break Err(e);
+                }
+                stage = 1;
+                recent.clear();
+            }
+            1 if has_marker(&recent, SHELL_PROMPT) => {
+                let path = "/mnt/data/supervisor/share/hars_p8ae_guest_state";
+                let command = if write {
+                    format!(
+                        "mkdir -p /mnt/data/supervisor/share && printf '{}\\n' > {} && sync && sha256sum {}\n",
+                        TEST_MARKER, path, path
+                    )
+                } else {
+                    format!("sha256sum {}\n", path)
+                };
+                if let Err(e) = send_guest_line(&mut stdin, command.as_bytes()) {
+                    break Err(e);
+                }
+                stage = 2;
+                recent.clear();
+            }
+            2 if has_marker(&recent, expected) => break Ok(()),
+            _ => {}
+        }
+    };
+    stop_guest(&mut child);
+    outcome
+}
+/// Genuine QEMU guest twice, with simulated process SIGKILL between boots.
+/// Only a fictitious marker inside a disposable HAOS guest is manipulated.
+pub fn prove_guest_cow_state_across_restarts_in_lab(
+    spec: &GuestSpec,
+    overlay_dir: &Path,
+) -> Result<(), GuestError> {
+    if std::env::var("HARS_DISPOSABLE_KVM_LAB").as_deref() != Ok("1") {
+        return Err(GuestError::InvalidArguments);
+    }
+    spec.validate()?;
+    let _lock = private_vm_lock(overlay_dir)?;
+    let overlay = make_overlay(spec, overlay_dir)?;
+    let digest = format!(
+        "{:x}",
+        Sha256::digest(format!("{TEST_MARKER}\n").as_bytes())
+    );
+    session_verify_guest_marker(spec, &overlay, true, &digest)?;
+    // QEMU was killed and reaped; ensure overlay durability before restart.
+    File::open(&overlay)
+        .and_then(|f| f.sync_all())
+        .map_err(|_| GuestError::UnsafeImage)?;
+    File::open(overlay_dir)
+        .and_then(|f| f.sync_all())
+        .map_err(|_| GuestError::UnsafeImage)?;
+    session_verify_guest_marker(spec, &overlay, false, &digest)?;
+    let after = sha256_file(&spec.source_image)?;
+    if after != spec.image_sha256 {
+        return Err(GuestError::ImageDigestMismatch);
+    }
+    Ok(())
 }
 
 const CLI_OK: &[u8] = b"\"result\":\"ok\"";
@@ -368,6 +586,20 @@ pub fn boot_guest_in_isolated_lab(spec: &GuestSpec) -> Result<(), GuestError> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn persistent_guest_arg_list_uses_cow_not_unsafe_ephemeral_switches() {
+        let spec = GuestSpec {
+            emulator: "/usr/bin/qemu-system-x86_64".into(),
+            firmware: "/usr/share/ovmf/OVMF.fd".into(),
+            source_image: "/tmp/haos.qcow2".into(),
+            image_sha256: "a".repeat(64),
+        };
+        let args = overlay_args(&spec, Path::new("/tmp/overlay.qcow2")).join(" ");
+        assert!(args.contains("/tmp/overlay.qcow2"));
+        assert!(!args.contains("snapshot=on") && !args.contains("-snapshot"));
+        assert!(!args.contains("hostfwd") && !args.contains("virtfs"));
+        assert!(!args.contains("usb-host"));
+    }
     #[test]
     fn supervisor_and_core_health_requires_real_cli_ok_marker() {
         assert!(cli_ok(br#"{"result":"ok","data":{}}"#));

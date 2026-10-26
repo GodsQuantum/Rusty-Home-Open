@@ -74,6 +74,10 @@ New branch feat/real-haos-guest-supervisor-20261025 and separate DEV worktree Ru
 
 P8ac native Rust HAOS KVM serial boot was proven in GitHub run 40243098816, feature 29f9a45db72e4ef69aa0abed00dda17483d7133e, merged as ac76a85dbeadc1456968e5912eb7ddf32c9ba2a3 (PR #103, 18/18 checks PASS). The next P8ad branch feat/haos-rust-supervisor-health-20261025 and worktree Rusty-Home-Guest-Health-20261025 extend the Rust launcher to probe official Supervisor and Core via real HAOS guest shell, not merely serial OS boot. New CI .github/workflows/p8ad-rust-health.yml; wait for exact SHA result before merging. No household service or radios, 0/15 production.
 
+## P8ae — guest state retained under native Rust (25 Oct)
+
+P8ac PR #103 KVM boot and P8ad PR #104 real Supervisor/Core CLI result=ok already merged; DO NOT REDO those. P8ae branch feat/haos-rust-persistent-guest-20261025/worktree Rusty-Home-Guest-Persist-20261025 adds Rust-owned persistent official HAOS QCOW2 overlay, single-writer flock, genuine KVM guest marker persisted across abrupt QEMU process restart, official base SHA pinned. New workflow .github/workflows/p8ae-rust-persistent.yml. Its new independent two-boot CI at exact feature SHA is mandatory before certification; no family HAOS devices, full Apps compatibility or field rollback implied. 0/15 production gates.
+
 ## Reprise obligatoire
 
 1. Lire ces sources, vérifier le SHA actuel de GitHub, les PR ouvertes, les preuves et la CI avant de relancer des travaux.
