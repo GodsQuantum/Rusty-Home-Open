@@ -122,6 +122,7 @@ impl ArmedDispatch {
         &self.id
     }
     /// Verified only from the audited original permit, never caller input.
+    #[cfg(feature = "core-durable-dispatch-lab")]
     pub(crate) fn actor_subject(&self) -> &str {
         self.permit.actor_subject()
     }
