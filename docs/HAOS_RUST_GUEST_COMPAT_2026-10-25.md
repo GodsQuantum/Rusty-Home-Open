@@ -270,3 +270,15 @@ atomic manifest replacement, a single retained previous unit, and unchanged
 Podman data volume. Real Redis 7.4 Alpine/Bookworm switching CI is required.
 This verifies image/unit rollback, not automatic application health or data
 schema migration rollback. No family HAOS or production deployment.
+
+## P8av — independent real Redis and Memcached OCI Apps (CI pending)
+
+The generic OCI manager is validated beyond one Redis application by
+running independently pinned official Redis and Memcached images
+simultaneously as unprivileged UIDs with no host network and readonly
+container root. Its GitHub run checks Redis persistent state versus
+Memcached intentionally transient cache state through independent lifecycle
+and uninstalls, without changing the generic Rust manager's implementation.
+This does NOT establish arbitrary third-party App manifest/secret/device
+configuration parity, true HA Supervisor App Store compatibility, whole-home
+rollback or hardware radios. 0/15 production gates.
