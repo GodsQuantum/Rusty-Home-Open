@@ -1,3 +1,7 @@
+## P8ax 26 October — SECOND stateful App restored in real CI (verified)
+
+#164 merged at 2a2813dd5e96b87adac99048665f27adddbab792 after 11/11 checks on original head 8a375a809b5ed1f078e42eb82ba9f6535bcca981. GitHub real Docker Distribution registry independent-volume restore run 40409988909 job 121877915230: stop original, SHA-private archive and corruption rejection, mutate source with newer blob, import old archive into NEW volume, launch second registry, old blob present/new blob absent (404), original unaffected. Separate P8aq Redis backup/restore already proven. Machine proof recorded config/lab-evidence.json. No nine-App certification, no household, no production release (0/15). Oversized GitHub PR #59 online proof REST422 corrected with strict GraphQL SHA fallback in #164; online evidence remains fail closed.
+
 # Rusty Home — handoff permanent
 
 ## P2n — durable redb MQTT topic and identity ownership (26 Oct, VERIFIED LAB)

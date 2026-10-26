@@ -502,3 +502,7 @@ New distinct missing coverage beyond P8aq (only Redis independent volume restore
 ## 26 October — CI exact-PR provenance repaired without evidence bypass (P8ax)
 
 Initial #164 native-rust-and-security-labs failed at verify_lab_evidence_online.py while checking immutable historical PR #59: the LIVE official GitHub REST pulls/59 API returns HTTP 422 with reason too many files changed. Confirmed using gh api on CT700; not an App restoration or fraudulent receipt failure. Fix: GraphQL via gh pr view ONLY for exact pulls/[1-9][0-9]* and ONLY REST 422 with that exact error reason. Validate PR number, MERGED, base main, 40-char lowercase head/merge SHA; existing source evidence must still match one exact immutable SHA. HTTP 403/404, other REST endpoints, invalid status/base/SHA/null fields all fail closed; offline negative mocks cover these cases. On CT700, the full online proof test independently checked all 21 claims against 17 GitHub runs, no certified gate changed (0/15). New exact-head GitHub CI required.
+
+## 26 October — P8ax definitive source-head real OCI independent restoration evidence
+
+PR #164 HEAD 8a375a809b5ed1f078e42eb82ba9f6535bcca981, merge 2a2813dd5e96b87adac99048665f27adddbab792; run 40409988909 job 121877915230 successful, 11/11 checks. Second stateful Distribution Registry restored from earlier checked SHA volume into independent App with old blob but no later original blob, confirmed by real isolated HTTP. Original kept both. Registered in canonical evidence without promoting supervisor_apps_restore; 0/15 production, VM100 untouched.
