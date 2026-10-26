@@ -14,15 +14,15 @@ cleanup() {
   sudo systemctl stop "$unit" >/dev/null 2>&1 || true
   sudo rm -f "/run/systemd/system/$unit"
   sudo systemctl daemon-reload >/dev/null 2>&1 || true
-  sudo rm -f /usr/local/libexec/rusty-home/haos_guest_service_lab
+  sudo rm -f /usr/libexec/rusty-home/haos_guest_service_lab
   sudo rm -f /run/rusty-home-lab/haos-guest.env
   sudo userdel rusty-home-lab >/dev/null 2>&1 || true
 }
 trap cleanup EXIT
 sudo install -d -m 0700 -o rusty-home-lab -g kvm /var/lib/rusty-home-lab
 sudo install -d -m 0700 /run/rusty-home-lab
-sudo install -d -m 0755 /usr/local/libexec/rusty-home
-sudo install -m 0755 "$ROOT/target/debug/haos_guest_service_lab"   /usr/local/libexec/rusty-home/haos_guest_service_lab
+sudo install -d -m 0755 /usr/libexec/rusty-home
+sudo install -m 0755 "$ROOT/target/debug/haos_guest_service_lab"   /usr/libexec/rusty-home/haos_guest_service_lab
 sudo install -m 0600 -o rusty-home-lab -g kvm   "$RUNNER_TEMP/haos-native-rust.qcow2" /var/lib/rusty-home-lab/haos-base.qcow2
 sudo -u rusty-home-lab qemu-img create -f qcow2 -F qcow2   -b /var/lib/rusty-home-lab/haos-base.qcow2   /var/lib/rusty-home-lab/guest-overlay.qcow2
 sudo chmod 0600 /var/lib/rusty-home-lab/guest-overlay.qcow2

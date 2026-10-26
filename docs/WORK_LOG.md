@@ -1,5 +1,12 @@
 # Rusty Home — journal de développement et de certification
 
+## 2026-10-26 — P8ak native Rust guest Debian lab packaging (CI pending)
+
+- Completed P8aj #111 real systemd official HAOS guest laboratory proof 10/10 PASS, GH 40254861417, merged 4a1377341eabd44bc81334705465a5ebf33cf6c4. No redo as a fresh certification.
+- New reproducible native manager Debian .deb (not the old synthetic read-only CLI package), lab-only versioned revisions, /usr/libexec service path, systemd unit and sysusers definition. The unit and package have no automatic start/enable. Real ephemeral Ubuntu dpkg install/update/downgrade/purge and updated actual systemd KVM workflow required at feature SHA.
+- No Cloud9/HAOS family changes, no real radio/device access, no signed production release, 0/15 production gates.
+
+
 ## 2026-10-26 — P8aj genuine systemd start/stop of real HAOS guest (CI pending)
 
 - P8ai #110 genuine Core frontend HTTP 16/16 passed and merged e891401d65d6f954afb809bd7ff9d7312c7b3e7f. Preserve verified proof; don't duplicate.
