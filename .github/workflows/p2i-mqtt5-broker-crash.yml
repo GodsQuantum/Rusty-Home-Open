@@ -1,0 +1,37 @@
+name: P2i Genuine isolated MQTT5 broker SIGKILL and durable stale quarantine
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/p2i-mqtt5-broker-crash.yml"
+      - "scripts/test_p2i_mqtt5_broker_sigkill.py"
+      - "scripts/fixtures/mqtt-broker/**"
+      - "crates/native-kernel/src/mqtt5_reconcile.rs"
+      - "crates/native-kernel/src/mqtt_registry.rs"
+      - "crates/native-kernel/src/mqtt_live.rs"
+      - "Cargo.lock"
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  real-isolated-mqtt5-broker-sigkill:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+      - name: Validate new scenario and native Rust MQTT code
+        run: |
+          python3 -m py_compile scripts/test_p2i_mqtt5_broker_sigkill.py
+          cargo fmt --all -- --check
+          cargo test --locked -p hars-native-kernel --lib mqtt_registry
+          cargo clippy --locked -p hars-native-kernel --all-targets -- -D warnings
+      - name: Build disposable genuine Mosquitto image
+        run: |
+          docker build --tag hars-mqtt-lab:20261019 scripts/fixtures/mqtt-broker
+      - name: Real SIGKILL, stale durable quarantine, denied state and fresh reattestation
+        timeout-minutes: 8
+        run: python3 scripts/test_p2i_mqtt5_broker_sigkill.py
