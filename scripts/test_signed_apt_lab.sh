@@ -76,7 +76,7 @@ docker run --rm --name "rusty-home-lab-apt-$RANDOM" --network none \
     # The offline APT client accepts this index only under our ephemeral
     # signed-by key. Native runtime is not started/installed in this container:
     # its full real-dpkg lifecycle was independently verified in P8ak.
-    apt-cache show rusty-home-guest-lab > /tmp/guest-signed-index
+    apt-cache -o Dir::Etc::sourcelist=/tmp/good.list       -o Dir::Etc::sourceparts=- -o APT::Sandbox::User=root       show rusty-home-guest-lab > /tmp/guest-signed-index
     grep -q "^Package: rusty-home-guest-lab$" /tmp/guest-signed-index
     grep -q "^Version: 0.1.0-1$" /tmp/guest-signed-index
     grep -q "^Version: 0.1.1-1$" /tmp/guest-signed-index

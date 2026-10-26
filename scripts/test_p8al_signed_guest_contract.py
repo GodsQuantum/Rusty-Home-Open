@@ -7,6 +7,7 @@ for token in ("build_guest_debian_package_lab.sh 0.1.0-1",
  "build_guest_debian_package_lab.sh 0.1.1-1",
  "P8AL_NATIVE_RUST_GUEST_BOTH_VERSIONS_IN_SIGNED_INDEX_PASS",
  "P8AL_SIGNED_OFFLINE_APT_DISCOVERS_NATIVE_RUST_GUEST_PASS",
+ "apt-cache -o Dir::Etc::sourcelist=/tmp/good.list",
  "dpkg-scanpackages --multiversion","apt-ftparchive",
  "--clearsign","signed-by=",
  "P12B_TAMPERED_APT_SIGNATURE_REJECTED_PASS"):
