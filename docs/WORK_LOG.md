@@ -395,3 +395,7 @@ Preserve automations.yaml as a byte-exact, bounded, unexecuted, archive- and ent
 ## 26 October P8bf automation restore fidelity
 
 Extended existing real HAOS 18.3 QEMU two-guest source/target fixtures with one fictitious disabled automation. Validate original SHA256 on source and after independent official Supervisor full restore to different guest. P8p verifies direct transport; P8ab verifies native Rust escrow + restored target. New marker per path with no new services or third CI harness. Neither executes automations or establishes Rust automation compatibility. Independent CI pending, 0/15.
+
+## 26 October 2026 — immutable P8be/P8bf lab evidence indexed
+
+P8be PR #136 merged 004f2cb, exact feature HEAD 3527be5, 12/12 green, real Supervisor HAOS run 40328174220, original automation YAML opaque inactive native redb. P8bf PR #137 merged 18b519e, exact HEAD ed07cc7, 12/12 green, genuine separate fresh-HAOS direct restore run 40330463271 plus original archive through native Rust escrow fresh HAOS restore run 40330463267, byte-exact disabled fixture SHA after restoration. The three distinct cases are now appended to existing machine-proof register with source markers; no duplicate register or environment. Current product remains release NOT_PRODUCTION_READY, 9 lab partial/6 blocked/0 independently certified; no actual home VM100, app state or devices touched.
