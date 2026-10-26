@@ -70,6 +70,8 @@ with tempfile.TemporaryDirectory(prefix="p8bi-",dir=runtime) as tmp:
     assert proof["compiled_to_native_moli"]
     assert proof["synthetic_actuator_confirmed"] and proof["approval_required"]
     assert proof["edit_revokes_approval"] and not proof["real_hardware_touched"]
+    assert proof["persisted_edit_inactive"] and proof["stale_approval_rejected"]
+    assert proof["no_run_after_edit"] and proof["restart_kept_edit_inactive"]
     assert proof["production_ready"] is False
     call(arg.stager,"--lab-readonly",directory,"rollback",first["sha256"])
     call(arg.native,"--lab-ha-backup-automation-moli",directory,digest,ok=False)
