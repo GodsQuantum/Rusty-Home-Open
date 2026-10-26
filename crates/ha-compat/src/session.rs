@@ -175,6 +175,46 @@ impl ShadowSession {
         Ok((client, events, epoch))
     }
 
+    /// Opt-in, bounded reconnect ONLY after the old authenticated epoch has
+    /// been explicitly revoked. Every retry consumes a NEW security epoch;
+    /// no cached state is ever reused after auth, TCP or snapshot failure.
+    ///
+    /// This is a read-only loopback laboratory policy; it is not a background
+    /// production reconnect daemon, TLS transport or unlimited retry queue.
+    pub async fn resync_loopback_bounded(
+        &mut self,
+        url: &str,
+        token: &str,
+        attempts: usize,
+    ) -> Result<(SandboxHaReader, ShadowEvents, u64)> {
+        if self.mirror.is_some() {
+            bail!("explicitly revoke the old Core session before reconnect")
+        }
+        if !(1..=4).contains(&attempts) {
+            bail!("out-of-range Core reconnect budget (1..=4)")
+        }
+        for attempt in 0..attempts {
+            // All three required phases (auth, subscribe, snapshot) must
+            // complete before the epoch can be exposed as fresh.
+            match tokio::time::timeout(Duration::from_secs(17), self.resync_loopback(url, token))
+                .await
+            {
+                Ok(Ok(connected)) => return Ok(connected),
+                Ok(Err(_)) | Err(_) => {
+                    // The next attempt must never observe prior states. A
+                    // partially installed snapshot is immediately revoked.
+                    self.mirror = None;
+                    self.snapshot_at = None;
+                    if attempt + 1 < attempts {
+                        let ms = 40 * (1_u64 << attempt);
+                        tokio::time::sleep(Duration::from_millis(ms)).await;
+                    }
+                }
+            }
+        }
+        bail!("bounded Core loopback reconnect exhausted; no live state")
+    }
+
     /// Relay overflow or stream closure invalidates all cached states.
     pub async fn recv_event(&mut self, epoch: u64, relay: &mut ShadowEvents) -> Result<()> {
         self.ensure_current_epoch(epoch)?;
@@ -326,6 +366,153 @@ mod tests {
         );
         assert_eq!(mirror.get("sensor.mock").unwrap().unwrap().state, "new");
         server_b.await.unwrap();
+    }
+
+    #[tokio::test]
+    async fn bounded_retry_survives_real_loopback_tcp_outage_with_new_auth_epoch() {
+        use futures_util::{SinkExt, StreamExt};
+        use tokio::net::TcpListener;
+        use tokio_tungstenite::{accept_async, tungstenite::Message};
+        let reserved = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
+        let addr = reserved.local_addr().unwrap();
+        drop(reserved); // The first TCP connection genuinely gets ECONNREFUSED.
+        let (keep_tx, keep_rx) = tokio::sync::oneshot::channel::<()>();
+        let server = tokio::spawn(async move {
+            tokio::time::sleep(Duration::from_millis(75)).await;
+            let listener = TcpListener::bind(addr).await.unwrap();
+            let (conn, _) = listener.accept().await.unwrap();
+            let mut ws = accept_async(conn).await.unwrap();
+            let packet = |v: serde_json::Value| Message::Text(v.to_string().into());
+            ws.send(packet(
+                json!({"type":"auth_required","ha_version":"2026.10.2"}),
+            ))
+            .await
+            .unwrap();
+            let auth = ws.next().await.unwrap().unwrap().into_text().unwrap();
+            let v: serde_json::Value = serde_json::from_str(&auth).unwrap();
+            assert_eq!(v["type"], "auth");
+            assert_eq!(v["access_token"], "synthetic-bounded-recovery");
+            ws.send(packet(json!({"type":"auth_ok","ha_version":"2026.10.2"})))
+                .await
+                .unwrap();
+            let raw = ws.next().await.unwrap().unwrap().into_text().unwrap();
+            let subscribe: serde_json::Value = serde_json::from_str(&raw).unwrap();
+            assert_eq!(subscribe["type"], "subscribe_events");
+            ws.send(packet(
+                json!({"type":"result","id":subscribe["id"],"success":true,"result":null}),
+            ))
+            .await
+            .unwrap();
+            let raw = ws.next().await.unwrap().unwrap().into_text().unwrap();
+            let get: serde_json::Value = serde_json::from_str(&raw).unwrap();
+            assert_eq!(get["type"], "get_states");
+            ws.send(packet(
+                json!({"type":"result","id":get["id"],"success":true,
+                "result":[entity("sensor.mock","recovered","2026-10-26T14:00:00+00:00")]}),
+            ))
+            .await
+            .unwrap();
+            let _ = keep_rx.await;
+        });
+        let mut shadow = ShadowSession::new();
+        let first = shadow.reconnecting().unwrap();
+        shadow
+            .install_snapshot(
+                first,
+                vec![entity(
+                    "sensor.mock",
+                    "OBSOLETE",
+                    "2026-10-26T13:00:00+00:00",
+                )],
+            )
+            .unwrap();
+        shadow.lost_connection(first).unwrap();
+        let url = format!("ws://{addr}/api/websocket");
+        let (_client, _relay, recovery_epoch) = shadow
+            .resync_loopback_bounded(&url, "synthetic-bounded-recovery", 4)
+            .await
+            .unwrap();
+        assert!(
+            recovery_epoch >= 3,
+            "at least one actual TCP refusal must consume an epoch"
+        );
+        assert!(recovery_epoch <= 5);
+        assert_eq!(shadow.epoch(), recovery_epoch);
+        assert_eq!(
+            shadow.get("sensor.mock").unwrap().unwrap().state,
+            "recovered"
+        );
+        assert!(
+            shadow
+                .event(
+                    first,
+                    &event("sensor.mock", "OBSOLETE", "2026-10-26T15:00:00+00:00")
+                )
+                .is_err()
+        );
+        assert_eq!(
+            shadow.get("sensor.mock").unwrap().unwrap().state,
+            "recovered"
+        );
+        keep_tx.send(()).unwrap();
+        server.await.unwrap();
+    }
+
+    #[tokio::test]
+    async fn bounded_retry_denies_live_session_and_exhaustion_leaves_no_state() {
+        let mut shadow = ShadowSession::new();
+        let first = shadow.reconnecting().unwrap();
+        shadow
+            .install_snapshot(
+                first,
+                vec![entity("sensor.mock", "old", "2026-10-26T12:00:00+00:00")],
+            )
+            .unwrap();
+        let bad_url = "ws://127.0.0.1:0/api/websocket";
+        assert!(
+            shadow
+                .resync_loopback_bounded(bad_url, "fake", 2)
+                .await
+                .is_err()
+        );
+        assert_eq!(shadow.epoch(), first);
+        assert!(
+            shadow.get("sensor.mock").is_ok(),
+            "live shadow cannot be touched by denied retry"
+        );
+        shadow.lost_connection(first).unwrap();
+        assert!(
+            shadow
+                .resync_loopback_bounded(bad_url, "fake", 0)
+                .await
+                .is_err()
+        );
+        assert!(
+            shadow
+                .resync_loopback_bounded(bad_url, "fake", 5)
+                .await
+                .is_err()
+        );
+        assert_eq!(shadow.epoch(), first);
+        assert!(
+            shadow
+                .resync_loopback_bounded(bad_url, "fake", 2)
+                .await
+                .is_err()
+        );
+        assert_eq!(shadow.epoch(), first + 2);
+        assert!(
+            shadow.len().is_err(),
+            "failed attempts must never restore prior states"
+        );
+        assert!(
+            shadow
+                .event(
+                    first,
+                    &event("sensor.mock", "old", "2026-10-26T14:00:00+00:00")
+                )
+                .is_err()
+        );
     }
 
     #[tokio::test]
