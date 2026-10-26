@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "verified_as_of": "2026-10-26",
-  "environment": "disposable Ubuntu 24.04 GitHub runner, genuine rootless Podman 4.9, user systemd and real Redis; no actual household, radios, production secrets or Cloud9",
+  "environment": "Disposable Ubuntu 24.04 GitHub runner, real rootless Podman user-systemd, Redis/Memcached multi-App tests; no household Cloud9/HAOS, real radios or production credentials.",
   "cases": [
     {
       "case_id": "p8ao",
@@ -77,6 +77,51 @@
       "verified_marker": "P8AS_REAL_ROOTLESS_REDIS_LOCALHOST_ONLY_TCP_PASS",
       "github_workflow": ".github/workflows/p8as-oci-localhost-tcp.yml",
       "verified_marker_source": "scripts/test_p8ar_native_oci_manager.sh"
+    },
+    {
+      "case_id": "p8at",
+      "scope": "real_digest_pinned_redis_alpine_to_bookworm_image_upgrade_explicit_rollback",
+      "status": "VERIFIED_IN_DISPOSABLE_REAL_ROOTLESS_OCI_APP_LAB_ONLY",
+      "pr": 124,
+      "feature_head_sha": "f11a80226a55a7b2e7c7e346beae16e9997a2a94",
+      "merged_commit_sha": "42db2dc1f1bf53873b37a95e83b88c6dfd5bd658",
+      "github_actions_run_id": 40295014593,
+      "github_actions_run_url": "https://github.com/GodsQuantum/Rusty-Home-Open/actions/runs/40295014593",
+      "checks_passed": 25,
+      "checks_failed": 0,
+      "verified_marker": "P8AT_REAL_OCI_IMAGE_ROLLBACK_EXACT_UNIT_AND_DATA_RETAINED_PASS",
+      "github_workflow": ".github/workflows/p8at-image-rollback.yml",
+      "verified_marker_source": "scripts/test_p8ar_native_oci_manager.sh"
+    },
+    {
+      "case_id": "p8au",
+      "scope": "real_unhealthy_image_automatic_redis_healthcheck_rollback",
+      "status": "VERIFIED_IN_DISPOSABLE_REAL_ROOTLESS_OCI_APP_LAB_ONLY",
+      "pr": 125,
+      "feature_head_sha": "fa64f2940624d949f70d8ad501404d819f59f2f4",
+      "merged_commit_sha": "05008d4cb9d2d577bec1567ea3bcda67f1faaa2e",
+      "github_actions_run_id": 40297108559,
+      "github_actions_run_url": "https://github.com/GodsQuantum/Rusty-Home-Open/actions/runs/40297108559",
+      "checks_passed": 26,
+      "checks_failed": 0,
+      "verified_marker": "P8AU_UNHEALTHY_OCI_APP_AUTO_IMAGE_RECOVERY_PASS",
+      "github_workflow": ".github/workflows/p8au-app-health-rollback.yml",
+      "verified_marker_source": "scripts/test_p8ar_native_oci_manager.sh"
+    },
+    {
+      "case_id": "p8av",
+      "scope": "two_different_real_redis_memcached_oci_apps_running_concurrently",
+      "status": "VERIFIED_IN_DISPOSABLE_REAL_ROOTLESS_OCI_APP_LAB_ONLY",
+      "pr": 126,
+      "feature_head_sha": "a4f66d11c1ff127547ac4bebe906cf8fd43c47ae",
+      "merged_commit_sha": "6ed03afa6d9a55a28cd4a51d28d48c21480fe57d",
+      "github_actions_run_id": 40299977840,
+      "github_actions_run_url": "https://github.com/GodsQuantum/Rusty-Home-Open/actions/runs/40299977840",
+      "checks_passed": 10,
+      "checks_failed": 0,
+      "verified_marker": "P8AV_TWO_GENERIC_APPS_UNINSTALL_WITHOUT_DATA_LOSS_PASS",
+      "github_workflow": ".github/workflows/p8av-real-two-oci-apps.yml",
+      "verified_marker_source": "scripts/test_p8av_real_two_distinct_apps.sh"
     }
   ],
   "production_release": "NOT_PRODUCTION_READY",
@@ -87,6 +132,9 @@
     "P8aq is one Redis independent volume restore, not all Apps nor transactional HAOS migration",
     "P8ar requires explicit disposable CI environment, not production operator authentication/RBAC",
     "P8as 127.0.0.1 ingress is not outbound egress isolation or public ingress authentication",
-    "No universal official HA Supervisor App parity, multi-container orchestration, production signed image upgrade/rollback, 72-hour soak or independent audit"
+    "No universal official HA Supervisor App parity, multi-container orchestration, production signed image upgrade/rollback, 72-hour soak or independent audit",
+    "P8at image/manifest rollback preserves bytes but not transactional application data schema downgrade",
+    "P8au native Podman healthcheck is operator-supplied and immediate bounded rollback, not universal production App semantic health or ongoing recovery",
+    "P8av Redis and Memcached both operate under same generic manager with isolated lifecycle; two representative Apps cannot certify entire HA Supervisor App Store or third-party permission parity"
   ]
 }

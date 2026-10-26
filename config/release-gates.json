@@ -34,7 +34,8 @@
       "status": "blocked",
       "blocked_reason": [
         "Nine-App migration fixtures remain synthetic; nine representative real Supervisor Apps still require full install, start, update, stop and rollback with persistent data checks.",
-        "P8ao-P8as five genuine rootless Podman App proofs (#117-#122) cover a generic app manager, real Redis lifecycle/persistence/independent backup restore and bounded localhost ingress; they do NOT validate generic 9+ Home Assistant Supervisor Apps, App dependency graph, identity, ingress, secrets, updates or transactional rollback."
+        "P8ao-P8as five genuine rootless Podman App proofs (#117-#122) cover a generic app manager, real Redis lifecycle/persistence/independent backup restore and bounded localhost ingress; they do NOT validate generic 9+ Home Assistant Supervisor Apps, App dependency graph, identity, ingress, secrets, updates or transactional rollback.",
+        "P8at real OCI digest image rollback #124 GH40295014593 25/25, P8au actual healthcheck recovery #125 GH40297108559 26/26, P8av two distinct real Redis/Memcached parallel unprivileged OCI Apps #126 GH40299977840 10/10 are VERIFIED AND MERGED; lab-only partial evidence. Full Supervisor arbitrary App manifests, secrets/devices/permissions, production auth and multi-App upgrade transactions remain unqualified."
       ],
       "certification_artifact": null
     },
@@ -65,7 +66,8 @@
         "P8aa verified native redb entity-identity staging rollback in an isolated HAOS->Rust handoff (GitHub 40238122942), but whole-host Rust->HAOS rollback and all actual App/automation data remain unproved.",
         "P8ab full archive recovery via Rust escrow (run 40240344194) does not prove reverse takeover of physical devices and third-party Apps from a running Rust Home host.",
         "P8ae (#105, SHA 4534b23, GH 40247000475, 12/12) demonstrates durable owner-private HAOS COW guest data after abrupt QEMU restart; P8af (#106, SHA 267e0fb, GH 40247834775, 13/13) demonstrates independent Rust manager reattach and double-owner exclusion in real HAOS QEMU. These do NOT prove fully running Rusty Home -> full HAOS field rollback of Core/Apps, auth and hardware.",
-        "P8an #116 proves process recovery after QEMU SIGKILL; P8aq #120 proves one independent Redis volume restore, neither demonstrates whole-home HAOS->Rust->HAOS rollback, credentials, radio ownership or multi-volume transaction consistency."
+        "P8an #116 proves process recovery after QEMU SIGKILL; P8aq #120 proves one independent Redis volume restore, neither demonstrates whole-home HAOS->Rust->HAOS rollback, credentials, radio ownership or multi-volume transaction consistency.",
+        "OCI image/manifest rollback actually proven #124 and unhealthy App auto recovery #125 with real Redis; on-disk data schema backward migration or complete HAOS household failback not proven."
       ],
       "certification_artifact": null
     },

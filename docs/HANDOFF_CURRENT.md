@@ -207,3 +207,11 @@ App/HACS parity, real physical radios, operator-authenticated production
 writes, security/availability endurance, secure signed distribution or a
 complete HAOS→Rust→HAOS household cutover. Product 0/15 fully certified;
 no family HAOS system modified or rebooted.
+
+## Immutable genuine OCI application evidence P8at–P8av (26 October 2026)
+
+- P8at PR #124: real Redis Alpine to Bookworm digest-pinned switch and exact manifest/data rollback, 25/25 feature-head CI, GitHub run 40295014593, merged 42db2dc1f1bf53873b37a95e83b88c6dfd5bd658.
+- P8au PR #125: genuine native Podman healthcheck rejects incompatible BusyBox image and automatically recovers healthy Redis with original data, 26/26 feature-head CI, GitHub run 40297108559, merged 05008d4cb9d2d577bec1567ea3bcda67f1faaa2e.
+- P8av PR #126: genuine two distinct official apps Redis+Memcached simultaneously on unmodified Rust rootless OCI manager, isolated state, independent lifecycle and retained volumes, 10/10 feature-head CI, GitHub run 40299977840, merged 6ed03afa6d9a55a28cd4a51d28d48c21480fe57d.
+
+Do not recertify previous lab proof as new work. All original feature SHAs, workflows, run IDs and distinct evidence markers are recorded in config/native-oci-app-evidence.json and checked by scripts/test_p8ao_oci_app_evidence_contract.py. P8aw new configurable mounted HTTP registry test is separate and NOT certified here until its exact CI succeeds. Universal Home Assistant Add-on Store compatibility, App image provenance signatures, physical radio ownership, operator RBAC, complete migration and real sustained production endurance remain unverified. Production remains **0/15** fully certified gates.
