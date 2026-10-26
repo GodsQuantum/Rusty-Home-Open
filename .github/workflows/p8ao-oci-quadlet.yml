@@ -29,7 +29,10 @@ jobs:
         run: |
           sudo apt-get update -qq
           sudo apt-get install -y --no-install-recommends podman
-          GEN="$(find /usr/lib/systemd /usr/libexec -name podman-system-generator -type f -print -quit 2>/dev/null)"
+          GEN=""
+          for candidate in               /lib/systemd/system-generators/podman-system-generator               /usr/lib/systemd/system-generators/podman-system-generator               /usr/libexec/podman/quadlet; do
+            if test -x "$candidate"; then GEN="$candidate"; break; fi
+          done
           test -n "$GEN"
           echo "PODMAN_GEN=$GEN" >> "$GITHUB_ENV"
       - name: Real Quadlet generator accepts two arbitrary signed OCI App manifests
