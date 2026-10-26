@@ -1,5 +1,12 @@
 # Rusty Home — journal de développement et de certification
 
+## 2026-10-26 — P8av two genuinely distinct simultaneous OCI Apps (CI pending)
+
+- P8au #125 genuine Redis + incompatible BusyBox healthcheck automatic image rollback 26/26 CI green, merged 05008d4cb9d2d577bec1567ea3bcda67f1faaa2e. Prior evidence pinned, do not repeat as new proof.
+- New *unchanged* generic Rust App manager compatibility lab runs two independent real official OCI packages, Redis 7.4 Alpine and Memcached 1.6 Alpine, under rootless Podman/systemd on isolated GitHub Ubuntu. Image tag is resolved to exact runtime manifest sha256 before each install. User 999 vs 11211, isolated network none/readonly root, no host ports, independent named volumes.
+- Real Redis durable SAVE/GET and Memcached volatile SET/GET/version protocol tests; stop/restart Memcached while Redis stays alive and retains data. Independently uninstall Memcached while Redis continues; preserve both Podman volumes. The real OCI images differ in app implementation, lifecycle and storage semantics: this is first multi-App proof beyond Redis alone, NOT a whitelist of 2, 9 or any fixed number. Requires exact-branch GitHub CI before certification. Still missing HA Supervisor metadata/permissions/configuration parity, production RBAC, persistent host lifecycle and cutover, 0/15.
+
+
 ## 2026-10-26 — P8as optional local-only TCP ingress for generic OCI Apps (CI pending)
 
 - P8ar native Rust manager actual Redis install/start/stop/uninstall/rootless persistent state verified in real GitHub Ubuntu on run 40291069681; exact-head 23 CI checks required before #121 merged. Do not reimplement P8ar.
