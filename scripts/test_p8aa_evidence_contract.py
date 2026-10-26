@@ -20,6 +20,32 @@ assert e["junit_tests"]=={"selected":3,"passed":3,"failed":0,"skipped":0}
 assert e["successful_pr_checks"]==17 and e["skipped_pr_checks"]==1
 assert e["certified_release_gates"]==0 and e["required_release_gates"]==15
 assert e["production_release"]=="NOT_PRODUCTION_READY"
+# Extra independently verified automation tests are append-only; the
+# ORIGINAL 2026-10-25 P8aa receipt above is immutable.
+new=e["additional_automation_cases"]
+assert [x["id"] for x in new]==[
+ "p8be-real-supervisor-native-source-custody",
+ "p8bf-direct-second-haos-automation-restore",
+ "p8bf-native-escrow-second-haos-automation-restore",
+]
+assert [(x["pr"],x["github_run"],x["successful_pr_checks"]) for x in new]==[
+ (136,40328174220,12),(137,40330463271,12),(137,40330463267,12)]
+heads=[
+ "3527be53ac91e3a329e3289772786d4a73a1d9f9",
+ "ed07cc772951079347eaaa08234623e2b0674f55",
+ "ed07cc772951079347eaaa08234623e2b0674f55"]
+merges=[
+ "004f2cb52c9993cff34653f133e8c31919585803",
+ "18b519e9b91451fed38a22665a9109ca7682225b",
+ "18b519e9b91451fed38a22665a9109ca7682225b"]
+for index,c in enumerate(new):
+    assert c["head_sha"]==heads[index] and c["merge_sha"]==merges[index]
+    assert c["head_sha"]!=c["merge_sha"]
+    assert c["status"].startswith("verified_disposable_")
+    assert len(c["claim"])>100 and len(c["limit"])>75
+    source=root/c["source_file"]
+    assert source.is_file() and c["marker"] in source.read_text()
+    assert str(c["github_run"]) in (root/"docs/CERTIFICATION_EVIDENCE_REGISTER.md").read_text()
 assert e["gate"]=="haos_backup_restore" and e["gate_status"]=="lab_partial"
 assert len(e["tested"])==6 and len(e["not_tested"])>=7
 assert "official HAOS 18.3" in e["environment"]

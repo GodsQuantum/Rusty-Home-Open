@@ -43,5 +43,46 @@
   "gate_status": "lab_partial",
   "production_release": "NOT_PRODUCTION_READY",
   "certified_release_gates": 0,
-  "required_release_gates": 15
+  "required_release_gates": 15,
+  "additional_automation_cases": [
+    {
+      "id": "p8be-real-supervisor-native-source-custody",
+      "pr": 136,
+      "head_sha": "3527be53ac91e3a329e3289772786d4a73a1d9f9",
+      "merge_sha": "004f2cb52c9993cff34653f133e8c31919585803",
+      "github_run": 40328174220,
+      "successful_pr_checks": 12,
+      "source_file": "scripts/test_p8aa_genuine_archive_qemu.py",
+      "marker": "P8BE_REAL_HAOS_SUPERVISOR_AUTOMATIONS_BYTE_EXACT_INACTIVE_PERSISTENCE_PASS",
+      "status": "verified_disposable_real_haos_supervisor_to_private_rust_inactive_source",
+      "claim": "Official unprotected Supervisor full archive contains synthetic disabled automations.yaml, exact original bytes ingested into private Rust/redb with SHA256 and original Core registry binding; not executed.",
+      "limit": "No conversion into native Rust automations, no actual actions, no encrypted backup import, no live household, no production release."
+    },
+    {
+      "id": "p8bf-direct-second-haos-automation-restore",
+      "pr": 137,
+      "head_sha": "ed07cc772951079347eaaa08234623e2b0674f55",
+      "merge_sha": "18b519e9b91451fed38a22665a9109ca7682225b",
+      "github_run": 40330463271,
+      "successful_pr_checks": 12,
+      "source_file": "scripts/p8p_cross_vm_backup_pytest.py",
+      "marker": "P8BF_ACTUAL_SECOND_HAOS_AUTOMATION_SOURCE_EXACT_BYTES_RESTORED_PASS",
+      "status": "verified_disposable_direct_real_haos_to_second_haos_restore",
+      "claim": "Original disabled synthetic automation bytes from first HAOS guest are SHA256 identical after official Supervisor full restore to an independently booted second HAOS guest.",
+      "limit": "Direct HAOS to HAOS only, no Rust automation execution, no real devices, no production household cutover."
+    },
+    {
+      "id": "p8bf-native-escrow-second-haos-automation-restore",
+      "pr": 137,
+      "head_sha": "ed07cc772951079347eaaa08234623e2b0674f55",
+      "merge_sha": "18b519e9b91451fed38a22665a9109ca7682225b",
+      "github_run": 40330463267,
+      "successful_pr_checks": 12,
+      "source_file": ".github/workflows/p8ab-native-escrow-rollback.yml",
+      "marker": "P8BF_HAOS_THROUGH_RUST_ESCROW_TO_FRESH_HAOS_AUTOMATIONS_RESTORED_PASS",
+      "status": "verified_disposable_real_haos_rust_custody_second_haos_restore",
+      "claim": "Original disabled synthetic automation bytes from first HAOS guest are SHA256 identical after full backup passed byte-exact through native Rust escrow and official Supervisor restoration to distinct second HAOS guest.",
+      "limit": "Rust only held the opaque archive; no native automation translation, service actions, user data or final production certification."
+    }
+  ]
 }
