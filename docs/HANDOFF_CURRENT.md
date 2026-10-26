@@ -263,3 +263,7 @@ Owner SentinelX Cloud9/LXC700, branch fix/incremental-release-gate-tests-2026102
 ## 26 October — P8bb gate transition hardcode corrected
 
 CI now compares the CURRENT release gate manifest and its independently verified Ed25519 evidence instead of freezing all five current check suites at historical 9 partial/6 blocked/0 certified. The 24 Oct masterplan and HAOS backup receipts remain immutable snapshots. Signed-scope attestation negative and positive test already verifies that a real single approved gate can count without granting deployment or signoff. Local validation of release gate, ledger, historical evidence, masterplan and attestation passed. No real independent production certificate has been issued; current 0/15, no household changes.
+
+## 26 Oct P8bb — remaining historical suites migrated to live proof authority
+
+Four ancillary suites (historic source-licence receipt, fuzz CI, signed APT, genuine HAOS archive escrow) no longer freeze live gate statuses; they use check_release_gate.audit for per-criterion independently signed promotion, while preserving their immutable laboratory attestations. Targeted old-license and fuzz transition tests + complete APT/escrow and public gate/attestation tests PASSED locally. Inactive legacy Codespaces suite refers to files missing in public repository; it is unchanged, not a new certification claim. CI exact final SHA required; release 0/15.

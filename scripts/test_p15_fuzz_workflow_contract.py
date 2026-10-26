@@ -100,7 +100,10 @@ class FuzzIsolation(unittest.TestCase):
     def test_release_still_blocked_and_no_real_personal_ids_in_corpus(self):
         data=json.loads((ROOT/"config/release-gates.json").read_text())
         item=next(g for g in data["required_gates"] if g["id"]=="security_stress_fuzz")
-        self.assertNotEqual(item["status"],"certified")
+        from check_release_gate import audit
+        live=audit(data)
+        self.assertTrue(item["status"]!="certified" or item["id"] not in live["blocked_ids"])
+        self.assertFalse(live["deployment_authorized"])
         declared = list((ROOT/"fuzz/corpus/core_user_snapshot").glob("*.json"))
         self.assertEqual(len(declared), 4)
         for p in declared:

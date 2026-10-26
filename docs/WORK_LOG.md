@@ -373,3 +373,7 @@ The existing five P8ao–P8as immutable proofs remain intact. The test suite ver
 ## 26 October 2026 — progressive independent release certification contract
 
 Discovered an accidental forever-0/15 condition in five CI scripts: they rejected all future legitimate gate certifications, even though the actual release checker supported double-signed Ed25519 scope-specific per-criterion proof. Changed CI tests to derive counts and accepted gates from the real checker, while retaining historical 24 October planning and HAOS laboratory snapshot invariants; unsigned/tampered/fake certifications still fail. Verification: local gate, attestation, evidence truth, public ledger, masterplan and historical QEMU evidence scripts PASS; production signoff and deployment remain false. Current release remains 0/15.
+
+## 2026-10-26 P8bb supplement
+
+Located four more secondary test assertions coupled to current literal 0/15. Replaced status assertions with release gate audit, preserving frozen original data in source-licence, fuzz, APT and QEMU escrow evidence. Relevant direct tests and targeted unittest variants PASSED. An obsolete Codespaces test references absent original files and was intentionally left unchanged rather than adding fictional replacements. No deployment, 0/15 release.

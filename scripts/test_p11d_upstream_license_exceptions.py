@@ -23,6 +23,10 @@ class Review(unittest.TestCase):
         self.assertGreaterEqual(len(data["remaining"]),4)
     def test_release_guard_is_still_blocked(self):
         doc=json.loads((R/"config/release-gates.json").read_text())
-        self.assertTrue(any(g["id"]=="third_party_licenses" and g["status"]!="certified" for g in doc["required_gates"]))
+        from check_release_gate import audit
+        live=audit(doc)
+        license_gate=next(g for g in doc["required_gates"] if g["id"]=="third_party_licenses")
+        self.assertTrue(license_gate["status"]!="certified" or license_gate["id"] not in live["blocked_ids"])
+        self.assertFalse(live["deployment_authorized"])
 if __name__=="__main__":
     unittest.main()
