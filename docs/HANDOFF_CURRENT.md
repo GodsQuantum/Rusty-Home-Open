@@ -1,5 +1,12 @@
 # Rusty Home — handoff permanent
 
+## Dernière reprise labo 26 octobre — preuves et SHA exacts
+
+- **#143 MERGED 0e1fec6ea21d5bbebc03aca1e445be32f4f5a768**, original head 45fed7c3a67014ea32fadfcf83c9ef2c5dc0ebe4 : Tokio 1.54.1, source SPDX Cargo.lock 227 packages et six licences amont vérifiées ; 37 SUCCESS / 1 SKIPPED GitHub, SPDX CI 40358021257, sources licences 40358021668. #119 Dependabot superseded and CLOSED. Pas d'audit juridique indépendant ni de SBOM binaire certifié.
+- **#148 MERGED 5e0abb94341b5a84be4e75a248f2d7c3c6058b8d**, original head 9c00276bc2140c4ee6b9f84d1c76f90d3bb8bb39 : 9/9 PASS, official isolated Core WS/Moli run 40362067016. Borne 1–4 tentatives, anciens états invalidés, TCP loopback initialement refusé puis rétabli (test Rust), nouvelle authentification du Core officiel ; **pas de preuve panne réseau physique ni tenue 72 h**.
+- **#147 MERGED 2aa23c45d9938dc7cbab210eb3901d2a8d2bc258**, original head 6743d139e08587787a22a1fc70b431a6f34092f7 : 9/9 PASS, native CI 40362790715. Linux PTY fictif TIOCEXCL : second processus refusé, SIGSTOP garde le lock, SIGKILL peut laisser lock présent si autre FD vivant ; relâchement de confiance TIOCNXCL nécessaire. **Pas de radio réelle transférée**.
+- Main HEAD après ces fusions 2aa23c4 ; revérifier au démarrage de chaque reprise. Produit toujours **NOT_PRODUCTION_READY 0/15**, 9 partiels, 6 bloqués, aucune approbation indépendante ; VM100, radios et famille inchangées.
+
 ## ÉTAT CANONIQUE ACTUEL — 26 octobre 2026 (prioritaire sur les notes historiques ci-dessous)
 
 - **P8bi #142 et P8bj #144 MERGÉS ET VÉRIFIÉS :** P8bi #142 original HEAD 2293d85b0d2c0c1ef514e2be75ec4f25f48b75f9, merge 6eeda5b718f3bd6b214053808e082841bd7494b9, 13/13 contrôles GitHub verts (source HAOS Supervisor officielle fictive, YAML désactivé → graphe Moli synthétique). P8bj #144 original HEAD 06e6a977a2c45cea3d04ec124241c552d90dee8e, merge 0e16eac7f848d98fc0c16b5ce80b9a7c371f8faf, 10/10 contrôles verts ; GitHub Rust 40352628593 et régression QEMU HAOS 40352628694. P8bj prouve pour la première fois édition réellement sauvegardée, ancienne approbation refusée, absence de run et protection maintenue après restart Moli. Aucun auditeur indépendant, 72 h soak ni matériel réel : **0/15 production**. Étude détaillée docs/P8BJ_PERSISTED_MOLI_APPROVAL_REVOCATION_2026-10-26.md. Main fusionné et synchronisé localement à 0e16eac.
