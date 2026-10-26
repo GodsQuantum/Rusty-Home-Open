@@ -76,6 +76,16 @@ ready rh-mqtt-persist
 assert_offline rh-mqtt-persist
 pub rh-mqtt-persist lab/p8cb/older before-checkpoint
 test "$(sub rh-mqtt-persist lab/p8cb/older)" = before-checkpoint
+echo P8CB_BOOTSTRAP_REAL_OFFICIAL_MOSQUITTO_AND_RETAINED_PUBLICATION_PASS
+# Strict diagnostic of the official image's nested VOLUME declarations.
+# All paths and contents here are synthetic disposable CI data.
+podman inspect rh-mqtt-persist --format '{{range .Mounts}}{{.Destination}}={{.Name}};{{end}}'
+podman exec rh-mqtt-persist /bin/sh -ec '
+  echo P8CB_REAL_APP_CONFIG:
+  grep -E "^(persistence|persistence_location|listener|allow_anonymous)" /mosquitto/config/mosquitto.conf
+  echo P8CB_REAL_APP_DB_FILES:
+  ls -la /mosquitto/data
+'
 HARS_DISPOSABLE_OCI_LAB=1 "$BIN" --stop-lab "$source_slug"
 ! podman ps --format '{{.Names}}' | grep -Fx rh-mqtt-persist
 umask 077
@@ -85,7 +95,11 @@ chmod 0600 "$ARCHIVE"
 test -s "$ARCHIVE"
 test "$(stat -c %a "$ARCHIVE")" = 600
 tar -tf "$ARCHIVE" > "$WORK/archive-content.txt"
-grep -Eq '(^|/)mosquitto.db$' "$WORK/archive-content.txt"
+if ! grep -Eq '(^|/)mosquitto.db$' "$WORK/archive-content.txt"; then
+  echo P8CB_ARCHIVE_MISSING_REAL_MOSQUITTO_DB >&2
+  head -30 "$WORK/archive-content.txt" >&2
+  exit 1
+fi
 SHA="$(sha256sum "$ARCHIVE" | cut -d' ' -f1)"
 [[ "$SHA" =~ ^[0-9a-f]{64}$ ]]
 echo "$SHA  $ARCHIVE" | sha256sum -c
