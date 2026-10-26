@@ -14,8 +14,15 @@ TARGET = BASE + "/v2/rusty-home-test/blobs/" + DIGEST
 
 def request(url,method="GET",data=None):
     assert url.startswith(BASE + "/v2/"),url
-    req=urllib.request.Request(url,method=method,data=data)
-    return urllib.request.urlopen(req,timeout=4)
+    headers={"Content-Type":"application/octet-stream"} if data is not None else {}
+    req=urllib.request.Request(url,method=method,data=data,headers=headers)
+    try:
+        return urllib.request.urlopen(req,timeout=4)
+    except urllib.error.HTTPError as exc:
+        # Controlled local-only test HTTP response; never log bearer tokens,
+        # URLs with opaque upload state, or external destinations.
+        print("P8AW_DISTRIBUTION_HTTP_FAILURE",method,exc.code,exc.read(256).decode("utf-8","replace"))
+        raise
 
 for attempt in range(80):
     try:
