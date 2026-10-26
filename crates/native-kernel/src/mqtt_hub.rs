@@ -434,12 +434,6 @@ mod p2l_atomic_discovery_tests {
         .await
         .unwrap();
         tx.send(DiscoveryEvent::SensorState {
-            topic: "lab/readonly/rogue_two".into(),
-            payload: b"forged".to_vec(),
-        })
-        .await
-        .unwrap();
-        tx.send(DiscoveryEvent::SensorState {
             topic: "lab/readonly/owner".into(),
             payload: b"trusted".to_vec(),
         })
@@ -452,6 +446,18 @@ mod p2l_atomic_discovery_tests {
             tokio::time::sleep(Duration::from_millis(10)).await;
         }
         assert_eq!(hub.snapshot().devices.len(), 1);
+        assert_eq!(
+            hub.state(&point).unwrap().value,
+            Value::Text("trusted".into())
+        );
+        // A rejected rival's topic must never overwrite the original owner.
+        tx.send(DiscoveryEvent::SensorState {
+            topic: "lab/readonly/rogue_two".into(),
+            payload: b"forged".to_vec(),
+        })
+        .await
+        .unwrap();
+        tokio::time::sleep(Duration::from_millis(80)).await;
         assert_eq!(
             hub.state(&point).unwrap().value,
             Value::Text("trusted".into())
