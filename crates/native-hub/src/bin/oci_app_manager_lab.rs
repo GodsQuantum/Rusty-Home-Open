@@ -175,6 +175,9 @@ fn install(
     if let Some(healthcmd) = health {
         q.container = with_health(&q.container, healthcmd)?;
     }
+    // Flock is acquired BEFORE checking or writing descriptors: concurrent
+    // installers and install/remove/start/switch may never race on a slug.
+    let _guard = lock_app_install(dir, slug)?;
     // Strictly no pull or mutable tags. OCI digest must already be available.
     podman(&["image", "exists", image])?;
     let (a, b, _) = unit_paths(dir, slug)?;
@@ -204,6 +207,15 @@ fn remove(dir: &Path, slug: &str) -> io::Result<()> {
 }
 // A short exclusive per-App advisory lock serializes separate manager invocations.
 fn lock_app(dir: &Path, slug: &str) -> io::Result<File> {
+    lock_app_inner(dir, slug, true)
+}
+// Install must acquire the same per-App lock BEFORE the descriptor exists.
+// Never unlink the lock when an App is removed: doing so would admit two
+// independent inode locks during a concurrent remove/reinstall transition.
+fn lock_app_install(dir: &Path, slug: &str) -> io::Result<File> {
+    lock_app_inner(dir, slug, false)
+}
+fn lock_app_inner(dir: &Path, slug: &str, require_existing: bool) -> io::Result<File> {
     let (a, _, _) = unit_paths(dir, slug)?;
     let lock = a.with_extension("lock");
     let file = OpenOptions::new()
@@ -213,7 +225,6 @@ fn lock_app(dir: &Path, slug: &str) -> io::Result<File> {
         .mode(0o600)
         .custom_flags(nix::libc::O_NOFOLLOW)
         .open(lock)?;
-    installed_file(&a)?;
     let m = file.metadata()?;
     if !m.is_file() || m.uid() != unsafe { nix::libc::geteuid() } || m.mode() & 0o077 != 0 {
         return Err(denied());
@@ -222,6 +233,11 @@ fn lock_app(dir: &Path, slug: &str) -> io::Result<File> {
         unsafe { nix::libc::flock(file.as_raw_fd(), nix::libc::LOCK_EX | nix::libc::LOCK_NB) };
     if code != 0 {
         return Err(denied());
+    }
+    // Hold lock throughout validation; check for the real unit only after
+    // fencing other processes, closing the install/remove TOCTOU window.
+    if require_existing {
+        installed_file(&a)?;
     }
     Ok(file)
 }
@@ -376,10 +392,12 @@ fn execute() -> io::Result<()> {
             install(&dir, &args[2], &args[3], uid, net, None, None)
         }
         "--start-lab" if args.len() == 3 => {
+            let _guard = lock_app(&dir, &args[2])?;
             let unit = require_installed(&dir, &args[2])?;
             systemctl(&["--user", "start", &unit])
         }
         "--stop-lab" if args.len() == 3 => {
+            let _guard = lock_app(&dir, &args[2])?;
             let unit = require_installed(&dir, &args[2])?;
             systemctl(&["--user", "stop", &unit])
         }
@@ -524,6 +542,47 @@ mod tests {
         ] {
             assert!(with_health(&original, bad).is_err(), "{bad}");
         }
+    }
+    #[test]
+    fn installation_fences_other_processes_and_retains_single_lock_inode() {
+        let temp = tempfile::tempdir().unwrap();
+        let guard = lock_app_install(temp.path(), "concurrent-app").unwrap();
+        let meta = temp
+            .path()
+            .join("rh-concurrent-app.lock")
+            .metadata()
+            .unwrap();
+        assert_eq!(meta.permissions().mode() & 0o777, 0o600);
+        // flock on separate opens conflicts even within a single process.
+        assert!(lock_app_install(temp.path(), "concurrent-app").is_err());
+        assert!(lock_app(temp.path(), "concurrent-app").is_err());
+        drop(guard);
+        let later = lock_app_install(temp.path(), "concurrent-app").unwrap();
+        assert_eq!(
+            temp.path()
+                .join("rh-concurrent-app.lock")
+                .metadata()
+                .unwrap()
+                .ino(),
+            meta.ino()
+        );
+        drop(later);
+        let lock_path = temp.path().join("rh-fake.lock");
+        std::os::unix::fs::symlink("/etc/passwd", &lock_path).unwrap();
+        assert!(lock_app_install(temp.path(), "fake").is_err());
+    }
+    #[test]
+    fn installed_start_stop_and_image_upgrade_share_the_same_lock() {
+        let temp = tempfile::tempdir().unwrap();
+        let container = temp.path().join("rh-redis.container");
+        let volume = temp.path().join("rh-redis-data.volume");
+        fs::write(&container, "[Container]\nImage=test\n").unwrap();
+        fs::write(&volume, "[Volume]\n").unwrap();
+        let lock = lock_app(temp.path(), "redis").unwrap();
+        assert!(lock_app(temp.path(), "redis").is_err());
+        assert!(lock_app_install(temp.path(), "redis").is_err());
+        drop(lock);
+        assert!(lock_app(temp.path(), "redis").is_ok());
     }
     #[test]
     fn fake_or_duplicate_image_configuration_fails_closed() {

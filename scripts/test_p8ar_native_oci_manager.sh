@@ -35,6 +35,20 @@ state="$(systemctl --user is-enabled rh-managedredis.service)"
 podman image exists "$SOURCE"
 echo P8AR_NATIVE_ROOTLESS_APP_INSTALL_NO_AUTOSTART_PASS
 
+# Hold the true per-App inode flock in this CI shell while the Rust manager
+# runs in a distinct process. A start must not race another lifecycle write.
+exec 9<>"$QUADLETS/rh-managedredis.lock"
+flock --exclusive 9
+unit_hash_before="$(sha256sum "$QUADLETS/rh-managedredis.container" | cut -d' ' -f1)"
+if HARS_DISPOSABLE_OCI_LAB=1 "$BIN" --start-lab managedredis; then
+  echo 'start unexpectedly bypassed exclusive per-App lock' >&2; exit 1
+fi
+test "$(sha256sum "$QUADLETS/rh-managedredis.container" | cut -d' ' -f1)" = "$unit_hash_before"
+[[ "$(systemctl --user is-active rh-managedredis.service)" == inactive ]]
+flock --unlock 9
+exec 9>&-
+echo P8AY_TRUE_INTERPROCESS_LOCK_DENIES_START_WITHOUT_MODIFICATION_PASS
+
 # Product API issues actual native user-systemd operations, not manual copies.
 HARS_DISPOSABLE_OCI_LAB=1 "$BIN" --start-lab managedredis
 for i in $(seq 1 90); do
@@ -185,6 +199,23 @@ HARS_DISPOSABLE_OCI_LAB=1 "$BIN" --remove-lab managedredis
 ! podman ps --format '{{.Names}}' | grep -Fx rh-managedredis
 podman volume exists rh-managedredis-data
 echo P8AR_RUST_MANAGER_REMOVE_PRESERVES_USER_APP_VOLUME_PASS
+
+# The inode lock survives uninstall: overlapping install/remove processes
+# cannot accidentally claim different locks for the same slug.
+lock_inode_before="$(stat -c '%i' "$QUADLETS/rh-managedredis.lock")"
+exec 9<>"$QUADLETS/rh-managedredis.lock"
+flock --exclusive 9
+if HARS_DISPOSABLE_OCI_LAB=1 "$BIN" --install-lab managedredis "$SOURCE" 999; then
+  echo 'install unexpectedly bypassed exclusive per-App lock' >&2; exit 1
+fi
+test ! -e "$QUADLETS/rh-managedredis.container"
+flock --unlock 9
+exec 9>&-
+HARS_DISPOSABLE_OCI_LAB=1 "$BIN" --install-lab managedredis "$SOURCE" 999
+[[ "$lock_inode_before" == "$(stat -c '%i' "$QUADLETS/rh-managedredis.lock")" ]]
+HARS_DISPOSABLE_OCI_LAB=1 "$BIN" --remove-lab managedredis
+podman volume exists rh-managedredis-data
+echo P8AY_TRUE_INTERPROCESS_LOCK_PERSISTS_ACROSS_REMOVE_REINSTALL_PASS
 
 # Fail-closed negative controls for unsafe input/host targeting.
 if HARS_DISPOSABLE_OCI_LAB=1 "$BIN" --install-lab evil   docker.io/library/redis:latest 999; then exit 1; fi
