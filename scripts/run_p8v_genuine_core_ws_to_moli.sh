@@ -89,6 +89,26 @@ RESULT="$(docker run --rm --network "container:$CONTAINER" \
         ws://127.0.0.1:8123/api/websocket "$ENTITY" on 8
     ')"
 printf '%s' "$RESULT" | python3 -c 'import json,sys; d=json.load(sys.stdin); assert d["source"]=="loopback_hass_rs" and d["states_verified"]==1 and d["changes_observed"]>=8 and d["requested_state_matched"] and d["read_only"] and not d["production_ready"]'
+# Second genuine-Core proof: revoke, deny one bad reauth, then rebuild an
+# authenticated subscription, snapshot and native Moli Hub on a fresh epoch.
+RECOVERY="$(docker run --rm --network "container:$CONTAINER" \
+    --user "$(id -u):$(id -g)" --read-only --cap-drop ALL \
+    --security-opt no-new-privileges --pids-limit 96 --memory 512m --cpus 1 \
+    --tmpfs /tmp:rw,nosuid,nodev,size=32m \
+    --workdir /lab \
+    --mount "type=bind,src=$ROOT/target/debug/hars-native-kernel,dst=/lab/hars-native-kernel,readonly" \
+    --mount "type=bind,src=$ROOT/runtime,dst=/lab/runtime" \
+    --mount "type=bind,src=$TMP/config,dst=/config,readonly" \
+    --env "HARS_LAB_STORE=$(basename "$STORE")" \
+    --entrypoint /bin/sh ubuntu:24.04 -ec '
+      export HARS_LAB_WS_TOKEN="$(cat /config/p8v-token)"
+      ENTITY="$(cat /config/p8v-entity-id)"
+      exec /lab/hars-native-kernel --lab-ha-ws-reauth-recovery \
+        "/lab/runtime/$HARS_LAB_STORE" \
+        ws://127.0.0.1:8123/api/websocket "$ENTITY" on
+    ')"
+printf '%s' "$RECOVERY" | python3 -c 'import json,sys; d=json.load(sys.stdin); assert d["first_epoch"]==1 and d["failed_epoch"]==2 and d["recovered_epoch"]==3 and d["old_state_revoked"] and d["new_hub_verified"] and d["write_commands"]==0 and not d["production_ready"]'
+echo P8BH_REAL_CORE_WS_REVOKE_BAD_AUTH_NEW_EPOCH_NATIVE_HUB_PASS
 "$ROOT/target/debug/ha_registry_stager" --lab-readonly "$STORE" rollback "$SHA" >/dev/null
 STATUS="$("$ROOT/target/debug/ha_registry_stager" --lab-readonly "$STORE" status | python3 -c 'import json,sys; print(int(json.load(sys.stdin)["active"] is None))')"
 test "$STATUS" == 1

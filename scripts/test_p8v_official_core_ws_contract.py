@@ -21,6 +21,19 @@ assert "auth_invalid" in core and "p8w-invalid-fictional-token" in core
 assert "HARS_LAB_WS_TOKEN" in script and "p8v-token" in script
 assert 'HARS_LAB_WS_TOKEN="$TOKEN"' not in script
 assert "--lab-ha-ws-to-moli" in script
+# New actual Core reconnection is a distinct bounded laboratory behavior.
+# It must revoke the former native Hub, reject invalid login, resubscribe
+# and resnapshot into an independently constructed Hub without commands.
+native=(R/"crates/native-kernel/src/ha_ws_runtime_lab.rs").read_text()
+for key in ("prove_core_reauth", "into_revoked_session", "resync_loopback",
+            "EventConverger::start", "failed_epoch", "new_hub_verified",
+            "fresh.invalidate().await"):
+    assert key in native,key
+assert "--lab-ha-ws-reauth-recovery" in script
+assert "P8BH_REAL_CORE_WS_REVOKE_BAD_AUTH_NEW_EPOCH_NATIVE_HUB_PASS" in script
+assert 'd["recovered_epoch"]==3' in script
+assert "write_commands: 0" in native
+
 assert "--cap-drop ALL" in script and "no-new-privileges" in script and "--read-only" in script
 assert "P8V_GENUINE_OFFICIAL_CORE_WEBSOCKET_AUTH_TO_ACTUAL_RUST_MOLI_PASS" in script
 assert "P8V_GENUINE_CORE_TO_RUST_ROLLBACK_PASS" in script
