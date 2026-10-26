@@ -1,5 +1,15 @@
 # Rusty Home — journal de développement et de certification
 
+## 2026-10-26 — P8al real guest manager in signed APT index (CI pending)
+
+- First exact-head CI found test-fixture APT source mismatch: apt-get used a temporary isolated sources.list, while the newly added apt-cache probe consulted default sources and returned "No packages found". Fixed apt-cache to use the SAME explicit trusted source options. Retest required; package index was already verified to contain both native versions.
+
+
+- P8ak PR #112 11/11 PASS merged cae2cde2ce1e08eb86bd5a2b0465212be07845cf; real Ubuntu package 40255870443 and official HAOS systemd KVM 40255870364. Do not duplicate completed proofs.
+- Modified existing P12b ephemeral signed-APT repo generator to include both actual native guest .deb versions. Added independent guard for signed metadata discovery of two versions in an offline Ubuntu client, preserving explicit tampered InRelease refusal.
+- CI-only disposable signing key; no production trusted key or HAOS household installation. Product 0/15.
+
+
 ## 2026-10-26 — P8ak native Rust guest Debian lab packaging (CI pending)
 
 - Completed P8aj #111 real systemd official HAOS guest laboratory proof 10/10 PASS, GH 40254861417, merged 4a1377341eabd44bc81334705465a5ebf33cf6c4. No redo as a fresh certification.

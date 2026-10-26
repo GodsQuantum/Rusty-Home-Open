@@ -15,6 +15,10 @@ chmod 0755 "$WORK"
 mkdir -p "$WORK/packages" "$WORK/repo/pool" "$WORK/bad/pool"
 bash scripts/build_debian_lab_package.sh 0.1.0-1 "$WORK/packages"
 bash scripts/build_debian_lab_package.sh 0.1.1-1 "$WORK/packages"
+# Distribute the genuine native Rust HAOS guest manager alongside the
+# previously signed synthetic reader without merging their package names.
+bash scripts/build_guest_debian_package_lab.sh 0.1.0-1 "$WORK/packages"
+bash scripts/build_guest_debian_package_lab.sh 0.1.1-1 "$WORK/packages"
 cp "$WORK/packages/"*.deb "$WORK/repo/pool/"
 chmod 0755 "$WORK/repo" "$WORK/repo/pool"
 chmod 0644 "$WORK/repo/pool/"*.deb
@@ -28,6 +32,11 @@ chmod 0644 "$WORK/repo/pool/"*.deb
     -o APT::FTPArchive::Release::Codename='lab' \
     release . > Release
 )
+# Both native guest versions must actually be in the signed index.
+test "$(grep -c '^Package: rusty-home-guest-lab$' "$WORK/repo/Packages")" -eq 2
+grep -q '^Version: 0.1.0-1$' "$WORK/repo/Packages"
+grep -q '^Version: 0.1.1-1$' "$WORK/repo/Packages"
+echo P8AL_NATIVE_RUST_GUEST_BOTH_VERSIONS_IN_SIGNED_INDEX_PASS
 chmod 0644 "$WORK/repo/"{Packages,Packages.gz,Release}
 GNUPGHOME="$WORK/gnupg"
 export GNUPGHOME
@@ -64,6 +73,15 @@ docker run --rm --name "rusty-home-lab-apt-$RANDOM" --network none \
         -o APT::Get::List-Cleanup=0 "$@"
     }
     apt_ci update -qq
+    # The offline APT client accepts this index only under our ephemeral
+    # signed-by key. Native runtime is not started/installed in this container:
+    # its full real-dpkg lifecycle was independently verified in P8ak.
+    apt-cache -o Dir::Etc::sourcelist=/tmp/good.list       -o Dir::Etc::sourceparts=- -o APT::Sandbox::User=root       show rusty-home-guest-lab > /tmp/guest-signed-index
+    grep -q "^Package: rusty-home-guest-lab$" /tmp/guest-signed-index
+    grep -q "^Version: 0.1.0-1$" /tmp/guest-signed-index
+    grep -q "^Version: 0.1.1-1$" /tmp/guest-signed-index
+    echo P8AL_SIGNED_OFFLINE_APT_DISCOVERS_NATIVE_RUST_GUEST_PASS
+
     apt_ci install -y -qq rusty-home-lab=0.1.0-1
     test "$(dpkg-query -W -f="\${Version}" rusty-home-lab)" = 0.1.0-1
     /usr/bin/rusty-home-lab --fixture /fixture.jsonl --host offline >/tmp/readonly.json

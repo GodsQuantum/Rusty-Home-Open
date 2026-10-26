@@ -107,6 +107,10 @@ PR #108 genuine Rust HAOS guest service 14/14 merged 0d943526, #109 local guest 
 P8aj #111 real official HAOS 18.3 under genuine systemd: 10/10 CI, GitHub run 40254861417, merged 4a1377341eabd44bc81334705465a5ebf33cf6c4. Certified lab only; DO NOT REDO.
 New separate branch feat/haos-rust-guest-debian-package-20261026, worktree Rusty-Home-Guest-Package-20261026. Changes the LAB unit executable path to Debian policy /usr/libexec/rusty-home; new rootless reproducible .deb builder scripts/build_guest_debian_package_lab.sh, actual Ubuntu dpkg upgrade/downgrade/purge workflow .github/workflows/p8ak-guest-debian.yml and updated real KVM systemd test P8aj. CI at exact SHA required. Package postinst creates only dedicated sysuser; no service start/enable or family deployment. Still no signed general host release, full Apps or hardware radio takeover; 0/15 production.
 
+## P8al — signed APT metadata for native Rust HAOS guest (26 October)
+
+P8ak #112 exact-feature GitHub checks all 11 PASS; genuine package install/update/downgrade/purge run 40255870443, official HAOS systemd KVM run 40255870364; merged cae2cde2ce1e08eb86bd5a2b0465212be07845cf. DO NOT REDO. Current branch feat/signed-native-haos-guest-apt-20261026, worktree Rusty-Home-Signed-Guest-APT-Main-20261026. Extends existing signed APT fixture scripts/test_signed_apt_lab.sh with native guest versions v0.1.0 and v0.1.1 in same ephemeral signed Packages index; offline Ubuntu apt-cache both versions, deliberately tampered InRelease rejection. Independent static contract in scripts/test_p8al_signed_guest_contract.py. Pending exact-head GitHub public-debian-apt.yml job. No production signing key, no auto-start, no Cloud9 family or radio changes. 0/15.
+
 ## Reprise obligatoire
 
 1. Lire ces sources, vérifier le SHA actuel de GitHub, les PR ouvertes, les preuves et la CI avant de relancer des travaux.

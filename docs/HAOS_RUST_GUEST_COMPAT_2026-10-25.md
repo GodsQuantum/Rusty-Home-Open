@@ -145,3 +145,27 @@ autostart and no changed real household HAOS.
 This LAB PACKAGE IS NOT A SIGNED GENERAL RELEASE. A signed distribution
 channel, system reboot/cold boot, full Apps lifecycle and audited production
 permissions are future gates. Rusty Home production remains 0/15.
+
+## P8al — signed APT index includes actual native Rust HAOS manager (CI pending)
+
+P8ak PR #112 certified an actual byte-reproducible versioned Debian guest
+manager package and real install, upgrade, downgrade and purge on disposable
+Ubuntu 24.04; native guest service did NOT auto-start. 11/11 checks including
+actual official HAOS KVM (runs 40255870443 and 40255870364), merged
+cae2cde2ce1e08eb86bd5a2b0465212be07845cf.
+
+P8al extends the existing P12b authenticated ephemeral signed APT fixture
+without introducing any parallel package manager. The same disposable
+GPG-signed Release/InRelease and Packages index now includes BOTH versions
+of rusty-home-guest-lab alongside the historic read-only bridge. In an
+offline Ubuntu client, apt-cache must discover both native versions from
+the index only after apt-get verifies its temporary signed-by key. A
+tampered InRelease must continue to be explicitly rejected for signature
+failure. The GitHub workflow must pass at exact P8al SHA.
+
+This CI key is intentionally discarded and is NOT a production trust
+anchor. Native guest .deb installation and rollback were separately proven
+under P8ak; this offline client only proves signed index/discovery and
+tamper rejection, not a second install of QEMU dependencies. A production
+release signing key, safe distribution, Core/Apps operational readiness and
+72-hour endurance remain unverified. Product production gates 0/15.
