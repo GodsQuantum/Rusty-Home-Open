@@ -1,8 +1,8 @@
 # Rusty Home deterministic source dependency SBOM (23 October 2026)
 
 This public artifact is an SPDX 2.3 **source dependency graph**, generated
-deterministically from locked Cargo metadata. It enumerates **226 packages**
-including eight workspace packages, 214 registry crates, four Git sources,
+deterministically from locked Cargo metadata. It enumerates **227 packages**
+including eight workspace packages, 215 registry crates, four Git sources,
 and their 524 dependency/DESCRIBES relationships across all targets.
 
 Artifact: [SPDX 2.3 JSON](../audits/CARGO_SOURCE_SPDX_2026-10-23.json).

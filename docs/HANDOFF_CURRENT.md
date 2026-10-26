@@ -135,3 +135,9 @@ All six are MERGED, latest main a756696b60081d641ad7ec9cf43144f3361a201b. Do NOT
 ## P8am — systemd native READY/watchdog handoff (26 Oct 2026)
 
 P8ac-P8al actual certified isolated tests and exact-SHA immutable record are complete, P8ag-P8al consolidated in PR #114 merged cd22ee3c1e1f7039306468043f862e0509a7a421. New isolated branch feat/native-systemd-ready-watchdog-20261026 in worktree Rusty-Home-Notify-QA-20261026; pinned sd-notify 0.5.0, Type=notify (not Type=exec), READY only after genuine private QMP greeting, WATCHDOG only while QMP alive, STOPPING on shutdown. Extends official genuine HAOS 18.3 P8aj KVM CI with two WatchdogTimestampMonotonic positive progress checks and verifies QEMU reap. P8ak Debian lifecycle must also pass. None of this proves HA Core/App readiness or unattended production deployment. Never install on family HAOS/Cloud9. 0/15 release gates fully certified.
+
+
+### P8am live CI diagnostic and source-license bookkeeping (2026-10-26)
+
+- At first PR #115 head 304c848, official HAOS systemd Type=notify test timed out before READY. Root cause: the new QMP detection used literal escaped quote bytes instead of normal JSON quote bytes. Readiness now calls the SAME QMP greeting parser as the previously certified shutdown path; new regression fixture rejects double escaping, Rust 16/16 and strict Clippy pass. Re-run CI on new exact head; do not claim systemd READY verified before it passes.
+- A newly pinned native crate sd-notify 0.5.0 increases Cargo.lock to 227 resolved packages, 215 registry dependencies, 219 external and 213 with bundled license/notice source. Regenerated unsigned SPDX 2.3 source graph (227 packages, 526 edges) and updated six historical upstream license receipts ONLY to the new Cargo.lock SHA. Legal redistribution/signed product compliance are still NOT certified.

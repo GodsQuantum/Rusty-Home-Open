@@ -394,6 +394,9 @@ static SERVICE_STOP: AtomicBool = AtomicBool::new(false);
 extern "C" fn service_term(_signal: nix::libc::c_int) {
     SERVICE_STOP.store(true, Ordering::SeqCst);
 }
+fn qmp_greeting_seen(frame: &[u8]) -> bool {
+    frame.windows(5).any(|p| p == b"\"QMP\"")
+}
 fn qmp_shutdown(socket: &Path) -> Result<(), GuestError> {
     let meta = std::fs::symlink_metadata(socket).map_err(|_| GuestError::QemuStart)?;
     if !meta.file_type().is_socket() || meta.uid() != nix::unistd::Uid::current().as_raw() {
@@ -408,7 +411,7 @@ fn qmp_shutdown(socket: &Path) -> Result<(), GuestError> {
     let n = conn
         .read(&mut greeting)
         .map_err(|_| GuestError::QemuStart)?;
-    if !greeting[..n].windows(5).any(|p| p == b"\"QMP\"") {
+    if !qmp_greeting_seen(&greeting[..n]) {
         return Err(GuestError::QemuStart);
     }
     conn.write_all(b"{\"execute\":\"qmp_capabilities\"}\r\n")
@@ -464,7 +467,7 @@ fn local_qmp_responsive(socket: &Path) -> bool {
     let Ok(n) = conn.read(&mut buf) else {
         return false;
     };
-    buf[..n].windows(5).any(|p| p == b"\\\"QMP\\\"")
+    qmp_greeting_seen(&buf[..n])
 }
 pub struct GuestServiceOutcome {
     pub guest_process_reaped: bool,
@@ -991,6 +994,12 @@ mod tests {
         let fake = private.join("guest-overlay.qcow2");
         std::os::unix::fs::symlink("/dev/null", &fake).unwrap();
         assert!(verified_existing_overlay(&spec, &private).is_err());
+    }
+    #[test]
+    fn systemd_qmp_ready_uses_same_unescaped_json_greeting_as_shutdown() {
+        assert!(super::qmp_greeting_seen(br#"{"QMP":{"version":{}}}"#));
+        assert!(!super::qmp_greeting_seen(br#"{\\"QMP\\":{}}"#));
+        assert!(!super::qmp_greeting_seen(b"not qmp"));
     }
     #[test]
     fn haos_core_http_loopback_port_is_fixed_and_not_externally_exposed() {

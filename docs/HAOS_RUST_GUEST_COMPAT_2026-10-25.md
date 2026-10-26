@@ -197,3 +197,9 @@ during both genuine Rust/QEMU service lifetimes and no QEMU persists after
 stop. This does not prove HAOS Core or App readiness, 72h endurance,
 real device ownership, or secure unattended upgrades. No household
 system modified; production 0/15.
+
+
+### P8am live CI diagnostic and source-license bookkeeping (2026-10-26)
+
+- At first PR #115 head 304c848, official HAOS systemd Type=notify test timed out before READY. Root cause: the new QMP detection used literal escaped quote bytes instead of normal JSON quote bytes. Readiness now calls the SAME QMP greeting parser as the previously certified shutdown path; new regression fixture rejects double escaping, Rust 16/16 and strict Clippy pass. Re-run CI on new exact head; do not claim systemd READY verified before it passes.
+- A newly pinned native crate sd-notify 0.5.0 increases Cargo.lock to 227 resolved packages, 215 registry dependencies, 219 external and 213 with bundled license/notice source. Regenerated unsigned SPDX 2.3 source graph (227 packages, 526 edges) and updated six historical upstream license receipts ONLY to the new Cargo.lock SHA. Legal redistribution/signed product compliance are still NOT certified.
