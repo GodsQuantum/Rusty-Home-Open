@@ -66,3 +66,14 @@ New distinct proof (not old direct HAOS->HAOS): PR #101 at 58cbfe3023532b7acca68
 ## Native Rust guest-host evidence P8ac–P8af — independently green genuine HAOS KVM (26 October)
 
 P8ac PR #103, official HAOS serial boot via Rust process, GitHub 40243098816 (18/18); P8ad PR #104, official Supervisor AND Core CLI health, GitHub 40243728521 (11/11); P8ae PR #105, official HAOS COW persisted across QEMU SIGKILL restart, GitHub 40247000475 (12/12); P8af PR #106, second independent Rust manager reattached with exclusive flock and rejected concurrent writer, GitHub 40247834775 (13/13). All merged into main d8c5bee817c7b7e8ef5ea6af24d62d366fbe610a. Exact approved HEAD SHA and workflow proof markers in config/haos-rust-guest-evidence.json. Real 18.3 QEMU lab, fictional data only; no family access. They prove usable native Rust host primitives, not a distributable host daemon, secure operational App service, radio, hardware handover, full reverse migration or 72-hour reliability. Production 0/15.
+
+## Immutable verified P8ag–P8al Rust host evidence (26 Oct 2026)
+
+- P8ag PR #108: 14/14 exact feature-head GitHub CI, run 40250349459; long-lived Rust/QMP lifecycle.
+- P8ah PR #109: 15/15 exact feature-head GitHub CI, run 40251693506; fixed 127.0.0.1 UI forwarding.
+- P8ai PR #110: 16/16 exact feature-head GitHub CI, run 40252930987; real official Core HTTP frontend.
+- P8aj PR #111: 10/10 exact feature-head GitHub CI, run 40254861417; real systemd two HAOS/QEMU process lifecycles.
+- P8ak PR #112: 11/11 exact feature-head GitHub CI, run 40255870443; reproducible Debian guest package real dpkg lifecycle.
+- P8al PR #113: 9/9 exact feature-head GitHub CI, run 40257162323; offline signed APT index and tamper refusal.
+
+All six are MERGED, latest main a756696b60081d641ad7ec9cf43144f3361a201b. Do NOT rerun as newly unproved work. Machine-readable source config/haos-rust-guest-evidence.json keeps each exact original feature SHA, merge SHA and workflow marker source. P8ag–P8aj official HAOS 18.3 QEMU/KVM is an isolated genuine guest; P8ak real Ubuntu dpkg and P8al cryptographic offline APT use disposable CI runners. No household deployment, no signed production trust key, no actual App service parity, no physical radios, no whole-host backwards cutover or endurance qualification. Production remains **0/15** fully certified.

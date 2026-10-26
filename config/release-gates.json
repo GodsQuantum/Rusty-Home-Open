@@ -7,7 +7,8 @@
       "id": "authenticated_host_transport",
       "status": "lab_partial",
       "blocked_reason": [
-        "Official isolated Supervisor Ingress rejects forged peer/header requests; native Rust product App runs nonroot (GitHub runs 40004128675 and 40002933713). Still missing authorized write sessions, per-operation revocation and production-host penetration tests."
+        "Official isolated Supervisor Ingress rejects forged peer/header requests; native Rust product App runs nonroot (GitHub runs 40004128675 and 40002933713). Still missing authorized write sessions, per-operation revocation and production-host penetration tests.",
+        "P8ah (#109 GH 40251693506) validated fixed localhost-only Rust QEMU forward, P8ai (#110 GH 40252930987) validated actual uncredentialed official Core HTTP response; neither proves production per-user authentication, RBAC or secure writable routes."
       ],
       "certification_artifact": null
     },
@@ -100,7 +101,8 @@
       "id": "performance_full_stack",
       "status": "blocked",
       "blocked_reason": [
-        "Native Rust microbenchmarks and isolated Core scale are not whole-home representative. Real 24h+ soak, peak workloads, memory, crash recovery and hardware resource regression remain."
+        "Native Rust microbenchmarks and isolated Core scale are not whole-home representative. Real 24h+ soak, peak workloads, memory, crash recovery and hardware resource regression remain.",
+        "P8ag (#108 GH 40250349459) proved bounded native Rust QEMU child lifecycle; P8aj (#111 GH 40254861417) proved two systemd start/stop cycles. They do not prove 24h-72h soak, whole-home IO/memory workloads or hardware failover."
       ],
       "certification_artifact": null
     },
@@ -109,7 +111,8 @@
       "status": "lab_partial",
       "blocked_reason": [
         "Real disposable .deb install, upgrade, downgrade, purge and offline signed APT tamper rejection passed on main (run 40004128778). Still missing release signing infrastructure, published packages, service migration and rollback on an existing installation.",
-        "P8ac+P8ad native Rust guest boot and genuine official Core/Supervisor CLI health passed in real HAOS 18.3 QEMU; P8ae/P8af durable guest and second Rust-process reattach also verified. These are isolated binaries and do not certify a signed unattended upgradable installed host daemon or boot service."
+        "P8ac+P8ad native Rust guest boot and genuine official Core/Supervisor CLI health passed in real HAOS 18.3 QEMU; P8ae/P8af durable guest and second Rust-process reattach also verified. These are isolated binaries and do not certify a signed unattended upgradable installed host daemon or boot service.",
+        "P8aj (#111 real HAOS systemd 10/10, GH 40254861417), P8ak (#112 native Rust guest Debian dpkg genuine install/upgrade/downgrade/purge 11/11, GH 40255870443), P8al (#113 disposable signed offline APT index/tamper rejection 9/9, GH 40257162323) are GREEN and merged. Release remains partial: no real production signing authority, unattended upgrades/cold reboots on installed Rust host, real data cutover or independent operations audit."
       ],
       "certification_artifact": null
     },
