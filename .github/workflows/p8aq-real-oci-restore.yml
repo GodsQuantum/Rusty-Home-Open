@@ -6,7 +6,13 @@ on:
       - "scripts/test_p8aq_app_restore_contract.py"
       - "scripts/test_p8ap_real_redis_quadlet.sh"
       - "scripts/test_p8ap_real_oci_contract.py"
-      - "crates/native-hub/**"
+      - "crates/native-hub/src/oci_quadlet.rs"
+      - "crates/native-hub/src/bin/oci_app_manager_lab.rs"
+      - "crates/native-hub/src/bin/oci_quadlet_lab.rs"
+      - "crates/native-hub/src/lib.rs"
+      - "crates/native-hub/Cargo.toml"
+      - "crates/native-hub/build.rs"
+      - "crates/native-hub/tests/**"
       - "Cargo.lock"
   workflow_dispatch:
 permissions:

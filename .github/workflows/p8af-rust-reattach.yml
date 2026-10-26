@@ -4,7 +4,13 @@ on:
   pull_request:
     paths:
       - ".github/workflows/p8af-rust-reattach.yml"
-      - "crates/native-hub/**"
+      - "crates/native-hub/src/haos_guest.rs"
+      - "crates/native-hub/src/bin/haos_guest_lab.rs"
+      - "crates/native-hub/src/bin/haos_guest_service_lab.rs"
+      - "crates/native-hub/src/lib.rs"
+      - "crates/native-hub/Cargo.toml"
+      - "crates/native-hub/build.rs"
+      - "crates/native-hub/tests/**"
       - "scripts/test_p8af_manager_reattach_contract.py"
       - "scripts/test_p8af_manager_lock.py"
       - "Cargo.lock"

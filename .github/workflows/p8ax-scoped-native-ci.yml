@@ -1,0 +1,20 @@
+name: P8ax Native Rust CI scope guard without weakening HAOS or OCI tests
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/p8a*.yml"
+      - "scripts/test_p8ax_scoped_ci_contract.py"
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  path-scope-contract:
+    name: Every shared edit triggers both; OCI-only never triggers HAOS KVM
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - name: Verify all 18 original workflow scopes, manual dispatch and shared safety paths
+        run: python3 scripts/test_p8ax_scoped_ci_contract.py
