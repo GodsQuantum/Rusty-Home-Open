@@ -20,14 +20,23 @@ fn execute() -> Result<(), ()> {
         return Err(());
     }
     let a = env::args().collect::<Vec<_>>();
-    if a.len() != 5 || a[1] != "--generate-lab" {
+    if (a.len() != 5 && a.len() != 7) || a[1] != "--generate-lab" {
         return Err(());
     }
+    let uid = if a.len() == 7 {
+        if a[5] != "--uid" {
+            return Err(());
+        }
+        Some(a[6].parse::<u32>().map_err(|_| ())?)
+    } else {
+        None
+    };
     let units = OciApp {
         slug: &a[2],
         image: &a[3],
         memory_mib: 256,
         pids_limit: 128,
+        run_uid: uid,
     }
     .render()
     .map_err(|_| ())?;

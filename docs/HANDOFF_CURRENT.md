@@ -116,6 +116,11 @@ P8ak #112 exact-feature GitHub checks all 11 PASS; genuine package install/updat
 P8am #115 is merged on main 01265a9; P8an #116 separate real QEMU SIGKILL crash-restart CI is active; DO NOT REIMPLEMENT here.
 Branch feat/generic-oci-quadlet-apps-20261026, isolated worktree Rusty-Home-OCI-Quadlet-20261026, introduces generic OCI sha256 digest pinned App manifests compiled into official Podman Quadlet rootless configuration. No hardcoded App-name allowlist; constrained quotas, volumes and no auto-install. Official generator CI p8ao-oci-quadlet.yml is mandatory before even limited lab certification. This does NOT demonstrate real Apps running, login, backup or full Supervisor parity. Production 0/15.
 
+## P8ap — genuine rootless OCI App systemd lifecycle + persisted data (26 October)
+
+P8ao PR #117 generic arbitrary OCI digest-pinned rootless Podman Quadlet generator 20/20 CI green, run 40264974609, MERGED b8d322bc8c37e3c4302f7eb08e45c76dbebccd7b; DO NOT RETEST AS NEW PROOF. Current worktree Rusty-Home-OCI-Real-App-Main-20261026, branch test/real-oci-app-lifecycle-main-20261026, extends generic Rust OCI App manifest to select a bounded nonroot numeric container UID and native Podman :U volume ownership; NO hardcoded app name mapping.
+Distinct CI p8ap-real-oci-app.yml uses official Redis 7.4-alpine image pinned dynamically to its actual digest and attempts real systemctl --user start/stop/restart of generated Quadlet on an isolated Ubuntu runner; checks redis-cli state persisted across restart, no host port, read-only root and exclusive rootless OCI runtime. This requires exact GitHub CI at head. Redis is a real App test, NOT blanket Supervisor add-on compatibility; no household deployment, credentials, hardware, or radio. Production 0/15.
+
 ## Reprise obligatoire
 
 1. Lire ces sources, vérifier le SHA actuel de GitHub, les PR ouvertes, les preuves et la CI avant de relancer des travaux.
