@@ -1,5 +1,9 @@
 # Rusty Home — handoff permanent
 
+## P2j - live Moli tombstone then re-discovery (26 October 2026, CI pending)
+
+New gap distinct from P2h (offline broker tombstone) and P2i (Mosquitto SIGKILL): actual Moli kept unique_id in globally_known after removal, blocking re-discovery within the SAME process. RED test reproduced failure to reach one device after re-add. Fix: release only IDs owned by removed config; re-add requires fresh Config Intent and inherits neither old state nor old topic. GREEN: real upstream Moli Hub, one sensor, initial state, tombstone, ignored old-topic state, same-ID new-topic re-add, no state until new packet, read-only. CT700 55/55 native-kernel tests PASS, strict Clippy and fmt PASS. Dedicated p2j CI added; exact-head PR/CI pending. This test did not run a live broker. Production 0/15, no radio/VM100/service access.
+
 ## ÉTAT CANONIQUE ACTUEL — 26 octobre 2026 (prioritaire sur les notes historiques ci-dessous)
 
 - **P2i #153 FUSIONNÉ, VRAI MQTT5 EN LAB :** HEAD exact `6322f0607a80fd03e5ef190956d84e8384fd0149`, merge `45097f3a6cd9be085446e36c1076dc6ceb2e98a2`, **10/10 CI verts** ; vrai Mosquitto SIGKILL + redb stale refusé après redémarrage vide, paquet d'état non autorisé rejeté, nouvelle config retained réautorise Moli lecture seule. [CI 40371604105](https://github.com/GodsQuantum/Rusty-Home-Open/actions/runs/40371604105), job 121743500539, six marqueurs vérifiés. Preuve structurée `config/lab-evidence.json`, registre et journal mis à jour ; ni radio ni VM100, 0/15 production.
