@@ -109,6 +109,10 @@ pub struct Proof {
     pub initially_inactive: bool,
     pub synthetic_actuator_confirmed: bool,
     pub approval_invalidated_by_edit: bool,
+    pub persisted_edit_inactive: bool,
+    pub stale_approval_rejected: bool,
+    pub no_run_after_edit: bool,
+    pub restart_kept_edit_inactive: bool,
     pub no_python: bool,
     pub hardware_touched: bool,
     pub production_ready: bool,
@@ -173,7 +177,44 @@ pub async fn prove_plan(folder: &Path, plan: &Plan) -> Result<Proof> {
     if changed.is_approved() {
         bail!("a mutated imported action retained previous approval");
     }
-    tokio::time::sleep(Duration::from_millis(70)).await;
+    // P8bj: a local fingerprint comparison is NOT evidence that the actual
+    // persisted Moli engine has revoked the old approval. Exercise its save,
+    // stale-approval rejection, event dispatch and a fresh engine process.
+    let edited = autos
+        .save(
+            changed,
+            moli_automation::Actor {
+                human: false,
+                author: Author::Agent,
+            },
+        )
+        .await?;
+    if edited.is_live() || autos.get(&edited.id).is_some_and(|a| a.is_live()) {
+        bail!("persisted automation edit remained live without new approval");
+    }
+    if autos
+        .approve(&edited.id, &approved.fingerprint(), crate::human())
+        .await
+        .is_ok()
+    {
+        bail!("stale approval fingerprint unexpectedly accepted after edit");
+    }
+    hub.command(
+        &PointId::from("hars-lab:actuator/on"),
+        Value::Bool(false),
+        Origin::Ui,
+        None,
+    )
+    .await?;
+    hub.command(
+        &PointId::from("hars-lab:sensor/on"),
+        Value::Bool(false),
+        Origin::Ui,
+        None,
+    )
+    .await?;
+    tokio::time::sleep(Duration::from_millis(150)).await;
+    let before = autos.runs(Some(&edited.id), 500).len();
     hub.command(
         &PointId::from("hars-lab:sensor/on"),
         Value::Bool(true),
@@ -181,7 +222,63 @@ pub async fn prove_plan(folder: &Path, plan: &Plan) -> Result<Proof> {
         None,
     )
     .await?;
-    crate::wait_for(&hub, "hars-lab:actuator/on", true).await?;
+    tokio::time::sleep(Duration::from_millis(250)).await;
+    if autos.runs(Some(&edited.id), 500).len() != before
+        || hub
+            .state(&PointId::from("hars-lab:actuator/on"))
+            .map(|s| s.value)
+            != Some(Value::Bool(false))
+    {
+        bail!("revoked automation still dispatched after a persisted edit");
+    }
+    cancel.cancel();
+    let _ = tokio::time::timeout(Duration::from_secs(3), driver).await;
+    let _ = tokio::time::timeout(Duration::from_secs(3), engine).await;
+    drop(autos);
+    drop(hub);
+
+    let hub = Hub::new(HubOptions::default())?;
+    let cancel = CancellationToken::new();
+    let driver = spawn_driver(
+        &hub,
+        InstanceId::from("hars-lab"),
+        Arc::new(crate::Synthetic),
+        cancel.clone(),
+    );
+    crate::ready(&hub).await?;
+    let (autos, engine) =
+        Automations::start(&hub, Config::default(), Some(folder), cancel.clone()).await?;
+    let reloaded = autos
+        .get(&edited.id)
+        .ok_or_else(|| anyhow::anyhow!("persisted edited automation missing after restart"))?;
+    if reloaded.is_live() || reloaded.fingerprint() != edited.fingerprint() {
+        bail!("restart reactivated or changed unapproved automation");
+    }
+    if autos
+        .approve(&edited.id, &approved.fingerprint(), crate::human())
+        .await
+        .is_ok()
+    {
+        bail!("restart accepted stale approval of changed automation");
+    }
+    tokio::time::sleep(Duration::from_millis(100)).await;
+    let before_restart = autos.runs(Some(&edited.id), 500).len();
+    hub.command(
+        &PointId::from("hars-lab:sensor/on"),
+        Value::Bool(true),
+        Origin::Ui,
+        None,
+    )
+    .await?;
+    tokio::time::sleep(Duration::from_millis(250)).await;
+    if autos.runs(Some(&edited.id), 500).len() != before_restart
+        || hub
+            .state(&PointId::from("hars-lab:actuator/on"))
+            .map(|s| s.value)
+            != Some(Value::Bool(false))
+    {
+        bail!("restart executed revoked automation");
+    }
     cancel.cancel();
     let _ = tokio::time::timeout(Duration::from_secs(3), driver).await;
     let _ = tokio::time::timeout(Duration::from_secs(3), engine).await;
@@ -193,6 +290,10 @@ pub async fn prove_plan(folder: &Path, plan: &Plan) -> Result<Proof> {
         initially_inactive: true,
         synthetic_actuator_confirmed: true,
         approval_invalidated_by_edit: true,
+        persisted_edit_inactive: true,
+        stale_approval_rejected: true,
+        no_run_after_edit: true,
+        restart_kept_edit_inactive: true,
         no_python: true,
         hardware_touched: false,
         production_ready: false,
@@ -240,6 +341,21 @@ actions:
             Step::Set { .. }
         ));
     }
+    #[tokio::test]
+    async fn actual_moli_persisted_agent_edit_revokes_approval_across_restart() {
+        let dir = tempfile::tempdir().expect("disposable synthetic lab");
+        let plan = parse_plan(YAML).expect("fixture");
+        let proof = prove_plan(dir.path(), &plan)
+            .await
+            .expect("real upstream Moli save, dispatch and restart");
+        assert!(proof.persisted_edit_inactive);
+        assert!(proof.stale_approval_rejected);
+        assert!(proof.no_run_after_edit);
+        assert!(proof.restart_kept_edit_inactive);
+        assert!(!proof.hardware_touched);
+        assert!(!proof.production_ready);
+    }
+
     #[test]
     fn nonmapped_lab_entities_or_actions_refused_not_guessed() {
         for invalid in [
