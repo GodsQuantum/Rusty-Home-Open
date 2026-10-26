@@ -7,6 +7,7 @@ on:
       - "crates/native-hub/**"
       - "scripts/test_p8ag_service_contract.py"
       - "scripts/test_p8aj_systemd_contract.py"
+      - "scripts/test_p8am_native_watchdog_contract.py"
       - "scripts/test_p8aj_real_systemd_guest.sh"
       - "packaging/systemd/rusty-home-haos-lab.service"
       - "Cargo.lock"
@@ -26,6 +27,7 @@ jobs:
         run: |
           python3 scripts/test_p8ag_service_contract.py
           python3 scripts/test_p8aj_systemd_contract.py
+          python3 scripts/test_p8am_native_watchdog_contract.py
           cargo fmt --all -- --check
           cargo test --locked -p hars-native-hub --all-targets
           cargo clippy --locked -p hars-native-hub --all-targets -- -D warnings
