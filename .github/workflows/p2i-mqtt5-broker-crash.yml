@@ -4,6 +4,7 @@ on:
     paths:
       - ".github/workflows/p2i-mqtt5-broker-crash.yml"
       - "scripts/test_p2i_mqtt5_broker_sigkill.py"
+      - "scripts/test_p2k_real_readd_contract.py"
       - "scripts/fixtures/mqtt-broker/**"
       - "crates/native-kernel/src/mqtt5_reconcile.rs"
       - "crates/native-kernel/src/mqtt_registry.rs"
@@ -26,6 +27,7 @@ jobs:
       - name: Validate new scenario and native Rust MQTT code
         run: |
           python3 -m py_compile scripts/test_p2i_mqtt5_broker_sigkill.py
+          python3 scripts/test_p2k_real_readd_contract.py
           cargo fmt --all -- --check
           cargo test --locked -p hars-native-kernel --lib mqtt_registry
           cargo clippy --locked -p hars-native-kernel --all-targets -- -D warnings
