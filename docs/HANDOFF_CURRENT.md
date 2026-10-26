@@ -387,6 +387,10 @@ Owner SentinelX CT700, independent branch test/p2k-real-mqtt5-tombstone-readd-20
 
 The originally ACTIVE in-memory Moli topic-alias task is now merged and verified as PR #161; the exact receipt is at the top of this handoff. Do not repeat. P2n #162 is the distinct durable redb correction. Both are laboratory only, release 0/15.
 
+## P8ax GitHub 422 provenance blocker resolved (26 Oct)
+
+Initial #164 OCI Registry independent restore GitHub run 40409099687 is already green (private saved tar, SHA tamper refusal, post-checkpoint fork, second HTTP Registry old blob present/new blob absent). Concurrent core-security job failed ONLY when GitHub REST could not render historical PR #59 due to too many changed files (HTTP 422). Verified fallback to GitHub GraphQL exact MERGED/main/source HEAD or merge SHA, rejecting 403/404/missing fields. Locally all 21 lab receipts / 17 GitHub runs independently validated, no skipped check. Await exact new CI SHA.
+
 ## P8ax second independent stateful OCI restore (26 Oct, ACTIVE)
 
 Owner SentinelX CT700 independent worktree Rusty-Home-Registry-Restore-20261026, branch test/p8ax-second-stateful-oci-registry-independent-restore-20261026, base main 57aa54e. New missing Apps restore scope distinct from P8aq #128 private Redis backup/restore and P8aw #127 Registry restart: test REAL Docker Distribution 3.1.2 *full independent Podman volume export and import* through generic Rust Quadlet manager. Quiesce original, export 0600 tar, SHA verify and tamper refuse, mutate original AFTER checkpoint with second content-addressed blob, restore new named volume/App instance using same pinned digest under distinct loopback port, prove old blob present/new blob absent; primary retains both. Security: only disposable GitHub runner, no Cloud9 production podman action/HAOS VM100/radios/secrets; no outside host bind; no auto start. Reuse existing p8aw real CI rather than new runner. Separate OCI App restore evidence, not proof of 9 Apps or whole production 0/15.

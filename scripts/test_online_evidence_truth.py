@@ -3,7 +3,9 @@
 import copy,json
 from pathlib import Path
 from verify_lab_evidence import ROOT,validate,REPO
-from verify_lab_evidence_online import verify
+from verify_lab_evidence_online import verify, gh_api, merged_pr_from_graphql
+from unittest.mock import patch
+import subprocess
 claims=validate(json.loads((ROOT/"config/lab-evidence.json").read_text()))
 selected=[x for x in claims if x["id"] in (
     "fuzz_four_native_security_surfaces","github_oidc_cargo_source_sbom")]
@@ -48,3 +50,41 @@ deny(lambda p,v:v["repository"].update(full_name="unknown/not-this-repo") if
      p.startswith("actions/runs/") and "/jobs?" not in p else None,
      "mismatched repository")
 print("GH_REMOTE_CI_EVIDENCE_FAILURE_REJECTION_PASS")
+
+
+# REST is incapable of serving a historic oversized diff (#59, actual HTTP 422).
+# GraphQL returns the same SHA-bound merged/base facts. No 403, 404, changed
+# merge branch, SHA corruption or unsigned fake PR may trigger a bypass.
+graph={"number":59,"state":"MERGED","baseRefName":"main",
+       "headRefOid":"a"*40,"mergeCommit":{"oid":"b"*40}}
+normal=merged_pr_from_graphql(graph,59)
+assert normal["merged"] is True and normal["head"]["sha"]=="a"*40
+assert normal["merge_commit_sha"]=="b"*40 and normal["base"]["ref"]=="main"
+for broken in (
+    {**graph,"number":58},
+    {**graph,"state":"OPEN"},
+    {**graph,"baseRefName":"attacker"},
+    {**graph,"headRefOid":"0"*39},
+    {**graph,"mergeCommit":None},
+):
+    try:merged_pr_from_graphql(broken,59)
+    except (AssertionError,KeyError,TypeError):pass
+    else:raise AssertionError("Invalid oversized-PR GraphQL attestation accepted")
+err=subprocess.CalledProcessError(
+    returncode=1,cmd=["gh","api"],stderr="too many files changed (HTTP 422)")
+ok=subprocess.CompletedProcess(args=["gh","pr"],returncode=0,
+                               stdout=json.dumps(graph),stderr="")
+with patch("verify_lab_evidence_online.subprocess.run",side_effect=[err,ok]) as mock:
+    assert gh_api("pulls/59")==normal
+    assert mock.call_count==2
+    assert mock.call_args_list[1].args[0][:4]==["gh","pr","view","59"]
+for path,code in (("pulls/59","not found (HTTP 404)"),
+                  ("pulls/59","rate limited (HTTP 403)"),
+                  ("actions/runs/59","too many files changed (HTTP 422)")):
+    bad=subprocess.CalledProcessError(1,["gh","api"],stderr=code)
+    with patch("verify_lab_evidence_online.subprocess.run",side_effect=bad) as mock:
+        try:gh_api(path)
+        except subprocess.CalledProcessError:pass
+        else:raise AssertionError("Unauthorized GraphQL fallback accepted")
+        assert mock.call_count==1
+print("GH_OVERSIZED_PR_422_STRICT_GRAPHQL_SHA_FALLBACK_PASS")
