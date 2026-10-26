@@ -324,3 +324,7 @@ Owner SentinelX, CT700 branch feat/p8bi-haos-native-moli-automation-lab-20261026
 ## 2026-10-26 P8bi QEMU CI first-head correction
 
 Feature head 65bbcb5 passed new genuine Supervisor source->Rust disabled automation native synthetic Moli (P8BI_REAL_HAOS_BACKUP_DISABLED_AUTOMATION_ACTUAL_SYNTHETIC_MOLI_GRAPH_PASS, job 121660464173, run 40348122985). Separate already-existing HAOS->fresh-HAOS Rust escrow job failed ONLY at old hardcoded fixture guard requiring an empty trigger, prior to creation/export of any backup: fixture intentionally now carries a disabled fictional motion-to-light action. Changed guard to require explicit initial_state false, synthetic endpoints and no shell/real hardware commands. Both real cross-VM workflows must rerun on exact new head and succeed before merge. No VM100 touched, still 0/15.
+
+## 2026-10-26 P15 disabled HAOS automation parser+graph fuzz [IN PROGRESS]
+
+Owner SentinelX CT700 isolated branch test/p15-disabled-haos-automation-fuzz-20261026, base main 6eeda5b. New attack surface from merged P8bi: actual HAOS YAML disabled-list parser + native synthetic Moli graph. Build instrumented libFuzzer/ASan target, only fictional corpus. Deny enabled, duplicate keys, templates, multi-entry, real-target references. No real Home Assistant/device/credentials. Root Cargo.lock unchanged, not production certification. Exact CI pending, rollback branch deletion.
