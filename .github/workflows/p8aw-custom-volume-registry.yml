@@ -1,4 +1,4 @@
-name: P8aw OCI App custom volume path with genuine Docker Distribution registry storage
+name: Generic rootless OCI Registry and PostgreSQL App persistence and restore
 on:
   pull_request:
     paths:
@@ -7,6 +7,8 @@ on:
       - "scripts/test_p8aw_real_registry_custom_volume.sh"
       - "scripts/test_p8ax_registry_independent_restore.sh"
       - "scripts/test_p8ax_independent_registry_restore_contract.py"
+      - "scripts/test_p8ay_postgresql17_independent_restore.sh"
+      - "scripts/test_p8ay_postgres_sql_restore_contract.py"
       - "scripts/p8aw_registry_http_proof.py"
       - "scripts/test_p8ar_native_oci_manager.sh"
       - "scripts/test_p8ar_manager_contract.py"
@@ -17,7 +19,7 @@ permissions:
   contents: read
 jobs:
   actual-stateful-http-registry:
-    name: Rust manager runs real Distribution registry HTTP with custom persistent OCI volume
+    name: Real rootless OCI Registry HTTP and PostgreSQL SQL separate-volume restores
     runs-on: ubuntu-24.04
     timeout-minutes: 25
     steps:
@@ -30,11 +32,13 @@ jobs:
           python3 scripts/test_p8ar_manager_contract.py
           python3 scripts/test_p8aw_data_path_contract.py
           python3 scripts/test_p8ax_independent_registry_restore_contract.py
+          python3 scripts/test_p8ay_postgres_sql_restore_contract.py
           cargo fmt --all -- --check
           cargo test --locked -p hars-native-hub --all-targets
           cargo clippy --locked -p hars-native-hub --all-targets -- -D warnings
           bash -n scripts/test_p8aw_real_registry_custom_volume.sh
           bash -n scripts/test_p8ax_registry_independent_restore.sh
+          bash -n scripts/test_p8ay_postgresql17_independent_restore.sh
           python3 -m py_compile scripts/p8aw_registry_http_proof.py
       - name: Install official rootless Podman and user systemd
         run: |
@@ -47,3 +51,7 @@ jobs:
         run: |
           cargo build --locked -p hars-native-hub --bin oci_app_manager_lab
           bash scripts/test_p8aw_real_registry_custom_volume.sh
+      - name: Third real stateful App - PostgreSQL 17 transaction checkpoint restore
+        timeout-minutes: 9
+        run: |
+          bash scripts/test_p8ay_postgresql17_independent_restore.sh
