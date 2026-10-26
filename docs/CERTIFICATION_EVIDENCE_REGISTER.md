@@ -119,3 +119,7 @@ These six distinct cases were already completed in real, disposable GitHub CI an
 | P8AZ | #131 | `ddcd3550` | `a351529c` | 40315761886 | 20/20 | native podman secret reference real rootless redis sha256 mount |
 
 The existing five P8ao–P8as immutable proofs remain intact. The test suite verifies all eleven cases and their exact original sources; production still has 0/15 accepted independent gates.
+
+## Official Home Assistant Core 2026.10.4 independent additional baseline (26 October 2026)
+
+PR [#134](https://github.com/GodsQuantum/Rusty-Home-Open/pull/134) verified genuine official **Core 2026.10.4** (released 24 October) inside a disposable GitHub Ubuntu runner with no network route, nonroot, readonly Docker, independently from preserved Core 2026.10.2 and 2026.11-dev Marketplace baselines. The original independently verified feature HEAD is `21d9b21421a215856930764f2264509f06459a3a`, passed 10/10 checks, GitHub run [40319204128](https://github.com/GodsQuantum/Rusty-Home-Open/actions/runs/40319204128), merged `16a1f49b9b17e2175e30268cd4fc545b2121a05f`. Synthetic Core config entry lifecycle covers real create/load/unload/reload/remove, strict version, no device IO. The initial CI run 40318906283 FAILED due erroneous test import `homeassistant.__version__` (correct official import `homeassistant.const.__version__`), resolved and independently rerun. This is a new version check, not an extra HACS full parity test and NOT any production gate; **0/15 independent production gates**.

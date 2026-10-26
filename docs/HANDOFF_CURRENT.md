@@ -1,5 +1,16 @@
 # Rusty Home — handoff permanent
 
+## ÉTAT CANONIQUE ACTUEL — 26 octobre 2026 (prioritaire sur les notes historiques ci-dessous)
+
+- **Développement :** `main` `16a1f49b9b17e2175e30268cd4fc545b2121a05f`, LXC700 (`/home/arezki/Projets/Applications/Rusty-Home-Open`), GitHub `GodsQuantum/Rusty-Home-Open`. Worktrees temporaires de la reprise nettoyés, branche principale synchronisée par fast-forward.
+- **Production : `NOT_PRODUCTION_READY`, 0/15 gates certifiés** (9 `lab_partial`, 6 `blocked`). `python3 scripts/check_release_gate.py --matrix` est l'unique verdict courant. Une CI verte est une preuve LAB bornée, jamais une attestation indépendante ni une autorisation de basculement.
+- **Fonctions vérifiées ce jour :** #127 (`b1881a6`, vraie Registry HTTP/volume), #128 (`e5968c2`, CI HAOS/OCI ciblée, 28/28), #129 (`df796cd`, matrice de 15 gates, 9/9), #130 (`075e18e`, vrai verrou OCI interprocessus, 18/18), #131 (`a351529`, secret Podman réellement monté, 20/20), #132 (`6ee9e7e`, 11 preuves OCI immuables, 9/9), #133 (`35b09f0`, futures certifications indépendantes acceptables une par une, 10/10), #134 (`16a1f49`, vrai Core 2026.10.4, 10/10).
+- **Preuve Core récente à NE PAS REJOUER :** PR #134, head original `21d9b21421a215856930764f2264509f06459a3a`, GitHub Actions `40319204128` (succès), Core officiel 2026.10.4 conteneur isolé, config-flow/entry install, unload, reload, remove et version vérifiée. Premier run `40318906283` échoué sur un import erroné du fixture, corrigé via `homeassistant.const.__version__`. Core 2026.10.2 précédent et Core 2026.11-dev Marketplace restent des témoins séparés ; pas 29/29 HACS.
+- **Priorités réellement manquantes :** migration complète réversible HAOS→runtime Rust→HAOS avec identités/automations/Apps et bases tierces ; RBAC/opérations utilisateur révocables ; vrais contrôleurs radios avec propriété exclusive ; 72 h de charge/soak ; licences, publication signée et pentest indépendant. Ne pas refaire sauvegarde HAOS même VM/seconde VM, OCI Redis+Registry ou test Core 2026.10.4 sans changement de code/environnement.
+- **Interdits :** aucune mutation VM100 HAOS familiale, radios, secrets ou données réelles sans autorisation spécifique ; utiliser SentinelX→LXC700 uniquement, branche DEV propre, réutiliser les sources et les tests upstream.
+
+---
+
 **Audit du 24 octobre 2026.** La référence historique de base est `main` 6585cb4 ; elle ne représente pas nécessairement le dernier commit. Pour connaître le HEAD du dossier et les critères actuels : `python3 scripts/show_handoff.py`.
 
 ## État confirmé
