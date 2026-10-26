@@ -4,7 +4,13 @@ on:
   pull_request:
     paths:
       - ".github/workflows/p8aj-real-systemd.yml"
-      - "crates/native-hub/**"
+      - "crates/native-hub/src/haos_guest.rs"
+      - "crates/native-hub/src/bin/haos_guest_lab.rs"
+      - "crates/native-hub/src/bin/haos_guest_service_lab.rs"
+      - "crates/native-hub/src/lib.rs"
+      - "crates/native-hub/Cargo.toml"
+      - "crates/native-hub/build.rs"
+      - "crates/native-hub/tests/**"
       - "scripts/test_p8ag_service_contract.py"
       - "scripts/test_p8aj_systemd_contract.py"
       - "scripts/test_p8am_native_watchdog_contract.py"

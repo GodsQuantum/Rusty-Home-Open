@@ -5,7 +5,13 @@ on:
       - ".github/workflows/p8ar-real-oci-manager.yml"
       - "scripts/test_p8ar_native_oci_manager.sh"
       - "scripts/test_p8ar_manager_contract.py"
-      - "crates/native-hub/**"
+      - "crates/native-hub/src/oci_quadlet.rs"
+      - "crates/native-hub/src/bin/oci_app_manager_lab.rs"
+      - "crates/native-hub/src/bin/oci_quadlet_lab.rs"
+      - "crates/native-hub/src/lib.rs"
+      - "crates/native-hub/Cargo.toml"
+      - "crates/native-hub/build.rs"
+      - "crates/native-hub/tests/**"
       - "Cargo.lock"
   workflow_dispatch:
 permissions:
