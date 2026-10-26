@@ -350,3 +350,7 @@ Compared main b1881a6 against `config/release-gates.json`, the independent-signa
 ## 26 October 2026 — P8ay race containment, NOT production certification
 
 New issue independent of previously pinned Redis/Registry results: install, start and stop lacked per-App flock although upgrade/rollback/remove used it. Hardened existing native Rust OCI manager (no custom watcher/services) by locking before install descriptor creation and throughout start/stop; do not unlink the lock on remove. Added genuine inter-process denial and removal/reinstallation inode-continuity assertions to existing real Redis workflow. No radio, host change, new separate test infrastructure, or household deployment. Existing P8ar-P8aw proof remains unchanged; exact CI SHA must pass.
+
+## 26 October 2026 — P8az real OCI credential delivery (new feature)
+
+Upstream Podman Quadlet offers native `Secret=`. Added bounded non-privileged secret reference by name with pre-existing native store check. No custom secret daemon, disk copy, env credential or sample production secret. Isolated independent rootless Redis SHA256 mount CI tests correct data + negative/missing secret and cleanup. Limits: explicit lab flag; not full credential lifecycle/RBAC/HAOS migrations, release 0/15.
