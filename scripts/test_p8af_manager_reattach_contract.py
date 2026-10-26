@@ -15,6 +15,8 @@ for marker in ("verified_existing_overlay","backing-filename","backing-filename-
                "O_NOFOLLOW","private_vm_lock","session_verify_guest_marker",
                "guest_marker_in_separate_manager_lab"):
     assert marker in m,marker
+segment=m.split("pub fn guest_marker_in_separate_manager_lab(",1)[1].split("fn ",1)[0]
+assert segment.index("private_vm_lock(dir)?") < segment.index("spec.validate()?")
 assert "guest_marker_verified_by_second_rust_manager" in cli
 assert "192.168." not in w and "hostfwd" not in w
 print("P8AF_REAL_GUEST_DIFFERENT_RUST_MANAGER_RESTART_CONTRACT_PASS")

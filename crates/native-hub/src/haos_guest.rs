@@ -355,8 +355,10 @@ pub fn guest_marker_in_separate_manager_lab(
     if std::env::var("HARS_DISPOSABLE_KVM_LAB").as_deref() != Ok("1") {
         return Err(GuestError::InvalidArguments);
     }
-    spec.validate()?;
+    // Reject a concurrent manager immediately: do not hash a large
+    // official HAOS base image before acquiring the exclusive lease.
     let _lease = private_vm_lock(dir)?;
+    spec.validate()?;
     let overlay = if create {
         make_overlay(spec, dir)?
     } else {
