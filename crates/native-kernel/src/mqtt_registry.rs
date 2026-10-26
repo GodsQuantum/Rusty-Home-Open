@@ -98,8 +98,18 @@ fn decode(raw: &str) -> Result<StoredConfig> {
         bail!("invalid persisted MQTT discovery entry");
     }
     let mut unique = HashSet::new();
+    let mut topics = HashSet::new();
     if config.sensors.iter().any(|s| !unique.insert(&s.unique_id)) {
         bail!("duplicate persisted MQTT sensor ID");
+    }
+    // A device payload may contain distinct unique_ids yet reuse one state
+    // topic. The native read-only Moli adapter cannot safely attribute it.
+    if config
+        .sensors
+        .iter()
+        .any(|s| !topics.insert(&s.state_topic))
+    {
+        bail!("duplicate persisted MQTT state topic in one config");
     }
     Ok(config)
 }
@@ -174,12 +184,13 @@ impl DiscoveryRegistry {
                     continue;
                 }
                 for previous in &existing.sensors {
-                    if config
-                        .sensors
-                        .iter()
-                        .any(|new| new.unique_id == previous.unique_id)
-                    {
-                        bail!("MQTT discovery ID collision across retained config topics");
+                    if config.sensors.iter().any(|new| {
+                        new.unique_id == previous.unique_id
+                            || new.state_topic == previous.state_topic
+                    }) {
+                        bail!(
+                            "MQTT discovery identity or state-topic collision across retained configs"
+                        );
                     }
                 }
             }
@@ -234,11 +245,24 @@ impl DiscoveryRegistry {
         let tx = self.db.begin_read()?;
         let table = tx.open_table(CONFIGS)?;
         let mut records = Vec::new();
+        // Older registry versions may contain rows that individually decode
+        // but collectively alias a sensor state topic. Refuse the WHOLE
+        // recovered cache rather than selecting an arbitrary owner.
+        let mut recovered_topics = HashSet::new();
+        let mut recovered_ids = HashSet::new();
         for entry in table.iter()? {
             let (key, value) = entry?;
             let record = decode(value.value())?;
             if key.value() != record.id {
                 bail!("MQTT registry key differs from stored identity");
+            }
+            for sensor in &record.sensors {
+                if !recovered_topics.insert(sensor.state_topic.clone()) {
+                    bail!("ambiguous MQTT state topic in legacy persisted cache");
+                }
+                if !recovered_ids.insert(sensor.unique_id.clone()) {
+                    bail!("ambiguous MQTT sensor identity in legacy persisted cache");
+                }
             }
             records.push(Recovered {
                 config: record,
@@ -324,6 +348,143 @@ mod tests {
         assert!(store.remove_retained(TOPIC, true).unwrap());
         assert!(store.recover_unverified().unwrap().is_empty());
         assert!(!store.remove_retained(TOPIC, true).unwrap());
+    }
+
+    #[test]
+    fn p2n_durable_topic_collision_is_atomic_across_batches_and_process_reopen() {
+        let root = private_root();
+        let rival_topic = "homeassistant/sensor/study/temperature/config";
+        let rival = br#"{"unique_id":"lab_study","state_topic":"lab/readonly/bedroom"}"#;
+        let batch = br#"{"dev":{"ids":"lab_device","name":"Lab device"},"o":{"name":"Lab origin"},"cmps":{"one":{"p":"sensor","uniq_id":"lab_one","stat_t":"lab/readonly/duplicate"},"two":{"p":"sensor","uniq_id":"lab_two","stat_t":"lab/readonly/duplicate"}}}"#;
+        let mixed = br#"{"dev":{"ids":"lab_mixed","name":"Lab mixed"},"o":{"name":"Lab origin"},"cmps":{"one":{"p":"sensor","uniq_id":"lab_new","stat_t":"lab/readonly/fresh"},"two":{"p":"sensor","uniq_id":"lab_collision","stat_t":"lab/readonly/bedroom"}}}"#;
+        {
+            let store = DiscoveryRegistry::open(root.path()).unwrap();
+            store.retain_validated(TOPIC, INPUT).unwrap();
+            assert!(
+                store.retain_validated(rival_topic, rival).is_err(),
+                "a second unique_id must not durably claim the same state_topic"
+            );
+            assert!(
+                store
+                    .retain_validated("homeassistant/device/multi/config", batch)
+                    .is_err(),
+                "an internally ambiguous device batch must be rejected atomically"
+            );
+            assert!(
+                store
+                    .retain_validated("homeassistant/device/mixed/config", mixed)
+                    .is_err(),
+                "a partially valid batch must not register its uncollided sensor"
+            );
+            let records = store.recover_unverified().unwrap();
+            assert_eq!(records.len(), 1);
+            assert_eq!(records[0].config.id, "bedroom/temp");
+        }
+        {
+            let store = DiscoveryRegistry::open(root.path()).unwrap();
+            let records = store.recover_unverified().unwrap();
+            assert_eq!(records.len(), 1);
+            assert!(records[0].stale_unverified);
+            assert_eq!(records[0].config.sensors[0].unique_id, "lab_bedroom");
+            assert!(store.remove_retained(TOPIC, true).unwrap());
+            store.retain_validated(rival_topic, rival).unwrap();
+        }
+        let reopened = DiscoveryRegistry::open(root.path()).unwrap();
+        let records = reopened.recover_unverified().unwrap();
+        assert_eq!(records.len(), 1);
+        assert_eq!(records[0].config.sensors[0].unique_id, "lab_study");
+        assert!(records[0].stale_unverified);
+        assert_eq!(
+            records[0].config.sensors[0].state_topic,
+            "lab/readonly/bedroom"
+        );
+    }
+
+    #[test]
+    fn p2n_legacy_ambiguous_redb_cache_fails_closed_without_purging_owner() {
+        let root = private_root();
+        let store = DiscoveryRegistry::open(root.path()).unwrap();
+        store.retain_validated(TOPIC, INPUT).unwrap();
+        // Simulate an old on-disk database produced before the ownership fix.
+        // The malicious row bypasses the public registry writer deliberately.
+        let old = StoredConfig {
+            version: 1,
+            id: "study/temp".into(),
+            topic: "homeassistant/sensor/study/temp/config".into(),
+            sensors: vec![StoredSensor {
+                unique_id: "lab_study".into(),
+                platform: "sensor".into(),
+                state_topic: "lab/readonly/bedroom".into(),
+            }],
+        };
+        {
+            let mut tx = store.db.begin_write().unwrap();
+            tx.set_durability(Durability::Immediate).unwrap();
+            tx.set_two_phase_commit(true);
+            {
+                let mut table = tx.open_table(CONFIGS).unwrap();
+                table
+                    .insert(
+                        old.id.as_str(),
+                        serde_json::to_string(&old).unwrap().as_str(),
+                    )
+                    .unwrap();
+            }
+            tx.commit().unwrap();
+        }
+        drop(store);
+        let reopened = DiscoveryRegistry::open(root.path()).unwrap();
+        assert!(
+            reopened.recover_unverified().is_err(),
+            "pre-fix ambiguous persisted state topics must never be trusted on recovery"
+        );
+        // The legitimate original row remains available for explicit operator
+        // reconciliation; no destructive automatic repair is permitted.
+        assert!(reopened.remove_retained(&old.topic, true).unwrap());
+        let recovered = reopened.recover_unverified().unwrap();
+        assert_eq!(recovered.len(), 1);
+        assert_eq!(recovered[0].config.id, "bedroom/temp");
+        assert!(recovered[0].stale_unverified);
+    }
+
+    #[test]
+    fn p2n_legacy_duplicate_identity_is_rejected_after_reopen() {
+        let root = private_root();
+        let store = DiscoveryRegistry::open(root.path()).unwrap();
+        store.retain_validated(TOPIC, INPUT).unwrap();
+        let old = StoredConfig {
+            version: 1,
+            id: "study/temp".into(),
+            topic: "homeassistant/sensor/study/temp/config".into(),
+            sensors: vec![StoredSensor {
+                unique_id: "lab_bedroom".into(),
+                platform: "sensor".into(),
+                state_topic: "lab/readonly/independent".into(),
+            }],
+        };
+        {
+            let mut tx = store.db.begin_write().unwrap();
+            tx.set_durability(Durability::Immediate).unwrap();
+            tx.set_two_phase_commit(true);
+            {
+                let mut table = tx.open_table(CONFIGS).unwrap();
+                table
+                    .insert(
+                        old.id.as_str(),
+                        serde_json::to_string(&old).unwrap().as_str(),
+                    )
+                    .unwrap();
+            }
+            tx.commit().unwrap();
+        }
+        drop(store);
+        let reopened = DiscoveryRegistry::open(root.path()).unwrap();
+        assert!(
+            reopened.recover_unverified().is_err(),
+            "pre-fix duplicate sensor identities must not be recovered as distinct owners"
+        );
+        assert!(reopened.remove_retained(&old.topic, true).unwrap());
+        assert_eq!(reopened.recover_unverified().unwrap().len(), 1);
     }
 
     #[test]
