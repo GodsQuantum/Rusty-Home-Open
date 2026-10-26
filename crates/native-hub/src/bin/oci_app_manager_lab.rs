@@ -1,6 +1,8 @@
 //! P8ar: lab-only *actual* rootless native systemd/Podman OCI App manager.
 //! No root, no household HAOS, no user device access, no production API.
-use hars_native_hub::oci_quadlet::{AppNetwork, OciApp, QuadletUnits, bind_native_secret};
+use hars_native_hub::oci_quadlet::{
+    AppNetwork, OciApp, QuadletUnits, bind_native_runtime_tmpfs, bind_native_secret,
+};
 use std::{
     env,
     fs::{self, File, OpenOptions},
@@ -152,6 +154,7 @@ struct InstallExtras<'a> {
     health: Option<&'a str>,
     data_destination: Option<&'a str>,
     secret_name: Option<&'a str>,
+    runtime_tmpfs: Option<&'a str>,
 }
 fn install(
     dir: &Path,
@@ -182,6 +185,9 @@ fn install(
     }
     if let Some(name) = extras.secret_name {
         bind_native_secret(&mut q, name).map_err(|_| bad())?;
+    }
+    if let Some(path) = extras.runtime_tmpfs {
+        bind_native_runtime_tmpfs(&mut q, path).map_err(|_| bad())?;
     }
     // Flock is acquired BEFORE checking or writing descriptors: concurrent
     // installers and install/remove/start/switch may never race on a slug.
@@ -447,6 +453,21 @@ fn execute() -> io::Result<()> {
                 network,
                 InstallExtras {
                     data_destination: Some(&args[5]),
+                    ..Default::default()
+                },
+            )
+        }
+        "--install-path-tmpfs-lab" if args.len() == 7 => {
+            let uid = args[4].parse::<u32>().map_err(|_| bad())?;
+            install(
+                &dir,
+                &args[2],
+                &args[3],
+                uid,
+                AppNetwork::Offline,
+                InstallExtras {
+                    data_destination: Some(&args[5]),
+                    runtime_tmpfs: Some(&args[6]),
                     ..Default::default()
                 },
             )

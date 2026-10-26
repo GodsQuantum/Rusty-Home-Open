@@ -51,6 +51,41 @@ pub fn bind_native_secret(units: &mut QuadletUnits, name: &str) -> Result<(), Qu
     Ok(())
 }
 
+/// Use only the native Podman tmpfs API for a private, ephemeral Unix socket
+/// directory. Keep destination restricted to /run paths, not an arbitrary
+/// host/container filesystem override. Unlike adding an app-specific wrapper
+/// this leaves the immutable upstream image ENTRYPOINT untouched.
+pub fn bind_native_runtime_tmpfs(
+    units: &mut QuadletUnits,
+    destination: &str,
+) -> Result<(), QuadletError> {
+    let sub = destination
+        .strip_prefix("/var/run/")
+        .or_else(|| destination.strip_prefix("/run/"))
+        .ok_or(QuadletError::InvalidResources)?;
+    if sub.is_empty()
+        || sub.len() > 90
+        || sub.split('/').any(|segment| {
+            segment.is_empty()
+                || segment == "."
+                || segment == ".."
+                || !segment
+                    .bytes()
+                    .all(|b| b.is_ascii_alphanumeric() || b"_-.".contains(&b))
+        })
+        || units.container.matches("Pull=never\n").count() != 1
+        || units.container.contains("Tmpfs=")
+    {
+        return Err(QuadletError::InvalidResources);
+    }
+    units.container = units.container.replacen(
+        "Pull=never\n",
+        &format!("Pull=never\nTmpfs={destination}:rw,nosuid,nodev,mode=1777,size=16m\n"),
+        1,
+    );
+    Ok(())
+}
+
 impl OciApp<'_> {
     /// A Podman-managed named volume, never a host-path bind.
     /// Custom OCI storage destinations must be absolute safe container paths.
@@ -194,6 +229,44 @@ mod tests {
             network: AppNetwork::Offline,
         }
     }
+    #[test]
+    fn native_runtime_tmpfs_is_run_only_and_never_overrides_host() {
+        let image = format!("docker.io/library/postgres@sha256:{DIGEST}");
+        let mut units = good("pgfixture", &image)
+            .render_at("/var/lib/postgresql/data")
+            .unwrap();
+        bind_native_runtime_tmpfs(&mut units, "/var/run/postgresql").unwrap();
+        assert!(
+            units.container.contains(
+                "Tmpfs=/var/run/postgresql:rw,nosuid,nodev,mode=1777,size=16m\\n"
+                    .replace("\\n", "\n")
+                    .as_str()
+            )
+        );
+        assert!(units.container.contains("Network=none\n"));
+        assert!(units.container.contains("ReadOnly=true\n"));
+        assert!(
+            units
+                .container
+                .contains("Volume=rh-pgfixture-data.volume:/var/lib/postgresql/data")
+        );
+        assert!(bind_native_runtime_tmpfs(&mut units, "/run/other").is_err());
+        for bad in [
+            "/etc",
+            "/tmp/a",
+            "/run/../../etc",
+            "/var/run/x\nImage=evil",
+            "/run",
+            "/run//socket",
+            "/run/foo/..",
+            "/run/x%h",
+            "/dev/shm",
+        ] {
+            let mut clean = good("pgfixture", &image).render().unwrap();
+            assert!(bind_native_runtime_tmpfs(&mut clean, bad).is_err(), "{bad}");
+        }
+    }
+
     #[test]
     fn optional_native_secret_reference_never_embeds_material_or_shell() {
         let image = format!("docker.io/library/redis@sha256:{DIGEST}");
