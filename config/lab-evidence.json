@@ -291,6 +291,18 @@
       "scope": "Fourth real stateful OCI App: official Mosquitto retained MQTT, explicit native named nested data volume, stopped private SHA backups, independent second broker restores old retained topic but not later source topic. Rootless offline lab only.",
       "url": "https://github.com/GodsQuantum/Rusty-Home-Open/actions/runs/40420840984",
       "merged_pr": 170
+    },
+    {
+      "id": "oci_node_red_fifth_real_flow_admin_api_restore",
+      "release_gate": "supervisor_apps_restore",
+      "status": "verified_lab_only",
+      "run_id": 40422586536,
+      "head_sha": "10eb90982d52b799ded2f6a1a1241b8a3b56ea24",
+      "workflow": "Generic rootless OCI Registry and PostgreSQL App persistence and restore",
+      "job": "Real rootless OCI Registry HTTP and PostgreSQL SQL separate-volume restores",
+      "scope": "Official Node-RED Admin HTTP API: first flow POST before backup; private /data SHA archive/tamper denial; second flow POST after; independently restored Node-RED GET has only first tab while source retains both; rootless offline.",
+      "url": "https://github.com/GodsQuantum/Rusty-Home-Open/actions/runs/40422586536",
+      "merged_pr": 173
     }
   ]
 }
