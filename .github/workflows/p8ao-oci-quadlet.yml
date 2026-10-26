@@ -49,7 +49,13 @@ jobs:
           test -f "$APP_DIR/rh-mealie-data.volume"
           test -f "$APP_DIR/rh-zigbee2mqtt-data.volume"
           test "$(stat -c '%a' "$APP_DIR/rh-mealie.container")" = 600
-          QUADLET_UNIT_DIRS="$APP_DIR" "$PODMAN_GEN" --user --dryrun > "$RUNNER_TEMP/quadlet-gen.out" 2>&1
+          if ! QUADLET_UNIT_DIRS="$APP_DIR" "$PODMAN_GEN" --user --dryrun > "$RUNNER_TEMP/quadlet-gen.out" 2>&1; then
+            echo "P8AO_REAL_PODMAN_GENERATOR_REJECTED_CONFIG"
+            cat "$RUNNER_TEMP/quadlet-gen.out"
+            exit 1
+          fi
+          echo "P8AO_REAL_PODMAN_GENERATOR_ACCEPTED_CONFIG"
+          cat "$RUNNER_TEMP/quadlet-gen.out"
           grep -F "rh-mealie" "$RUNNER_TEMP/quadlet-gen.out"
           grep -F "rh-zigbee2mqtt" "$RUNNER_TEMP/quadlet-gen.out"
           grep -F -- "--network none" "$RUNNER_TEMP/quadlet-gen.out"
