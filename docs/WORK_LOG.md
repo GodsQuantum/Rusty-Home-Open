@@ -228,3 +228,14 @@ Ce journal est persistant dans **GitHub** et dans le dossier de travail **LXC700
 ## Prochaines tâches distinctes, sans redondance
 
 **Mise à jour postérieure :** la restauration HAOS→HAOS sur une deuxième VM fraîche a été réalisée avec succès dans PR #86 (voir en-tête du journal). Les tâches véritablement manquantes concernent la migration de données depuis HAOS VERS LE MOTEUR Rusty Home, l'exécution des Apps tierces, les comptes et les vrais périphériques physiques, la sécurité et l'endurance de l'application. Les 15 gates de production restent non certifiés.
+
+## Immutable verified P8ag–P8al Rust host evidence (26 Oct 2026)
+
+- P8ag PR #108: 14/14 exact feature-head GitHub CI, run 40250349459; long-lived Rust/QMP lifecycle.
+- P8ah PR #109: 15/15 exact feature-head GitHub CI, run 40251693506; fixed 127.0.0.1 UI forwarding.
+- P8ai PR #110: 16/16 exact feature-head GitHub CI, run 40252930987; real official Core HTTP frontend.
+- P8aj PR #111: 10/10 exact feature-head GitHub CI, run 40254861417; real systemd two HAOS/QEMU process lifecycles.
+- P8ak PR #112: 11/11 exact feature-head GitHub CI, run 40255870443; reproducible Debian guest package real dpkg lifecycle.
+- P8al PR #113: 9/9 exact feature-head GitHub CI, run 40257162323; offline signed APT index and tamper refusal.
+
+All six are MERGED, latest main a756696b60081d641ad7ec9cf43144f3361a201b. Do NOT rerun as newly unproved work. Machine-readable source config/haos-rust-guest-evidence.json keeps each exact original feature SHA, merge SHA and workflow marker source. P8ag–P8aj official HAOS 18.3 QEMU/KVM is an isolated genuine guest; P8ak real Ubuntu dpkg and P8al cryptographic offline APT use disposable CI runners. No household deployment, no signed production trust key, no actual App service parity, no physical radios, no whole-host backwards cutover or endurance qualification. Production remains **0/15** fully certified.
