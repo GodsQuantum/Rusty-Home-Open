@@ -1,0 +1,35 @@
+- id: "p8bi_official_archive_disabled_lab_motion"
+  alias: "Fictional disabled motion to light (native Moli sandbox)"
+  initial_state: false
+  mode: single
+  triggers:
+    - trigger: state
+      entity_id: binary_sensor.lab_motion
+      from: "off"
+      to: "on"
+  conditions:
+    - condition: state
+      entity_id: light.lab_room
+      state: "off"
+  actions:
+    - action: light.turn_on
+      target:
+        entity_id: light.lab_room
+
+- id: "p8bi_official_archive_disabled_lab_motion"
+  alias: "Fictional disabled motion to light (native Moli sandbox)"
+  initial_state: false
+  mode: single
+  triggers:
+    - trigger: state
+      entity_id: binary_sensor.lab_motion
+      from: "off"
+      to: "on"
+  conditions:
+    - condition: state
+      entity_id: light.lab_room
+      state: "off"
+  actions:
+    - action: light.turn_on
+      target:
+        entity_id: light.lab_room
