@@ -267,6 +267,18 @@
       "scope": "Third real stateful OCI App: official PostgreSQL 17 Alpine real SQL checkpoint, stopped private volume SHA check, tamper refusal, restored independent PG instance has 1 row while original retains 2 committed rows; rootless and offline.",
       "url": "https://github.com/GodsQuantum/Rusty-Home-Open/actions/runs/40413124727",
       "merged_pr": 166
+    },
+    {
+      "id": "oci_postgresql_wal_sigkill_transaction_recovery",
+      "release_gate": "supervisor_apps_restore",
+      "status": "verified_lab_only",
+      "run_id": 40415028970,
+      "head_sha": "4299ca4d8c2a7d01fc471ad706b15c44d664f0cc",
+      "workflow": "Generic rootless OCI Registry and PostgreSQL App persistence and restore",
+      "job": "Real rootless OCI Registry HTTP and PostgreSQL SQL separate-volume restores",
+      "scope": "Real PostgreSQL 17: SIGKILL with open SQL transaction; native systemd restart and WAL recovery preserve committed row, reject uncommitted row; independent restored snapshot intact. Rootless offline lab, no household.",
+      "url": "https://github.com/GodsQuantum/Rusty-Home-Open/actions/runs/40415028970",
+      "merged_pr": 168
     }
   ]
 }

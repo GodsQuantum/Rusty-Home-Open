@@ -57,6 +57,12 @@ class GateReality(unittest.TestCase):
             self.assertEqual(item["merged_pr"], pr)
             self.assertEqual(item["run_id"], run)
             self.assertEqual(item["head_sha"], head)
+        p8ca = next(x for x in self.claims if x["id"] == "oci_postgresql_wal_sigkill_transaction_recovery")
+        self.assertEqual(p8ca["status"], "verified_lab_only")
+        self.assertEqual(p8ca["release_gate"], "supervisor_apps_restore")
+        self.assertEqual(p8ca["run_id"], 40415028970)
+        self.assertEqual(p8ca["head_sha"], "4299ca4d8c2a7d01fc471ad706b15c44d664f0cc")
+        self.assertEqual(p8ca["merged_pr"], 168)
         known={x["id"]:x for x in self.rows}
         self.assertEqual(set(known),{x["id"] for x in self.rows})
         self.assertTrue(all(x["blocked_reason"] and len(x["blocked_reason"][0])>80
