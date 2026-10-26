@@ -51,6 +51,7 @@ jobs:
       - name: Fail-closed isolation, official Core auth and pinned image contracts
         run: |
           python3 scripts/test_p8v_official_core_ws_contract.py
+          cargo test --locked -p hars-ha-compat --lib session::tests::bounded_retry
           python3 scripts/test_public_redaction.py
           python3 scripts/test_ha_core_pins.py
       - name: Official Home Assistant Core authenticated WS events into native Moli read-only Hub

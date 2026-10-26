@@ -107,7 +107,7 @@ RECOVERY="$(docker run --rm --network "container:$CONTAINER" \
         "/lab/runtime/$HARS_LAB_STORE" \
         ws://127.0.0.1:8123/api/websocket "$ENTITY" on
     ')"
-printf '%s' "$RECOVERY" | python3 -c 'import json,sys; d=json.load(sys.stdin); assert d["first_epoch"]==1 and d["failed_epoch"]==2 and d["recovered_epoch"]==3 and d["old_state_revoked"] and d["new_hub_verified"] and d["write_commands"]==0 and not d["production_ready"]'
+printf '%s' "$RECOVERY" | python3 -c 'import json,sys; d=json.load(sys.stdin); assert d["first_epoch"]==1 and d["failed_epoch"]==2 and d["recovered_epoch"]==3 and d["old_state_revoked"] and d["new_hub_verified"] and d["bounded_retry_policy"] and d["write_commands"]==0 and not d["production_ready"]'
 echo P8BH_REAL_CORE_WS_REVOKE_BAD_AUTH_NEW_EPOCH_NATIVE_HUB_PASS
 "$ROOT/target/debug/ha_registry_stager" --lab-readonly "$STORE" rollback "$SHA" >/dev/null
 STATUS="$("$ROOT/target/debug/ha_registry_stager" --lab-readonly "$STORE" status | python3 -c 'import json,sys; print(int(json.load(sys.stdin)["active"] is None))')"
