@@ -369,3 +369,7 @@ These six distinct cases were already completed in real, disposable GitHub CI an
 | P8AZ | #131 | `ddcd3550` | `a351529c` | 40315761886 | 20/20 | native podman secret reference real rootless redis sha256 mount |
 
 The existing five P8ao–P8as immutable proofs remain intact. The test suite verifies all eleven cases and their exact original sources; production still has 0/15 accepted independent gates.
+
+## 26 October 2026 — P8bd latest official Core compatibility CI candidate
+
+Official upstream Core stable 2026.10.4 dated 24 October (GHCR manifest digest sha256:23f4dfbb69ce76315dbc4de7915504f1c2dcecd7ca2648113a493a385972e133). Added independent workflow using same real strict isolated config-entry lifecycle/negative/no-egress harness, actual version assertion and separate pin, keeping 2026.10.2 and 2026.11-dev originals untouched. CI pending; current 0/15 release, no family host.

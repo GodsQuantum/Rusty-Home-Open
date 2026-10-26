@@ -255,3 +255,11 @@ These six distinct cases were already completed in real, disposable GitHub CI an
 | P8AZ | #131 | `ddcd3550` | `a351529c` | 40315761886 | 20/20 | native podman secret reference real rootless redis sha256 mount |
 
 The existing five P8ao–P8as immutable proofs remain intact. The test suite verifies all eleven cases and their exact original sources; production still has 0/15 accepted independent gates.
+
+## 26 October P8bd — official Core 2026.10.4 isolated ABI lifecycle [IN PROGRESS]
+
+Owner: SentinelX Cloud9 LXC700, isolated branch test/core-2026-10-4-20261026, base main 6ee9e7e. Current upstream official Core stable 2026.10.4 (released 24 October) Docker GHCR OCI index sha256:23f4dfbb69ce76315dbc4de7915504f1c2dcecd7ca2648113a493a385972e133 checked with docker buildx manifest only. Existing verified 2026.10.2 baseline and 2026.11-dev marketplace lab remain immutable, no rerun as new proof. Add separate disposable CI using same native synthetic Core config-entry lifecycle with dynamically selected strictly pinned 2026.10.4 candidate, assert actual runtime version and full create/unload/reload/remove. No HAOS family VM100 data or drivers. Rollback: revert branch, leave current release 0/15.
+
+## 26 Oct P8bd — Core 2026.10.4 candidate implemented, CI mandatory
+
+The independent Core 2026.10.4 GHCR OCI index was verified upstream; new opt-in P8bd GitHub workflow runs actual Core config-entry create/unload/reload/remove and runtime version verification without changing original 2026.10.2 pinned baseline or Marketplace dev. Strict external, network-none, read-only, nonroot fixture continues. GH exact-SHA proof still required; no current 29-integration hardware/API parity, release 0/15.

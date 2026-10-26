@@ -5,6 +5,7 @@ Only synthetic files under the disposable /config. No network or user devices.
 Executed INSIDE the unprivileged, network-none official Home Assistant container.
 """
 import asyncio
+import os
 import json
 from pathlib import Path
 
@@ -18,6 +19,11 @@ DOMAIN = "hars_lifecycle_probe"
 ENTITY = "sensor.hars_lifecycle_probe"
 
 async def main():
+    from homeassistant import __version__ as actual_core_version
+    expected_core_version = os.environ.get("HARS_EXPECTED_CORE_VERSION", "2026.10.2")
+    assert actual_core_version == expected_core_version, (
+        f"wrong official Core runtime {actual_core_version}, expected {expected_core_version}"
+    )
     iface = [r.split(":", 1)[0].strip() for r in Path("/proc/self/net/dev").read_text().splitlines()[2:] if ":" in r]
     assert iface == ["lo"], "non-loopback interface detected"
     assert not Path("/proc/net/route").read_text().splitlines()[1:], "unexpected external route"
