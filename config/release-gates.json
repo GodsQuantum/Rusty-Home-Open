@@ -59,7 +59,8 @@
       "blocked_reason": [
         "A real QEMU disposable local App v1 to v2 downgrade after manager SIGKILL did restore exact v1 bytes and version (run 40127707580). Full host migration rollback across independent machines, complete Core states, real App DBs, user accounts, physical radios and network ownership remain NOT verified.",
         "P8aa verified native redb entity-identity staging rollback in an isolated HAOS->Rust handoff (GitHub 40238122942), but whole-host Rust->HAOS rollback and all actual App/automation data remain unproved.",
-        "P8ab full archive recovery via Rust escrow (run 40240344194) does not prove reverse takeover of physical devices and third-party Apps from a running Rust Home host."
+        "P8ab full archive recovery via Rust escrow (run 40240344194) does not prove reverse takeover of physical devices and third-party Apps from a running Rust Home host.",
+        "P8ae (#105, SHA 4534b23, GH 40247000475, 12/12) demonstrates durable owner-private HAOS COW guest data after abrupt QEMU restart; P8af (#106, SHA 267e0fb, GH 40247834775, 13/13) demonstrates independent Rust manager reattach and double-owner exclusion in real HAOS QEMU. These do NOT prove fully running Rusty Home -> full HAOS field rollback of Core/Apps, auth and hardware."
       ],
       "certification_artifact": null
     },
@@ -107,7 +108,8 @@
       "id": "packaging_updates",
       "status": "lab_partial",
       "blocked_reason": [
-        "Real disposable .deb install, upgrade, downgrade, purge and offline signed APT tamper rejection passed on main (run 40004128778). Still missing release signing infrastructure, published packages, service migration and rollback on an existing installation."
+        "Real disposable .deb install, upgrade, downgrade, purge and offline signed APT tamper rejection passed on main (run 40004128778). Still missing release signing infrastructure, published packages, service migration and rollback on an existing installation.",
+        "P8ac+P8ad native Rust guest boot and genuine official Core/Supervisor CLI health passed in real HAOS 18.3 QEMU; P8ae/P8af durable guest and second Rust-process reattach also verified. These are isolated binaries and do not certify a signed unattended upgradable installed host daemon or boot service."
       ],
       "certification_artifact": null
     },

@@ -20,8 +20,7 @@ host paths, no physical USB/radio devices. Rust owns, kills and reaps QEMU
 after a bounded real HAOS 'homeassistant login:' console boot marker.
 
 CI tests genuine pinned HAOS 18.3 under KVM in a disposable GitHub runner
-using the official immutable compressed QCOW2 SHA-256. Until exact GitHub
-SHA and real CI success, this is only proposed evidence.
+using the official immutable compressed QCOW2 SHA-256. The pinned real HAOS KVM CI passed for P8ac; see exact immutable evidence below.
 
 REMAINING: boot marker is NOT Supervisor/Core readiness. Production needs a
 persistent guest disk (not -snapshot), scoped and authenticated Core+Supervisor
@@ -38,16 +37,16 @@ https://github.com/home-assistant/operating-system
 
 0/15 production gates cleared, no household HAOS, radios or credentials touched.
 
-## P8ad — real guest Supervisor/Core CLI readiness probe (CI pending)
+## P8ad — real guest Supervisor/Core CLI readiness probe (genuine CI VERIFIED)
 
 Native Rust now keeps a bounded QEMU guest process and drives its actual HAOS serial shell. The driver sends root login then the official 'ha supervisor info --no-progress --raw-json' and 'ha core info --no-progress --raw-json' read-only CLI calls. Both must return explicit result=ok independently, with retries and a strict boot deadline. The complete console transcript and tokens are neither printed nor persisted; only two boolean proof fields are exposed. Command and image verification are lab-only and cannot create an authorization for production. It validates CLI API responsiveness, not Core HTTP event streaming, Apps running, persistent disk or USB/radio cutover. The pinned KVM workflow p8ad-rust-health.yml must pass at the exact SHA before this scope is marked verified.
 
-## P8ae — persistent Rust-managed guest COW disk (CI pending)
+## P8ae — persistent Rust-managed guest COW disk (genuine CI VERIFIED)
 
 Rust now provisions a fixed owner-private qcow2 guest-overlay image using the official qemu-img binary with explicit QCOW2 backing pinned to the source image. A nonblocking Linux flock prevents dual VM orchestrators. Rust boots official HAOS twice without -snapshot, writes an invented share marker and syncs inside first guest, forcefully terminates QEMU, boots a second independent QEMU process using the **same overlay** and compares a checksum of the marker read from guest. The original base image hash is checked before and after. This directly exercises persistent guest configuration and crash recovery while preserving the previously certified ephemeral boot and Supervisor CLI health paths. Tests are lab-only: no real Apps data, no physical radio ownership, no host migration. Until real GitHub CI at exact head passes, this is code only.
 
 
-## P8af: native Rust manager restart recovery (CI pending)
+## P8af: native Rust manager restart recovery (genuine CI VERIFIED)
 
 P8ae proved two QEMU boots from a single Rust manager. New P8af ensures a
 SECOND independent Rust process can reattach to the same private qcow2 guest
@@ -58,3 +57,12 @@ fake HAOS share marker with two genuine QEMU guests in pinned KVM CI.
 No running-process adoption, auto-start system service or radio takeover
 is implied. Until exact GitHub CI and merge, this is unverified code.
 Production remains 0/15.
+
+## Immutable verified native Rust host / official HAOS QEMU evidence (26 October)
+
+- P8ac: official HAOS 18.3 boots under a real native Rust QEMU process. PR #103, HEAD 29f9a45db72e4ef69aa0abed00dda17483d7133e, 18/18 checks, GitHub 40243098816, merged ac76a85dbeadc1456968e5912eb7ddf32c9ba2a3.
+- P8ad: official Supervisor and Core CLI health each responded validly from the real guest. PR #104, HEAD 73f91ea3330adfa642e40c0854a001a4eabf206d, 11/11 checks, GitHub 40243728521, merged 230a5964090af47d3a5d06b83c89f8527d868c1c.
+- P8ae: persistent private COW QEMU guest file survived forcefully terminated guest and new real official HAOS boot. PR #105, HEAD 4534b23a4b2f0913430251dfe4b32d75fa788c94, 12/12 checks, GitHub 40247000475, merged 45811bcefa791544d7a016dc331d140fc585e120.
+- P8af: two INDEPENDENT Rust manager invocations; second safely acquired an exclusive owner lease and recovered first-run fictional file through same qcow2, concurrent owner denied. PR #106, HEAD 267e0fb0e287bb0072a0d933dc6365526f64e4e3, 13/13 checks, GitHub 40247834775, merged d8c5bee817c7b7e8ef5ea6af24d62d366fbe610a.
+
+Machine source of truth: config/haos-rust-guest-evidence.json. These scope-limited KVM proofs MUST NOT be relabeled full host certification. They do not prove an installable long-running guest supervisor daemon, authenticated Core HTTP access, full Apps service lifecycle, household cutover, exclusive hardware ownership, encrypted backing/secret migration or system-level rollback. 0/15 production gates. Reuse the CI history; do not repeat these tests as new evidence.
