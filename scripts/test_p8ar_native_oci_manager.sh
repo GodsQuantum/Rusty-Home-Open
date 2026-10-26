@@ -20,7 +20,11 @@ cleanup() {
 trap cleanup EXIT
 
 # Install is declared but must not start or enable the unit automatically.
-HARS_DISPOSABLE_OCI_LAB=1 "$BIN" --install-lab managedredis "$SOURCE" 999
+if [[ "$(printenv HARS_LOCAL_TCP_LAB || true)" == 1 ]]; then
+  HARS_DISPOSABLE_OCI_LAB=1 "$BIN" --install-lab managedredis "$SOURCE" 999 --local-tcp 18879:6379
+else
+  HARS_DISPOSABLE_OCI_LAB=1 "$BIN" --install-lab managedredis "$SOURCE" 999
+fi
 test -f "$QUADLETS/rh-managedredis.container"
 test -f "$QUADLETS/rh-managedredis-data.volume"
 test "$(stat -c '%a' "$QUADLETS/rh-managedredis.container")" = 600
@@ -40,6 +44,17 @@ done
 podman exec rh-managedredis redis-cli ping | grep -Fx PONG
 test "$(podman inspect rh-managedredis --format '{{.HostConfig.NetworkMode}}')" = none
 test "$(podman inspect rh-managedredis --format '{{.HostConfig.ReadonlyRootfs}}')" = true
+
+if [[ "$(printenv HARS_LOCAL_TCP_LAB || true)" == 1 ]]; then
+  podman port rh-managedredis 6379/tcp | grep -Fx '127.0.0.1:18879'
+  python3 - <<'PYTHON'
+import socket
+with socket.create_connection(('127.0.0.1',18879),timeout=5) as conn:
+    conn.sendall(b"*1\r\n$4\r\nPING\r\n")
+    assert conn.recv(64)==b"+PONG\r\n"
+PYTHON
+  echo P8AS_REAL_ROOTLESS_REDIS_LOCALHOST_ONLY_TCP_PASS
+fi
 podman exec rh-managedredis redis-cli SET manager-proof stable | grep -Fx OK
 podman exec rh-managedredis redis-cli SAVE | grep -Fx OK
 HARS_DISPOSABLE_OCI_LAB=1 "$BIN" --stop-lab managedredis

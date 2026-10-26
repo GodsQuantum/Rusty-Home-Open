@@ -1,5 +1,12 @@
 # Rusty Home — journal de développement et de certification
 
+## 2026-10-26 — P8as optional local-only TCP ingress for generic OCI Apps (CI pending)
+
+- P8ar native Rust manager actual Redis install/start/stop/uninstall/rootless persistent state verified in real GitHub Ubuntu on run 40291069681; exact-head 23 CI checks required before #121 merged. Do not reimplement P8ar.
+- Introduces generic opt-in AppNetwork::LoopbackTcp with explicit host and container port, rejecting host ports under 1024 and invalid guest ports. Default remains AppNetwork::Offline / Network=none; no 0.0.0.0/public publish. Uses native Podman 4.9 Quadlet Network=slirp4netns and PublishPort=127.0.0.1, not custom proxies. The Rust native manager exposes explicit --local-tcp only with laboratory flag.
+- Separate disposable GitHub test runs a genuine Redis App and tests actual host 127.0.0.1:18879 reachability, Podman port listing and strict read-only/rootless resources; will not claim proof before exact-head CI. IMPORTANT: slirp4netns can permit OUTBOUND egress; this is a host-side INGRESS limitation, NOT network egress isolation, production remote ingress, auth or completed Home Assistant App integration. No Cloud9 service change, 0/15 production.
+
+
 ## 2026-10-26 — P8ar real native Rust OCI App manager commands (CI pending)
 
 - Earlier P8ap #118 actual rootless Redis systemd start/restart/persistence 21/21 CI merged 071b85bac4f887843be3a2f47d25e44ddcc03bd1. P8aq #120 real offline Podman volume export/import, independent restored Redis and corrupted archive refusal 11/11 CI merged 7cf1d3ad3fb74d9e7d8537f171e500b94d86eac0. DO NOT REDO THESE TWO PROOFS.

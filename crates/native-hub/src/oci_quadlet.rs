@@ -8,12 +8,20 @@ pub enum QuadletError {
     InvalidResources,
 }
 
+/// Localhost-only service access requires an explicit operator-selected port.
+/// slirp4netns may still allow OUTBOUND egress; not an outbound firewall.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum AppNetwork {
+    Offline,
+    LoopbackTcp { host_port: u16, container_port: u16 },
+}
 pub struct OciApp<'a> {
     pub slug: &'a str,
     pub image: &'a str,
     pub memory_mib: u16,
     pub pids_limit: u16,
     pub run_uid: Option<u32>,
+    pub network: AppNetwork,
 }
 pub struct QuadletUnits {
     pub container_name: String,
@@ -60,6 +68,20 @@ impl OciApp<'_> {
         if self.run_uid.is_some_and(|uid| uid == 0 || uid > 65533) {
             return Err(QuadletError::InvalidResources);
         }
+        let net = match self.network {
+            AppNetwork::Offline => String::from("Network=none\n"),
+            AppNetwork::LoopbackTcp {
+                host_port,
+                container_port,
+            } => {
+                if host_port < 1024 || container_port == 0 {
+                    return Err(QuadletError::InvalidResources);
+                }
+                format!(
+                    "Network=slirp4netns\nPublishPort=127.0.0.1:{host_port}:{container_port}/tcp\n"
+                )
+            }
+        };
         let explicit_user = self
             .run_uid
             .map(|uid| format!("User={uid}\n"))
@@ -70,7 +92,7 @@ impl OciApp<'_> {
         let container = format!(
             "[Unit]\nDescription=Rusty Home isolated OCI App {slug} (lab only)\n\n\
              [Container]\nImage={image}\nContainerName={container_name}\n\
-             Volume={volume_name}.volume:/data{mount_flags}\n{explicit_user}Network=none\nPull=never\n\
+             Volume={volume_name}.volume:/data{mount_flags}\n{explicit_user}{net}Pull=never\n\
              NoNewPrivileges=true\nDropCapability=all\nReadOnly=true\n\
              PidsLimit={pids}\n\n\
              [Service]\nMemoryMax={memory}M\nRestart=on-failure\nRestartSec=5s\nTimeoutStartSec=180s\n",
@@ -78,7 +100,8 @@ impl OciApp<'_> {
             pids = self.pids_limit,
             memory = self.memory_mib,
             mount_flags = mount_flags,
-            explicit_user = explicit_user
+            explicit_user = explicit_user,
+            net = net
         );
         let volume = format!(
             "[Unit]\nDescription=Rusty Home isolated OCI App {slug} persistent volume\n\n\
@@ -103,6 +126,7 @@ mod tests {
             memory_mib: 256,
             pids_limit: 128,
             run_uid: None,
+            network: AppNetwork::Offline,
         }
     }
     #[test]
@@ -166,6 +190,30 @@ mod tests {
         assert!(cfg.render().is_err());
         cfg.run_uid = Some(99999);
         assert!(cfg.render().is_err());
+    }
+    #[test]
+    fn loopback_port_requires_opt_in_and_never_binds_public_interface() {
+        let image = format!("docker.io/library/redis@sha256:{DIGEST}");
+        let mut app = good("redis-local", &image);
+        assert!(app.render().unwrap().container.contains("Network=none\n"));
+        app.network = AppNetwork::LoopbackTcp {
+            host_port: 18879,
+            container_port: 6379,
+        };
+        let unit = app.render().unwrap().container;
+        assert!(unit.contains("PublishPort=127.0.0.1:18879:6379/tcp"));
+        assert!(unit.contains("Network=slirp4netns"));
+        assert!(!unit.contains("0.0.0.0:18879"));
+        app.network = AppNetwork::LoopbackTcp {
+            host_port: 80,
+            container_port: 6379,
+        };
+        assert!(app.render().is_err());
+        app.network = AppNetwork::LoopbackTcp {
+            host_port: 18879,
+            container_port: 0,
+        };
+        assert!(app.render().is_err());
     }
     #[test]
     fn unreasonable_limits_are_rejected() {

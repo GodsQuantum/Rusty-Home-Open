@@ -1,6 +1,6 @@
 //! P8ar: lab-only *actual* rootless native systemd/Podman OCI App manager.
 //! No root, no household HAOS, no user device access, no production API.
-use hars_native_hub::oci_quadlet::{OciApp, QuadletUnits};
+use hars_native_hub::oci_quadlet::{AppNetwork, OciApp, QuadletUnits};
 use std::{
     env,
     fs::{self, File, OpenOptions},
@@ -117,7 +117,7 @@ fn require_installed(dir: &Path, slug: &str) -> io::Result<String> {
     installed_file(&b)?;
     Ok(unit)
 }
-fn install(dir: &Path, slug: &str, image: &str, uid: u32) -> io::Result<()> {
+fn install(dir: &Path, slug: &str, image: &str, uid: u32, network: AppNetwork) -> io::Result<()> {
     if uid == 0 || uid > 65533 {
         return Err(bad());
     }
@@ -127,6 +127,7 @@ fn install(dir: &Path, slug: &str, image: &str, uid: u32) -> io::Result<()> {
         memory_mib: 256,
         pids_limit: 128,
         run_uid: Some(uid),
+        network,
     };
     let q = decl.render().map_err(|_| bad())?;
     // Strictly no pull or mutable tags. OCI digest must already be available.
@@ -166,9 +167,21 @@ fn execute() -> io::Result<()> {
     }
     let dir = units_dir()?;
     match args[1].as_str() {
-        "--install-lab" if args.len() == 5 => {
+        "--install-lab" if args.len() == 5 || args.len() == 7 => {
             let uid = args[4].parse::<u32>().map_err(|_| bad())?;
-            install(&dir, &args[2], &args[3], uid)
+            let net = if args.len() == 7 {
+                if args[5] != "--local-tcp" {
+                    return Err(bad());
+                }
+                let (h, c) = args[6].split_once(':').ok_or_else(bad)?;
+                AppNetwork::LoopbackTcp {
+                    host_port: h.parse::<u16>().map_err(|_| bad())?,
+                    container_port: c.parse::<u16>().map_err(|_| bad())?,
+                }
+            } else {
+                AppNetwork::Offline
+            };
+            install(&dir, &args[2], &args[3], uid, net)
         }
         "--start-lab" if args.len() == 3 => {
             let unit = require_installed(&dir, &args[2])?;
@@ -221,6 +234,7 @@ mod tests {
             memory_mib: 256,
             pids_limit: 128,
             run_uid: Some(999),
+            network: AppNetwork::Offline,
         }
         .render()
         .unwrap();
