@@ -30,6 +30,49 @@ pub struct QuadletUnits {
     pub volume: String,
 }
 impl OciApp<'_> {
+    /// A Podman-managed named volume, never a host-path bind.
+    /// Custom OCI storage destinations must be absolute safe container paths.
+    pub fn render_at(&self, destination: &str) -> Result<QuadletUnits, QuadletError> {
+        if destination.len() < 2
+            || destination.len() > 120
+            || !destination.starts_with('/')
+            || destination.ends_with('/')
+            || destination.contains("//")
+            || destination.contains('\\')
+            || !destination.split('/').skip(1).all(|part| {
+                !part.is_empty()
+                    && part != "."
+                    && part != ".."
+                    && part
+                        .bytes()
+                        .all(|c| c.is_ascii_alphanumeric() || c == b'-' || c == b'_' || c == b'.')
+            })
+            || ["/proc", "/sys", "/dev", "/etc", "/run", "/root"]
+                .iter()
+                .any(|reserved| {
+                    destination == *reserved || destination.starts_with(&format!("{reserved}/"))
+                })
+        {
+            return Err(QuadletError::InvalidResources);
+        }
+        let mut q = self.render()?;
+        let needle = format!(
+            "Volume={}.volume:/data",
+            q.volume_name.trim_end_matches(".volume")
+        );
+        if q.container.matches(&needle).count() != 1 {
+            return Err(QuadletError::InvalidResources);
+        }
+        q.container = q.container.replacen(
+            &needle,
+            &format!(
+                "Volume={}.volume:{destination}",
+                q.volume_name.trim_end_matches(".volume")
+            ),
+            1,
+        );
+        Ok(q)
+    }
     pub fn render(&self) -> Result<QuadletUnits, QuadletError> {
         let slug = self.slug;
         if slug.len() > 64
@@ -214,6 +257,36 @@ mod tests {
             container_port: 0,
         };
         assert!(app.render().is_err());
+    }
+    #[test]
+    fn generic_data_path_is_container_only_absolute_and_injection_safe() {
+        let image = format!("docker.io/library/registry@sha256:{DIGEST}");
+        let app = good("registry", &image);
+        let q = app.render_at("/var/lib/registry").unwrap();
+        assert!(
+            q.container
+                .contains("Volume=rh-registry-data.volume:/var/lib/registry")
+        );
+        assert!(q.container.contains("Network=none"));
+        assert!(!q.container.contains(":/data"));
+        for invalid in [
+            "",
+            "/",
+            "relative",
+            "/data/",
+            "/data//secret",
+            "/../mnt",
+            "/var/lib/../../host",
+            "/etc/shadow",
+            "/proc",
+            "/run/secrets",
+            "/var/lib/registry:Z",
+            "/var/lib/registry\\n[Install]",
+            "/root/config",
+        ] {
+            assert!(app.render_at(invalid).is_err(), "{invalid}");
+        }
+        assert!(app.render_at("/data").is_ok());
     }
     #[test]
     fn unreasonable_limits_are_rejected() {
