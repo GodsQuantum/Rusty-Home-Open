@@ -424,12 +424,37 @@ fn qmp_shutdown(socket: &Path) -> Result<(), GuestError> {
         .map_err(|_| GuestError::QemuStart)?;
     Ok(())
 }
+/// No credentials, no redirects, no sensitive body captured: only
+/// whether official Core responds to a local HTTP frontend request.
+fn local_core_frontend_responded() -> bool {
+    let local = SocketAddr::from(([127, 0, 0, 1], 18180));
+    let Ok(mut tcp) = TcpStream::connect_timeout(&local, Duration::from_millis(300)) else {
+        return false;
+    };
+    let _ = tcp.set_read_timeout(Some(Duration::from_millis(700)));
+    let _ = tcp.set_write_timeout(Some(Duration::from_millis(700)));
+    if tcp
+        .write_all(b"GET / HTTP/1.1\r\nHost: 127.0.0.1\r\nConnection: close\r\n\r\n")
+        .is_err()
+    {
+        return false;
+    }
+    let mut first = [0u8; 2048];
+    let Ok(n) = tcp.read(&mut first) else {
+        return false;
+    };
+    let response = &first[..n];
+    response.starts_with(b"HTTP/1.1 200 ")
+        || response.starts_with(b"HTTP/1.1 302 ")
+        || response.starts_with(b"HTTP/1.1 307 ")
+}
 pub struct GuestServiceOutcome {
     pub guest_process_reaped: bool,
     pub base_image_unchanged: bool,
     pub acpi_shutdown_requested: bool,
     pub loopback_frontend_forward_requested: bool,
     pub loopback_listener_reached: bool,
+    pub core_frontend_http_responded: bool,
 }
 /// The *host-side* service runs until SIGTERM/SIGINT or unexpected QEMU exit.
 /// A genuine OS/systemd manager owns the Rust process. QEMU runs without
@@ -438,7 +463,7 @@ pub fn run_guarded_guest_service_lab(
     spec: &GuestSpec,
     private_dir: &Path,
 ) -> Result<GuestServiceOutcome, GuestError> {
-    run_guest_service_inner_lab(spec, private_dir, false)
+    run_guest_service_inner_lab(spec, private_dir, false, false)
 }
 /// Optional on-host UI visibility, loopback only. HAOS 2026.8+ on HAOS
 /// uses guest TCP/80, not 8123. Core itself owns authentication/OAuth.
@@ -446,12 +471,19 @@ pub fn run_guarded_guest_service_http_loopback_lab(
     spec: &GuestSpec,
     private_dir: &Path,
 ) -> Result<GuestServiceOutcome, GuestError> {
-    run_guest_service_inner_lab(spec, private_dir, true)
+    run_guest_service_inner_lab(spec, private_dir, true, false)
+}
+pub fn verify_core_frontend_via_rust_guest_lab(
+    spec: &GuestSpec,
+    private_dir: &Path,
+) -> Result<GuestServiceOutcome, GuestError> {
+    run_guest_service_inner_lab(spec, private_dir, true, true)
 }
 fn run_guest_service_inner_lab(
     spec: &GuestSpec,
     private_dir: &Path,
     local_core_ui: bool,
+    must_verify_frontend: bool,
 ) -> Result<GuestServiceOutcome, GuestError> {
     if std::env::var("HARS_DISPOSABLE_KVM_LAB").as_deref() != Ok("1") {
         return Err(GuestError::InvalidArguments);
@@ -502,15 +534,28 @@ fn run_guest_service_inner_lab(
         .spawn()
         .map_err(|_| GuestError::QemuStart)?;
     // CI-only bounded lifecycle validation; no signal injection required.
+    let max_lab_seconds = if must_verify_frontend { 300 } else { 120 };
     let lab_stop_after = std::env::var("HARS_LAB_AUTO_STOP_SECONDS")
         .ok()
         .and_then(|v| v.parse::<u64>().ok())
-        .filter(|n| (1..=120).contains(n))
+        .filter(|n| (1..=max_lab_seconds).contains(n))
         .map(Duration::from_secs);
     let service_started = Instant::now();
     let mut loopback_listener_reached = false;
+    let mut core_frontend_http_responded = false;
+    let mut last_http_probe = Instant::now() - Duration::from_secs(3);
     let mut unexpectedly_exited = false;
     while !SERVICE_STOP.load(Ordering::SeqCst) {
+        if must_verify_frontend
+            && !core_frontend_http_responded
+            && last_http_probe.elapsed() >= Duration::from_secs(3)
+        {
+            core_frontend_http_responded = local_core_frontend_responded();
+            last_http_probe = Instant::now();
+            if core_frontend_http_responded {
+                SERVICE_STOP.store(true, Ordering::SeqCst);
+            }
+        }
         if local_core_ui && !loopback_listener_reached {
             let local = SocketAddr::from(([127, 0, 0, 1], 18180));
             loopback_listener_reached =
@@ -553,6 +598,9 @@ fn run_guest_service_inner_lab(
     if unexpectedly_exited {
         return Err(GuestError::EarlyExit);
     }
+    if must_verify_frontend && !core_frontend_http_responded {
+        return Err(GuestError::GuestHealthTimeout);
+    }
     File::open(&overlay)
         .and_then(|f| f.sync_all())
         .map_err(|_| GuestError::UnsafeImage)?;
@@ -569,6 +617,7 @@ fn run_guest_service_inner_lab(
         acpi_shutdown_requested: acpi,
         loopback_frontend_forward_requested: local_core_ui,
         loopback_listener_reached,
+        core_frontend_http_responded,
     })
 }
 
@@ -903,7 +952,7 @@ mod tests {
             std::env::var("HARS_NONEXISTENT_STRICT_LAB_TEST"),
             Err(std::env::VarError::NotPresent)
         ));
-        assert_eq!(std::mem::size_of::<GuestServiceOutcome>(), 5);
+        assert_eq!(std::mem::size_of::<GuestServiceOutcome>(), 6);
     }
     #[test]
     fn persistent_guest_arg_list_uses_cow_not_unsafe_ephemeral_switches() {

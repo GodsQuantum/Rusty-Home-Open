@@ -94,6 +94,10 @@ Branch feat/native-guest-service-lifecycle-20261026, isolated worktree Rusty-Hom
 
 PR #108 P8ag genuine Rust service lifecycle passed 14/14, merged 0d943526a1e62f91658d92db1b88aea947958a7c. New branch feat/haos-local-core-ui-20261026 in worktree Rusty-Home-Loopback-20261026 exposes only optional fixed loopback QEMU host TCP/18180 to guest HAOS TCP/80, lab-only. Genuine P8ah KVM CI required; its TCP-listener proof does NOT yet demonstrate complete UI/API/Apps availability. No family HAOS deployment, 0/15 gates.
 
+## P8ai — actual official Core frontend response from Rust (26 October)
+
+P8ag PR #108 (14 checks; run 40250349459, main 0d943526) and P8ah PR #109 (15 checks; run 40251693506, main 8cebcf788cde7b18dd893d28fb6d3d75abb97e51) are MERGED and must not be retested as new proof. P8ai branch feat/rust-haos-real-frontend-health-20261026 in worktree Rusty-Home-Core-Frontend-Main-20261026 adds a real Rust HTTP GET / check against the fixed local HAOS guest 80/tcp route; new official KVM workflow p8ai-real-core-frontend.yml must pass exact feature SHA. This only proves the uncredentialed frontend responds with HTTP success/redirect; product remains not production-ready (0/15), no household HAOS/radios.
+
 ## Reprise obligatoire
 
 1. Lire ces sources, vérifier le SHA actuel de GitHub, les PR ouvertes, les preuves et la CI avant de relancer des travaux.

@@ -91,3 +91,15 @@ trust, real radio USB pass-through or app control. Rust only detects
 the local TCP listener, not that the entire HA Core UI is ready.
 A separate real KVM certification at exact feature SHA is required.
 Production certification remains 0/15; family HAOS untouched.
+
+## P8ai: genuine frontend response from official HAOS guest (CI pending)
+
+Unlike P8ah, which only proves a host TCP listener, P8ai opens a
+read-only HTTP connection from native Rust to the official Home Assistant
+Core frontend over the fixed 127.0.0.1:18180 to guest TCP/80 route.
+It accepts only successful HTTP 200 or frontend redirection (302/307).
+It never logs HTTP response content and sends no passwords or access
+tokens. If Core does not start by the bounded disposable CI deadline,
+the laboratory fails closed. A fresh official HAOS 18.3 KVM test at the
+exact feature SHA is required; no conclusion about real Apps, logged-in
+sessions, Core WebSockets or production service is implied.

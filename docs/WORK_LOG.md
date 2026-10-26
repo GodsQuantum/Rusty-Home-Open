@@ -1,5 +1,10 @@
 # Rusty Home — journal de développement et de certification
 
+## 2026-10-26 — P8ai actual Home Assistant Core frontend through Rust QEMU (CI pending)
+
+Added a native Rust localhost read-only HTTP request to Core through QEMU. New real HAOS 18.3 KVM proof waits up to bounded limit for HTTP success, rather than mistaking P8ah TCP listener availability for Core readiness. Does not authenticate, mutate entities, or expose LAN services. Release 0/15.
+
+
 ## 2026-10-26 — P8ah native Rust HAOS frontend loopback forwarding (CI pending)
 
 Rust guest host now optionally exposes only QEMU localhost 127.0.0.1:18180 forwarding to official HAOS guest TCP/80, with a real host TCP listener probe. The default lab mode still exposes no ports; no public binding, HA Core token or radio. Genuine KVM CI required before certification; login UI health and production are not yet proven.
