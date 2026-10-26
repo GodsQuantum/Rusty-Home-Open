@@ -1,6 +1,13 @@
 # Rusty Home — journal de développement et de certification
 
-## 2026-10-26 — P8aq real independent OCI App data backup and restore (CI pending)
+## 2026-10-26 — P8ar real native Rust OCI App manager commands (CI pending)
+
+- Earlier P8ap #118 actual rootless Redis systemd start/restart/persistence 21/21 CI merged 071b85bac4f887843be3a2f47d25e44ddcc03bd1. P8aq #120 real offline Podman volume export/import, independent restored Redis and corrupted archive refusal 11/11 CI merged 7cf1d3ad3fb74d9e7d8537f171e500b94d86eac0. DO NOT REDO THESE TWO PROOFS.
+- New genuine Rust binary crates/native-hub/src/bin/oci_app_manager_lab.rs exposes explicit laboratory install/start/stop/remove of arbitrary safe OCI App slugs via the upstream native Podman+systemd rootless system. App digest must be SHA256 pinned and image already local. Install writes two new private Quadlet descriptor files, reloading systemd without auto-start; start and stop invoke unprivileged systemctl --user. Removal stops and unloads descriptors WITHOUT deleting App state volume. No fixed App list.
+- Strictly restricted to non-root GitHub ephemeral CI with second explicit lab opt-in. Reject symlink/foreign ownership/world-writable unit directories and files, mutable images, UID0, malformed slugs, missing manager install records, unauthorized commands. Real official Redis OCI end-to-end operation CI p8ar-real-oci-manager.yml required at exact SHA.
+- No real cloud9 or household access, production authentication/RBAC, app version upgrade transaction or encrypted migration; still 0/15 release gates fully qualified.
+
+## 2026-10-26 — P8aq real independent OCI App data backup and restore (CI passed 11/11, merged #120)
 
 - Already verified: #118 actual rootless Redis App start/stop and persisted data, 21/21 exact-head CI, merged 071b85bac4f887843be3a2f47d25e44ddcc03bd1. DO NOT REDO.
 - P8aq extends the same Redis + systemd rootless fixture only under an additional explicit laboratory environment. After stopping Redis writer, native Podman volume export writes private tar, enforces SHA256, corrupts a second copy and requires checksum rejection. The original Redis App restarts and its state is intentionally changed. A FRESH differently named Podman volume imports the checksum-verified archive; a new Rust-generated Quadlet starts the independent restore App; prior backup value is checked while primary still has new value.

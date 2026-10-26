@@ -1,0 +1,40 @@
+name: P8ar Native Rust app manager genuinely controls rootless OCI services
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/p8ar-real-oci-manager.yml"
+      - "scripts/test_p8ar_native_oci_manager.sh"
+      - "scripts/test_p8ar_manager_contract.py"
+      - "crates/native-hub/**"
+      - "Cargo.lock"
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  actual-rust-manager:
+    name: Real Rust manager installs, starts, stops and removes generic Redis App without data loss
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Guard unauthorized execution and unsafe manifests
+        run: |
+          python3 scripts/test_p8ar_manager_contract.py
+          cargo fmt --all -- --check
+          cargo test --locked -p hars-native-hub --all-targets
+          cargo clippy --locked -p hars-native-hub --all-targets -- -D warnings
+          bash -n scripts/test_p8ar_native_oci_manager.sh
+      - name: Install official rootless Podman and user systemd
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends podman uidmap slirp4netns fuse-overlayfs
+          test -x /usr/bin/podman
+          test -S /run/user/$(id -u)/bus
+      - name: Genuine Redis OCI lifecycle driven by Rust native app manager
+        timeout-minutes: 12
+        run: |
+          cargo build --locked -p hars-native-hub --bin oci_app_manager_lab
+          bash scripts/test_p8ar_native_oci_manager.sh
