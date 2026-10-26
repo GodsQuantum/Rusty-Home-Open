@@ -29,6 +29,7 @@ jobs:
           python3 -m py_compile scripts/test_p2i_mqtt5_broker_sigkill.py
           python3 scripts/test_p2k_real_readd_contract.py
           cargo fmt --all -- --check
+          cargo test --locked -p hars-native-kernel --lib p2n_ -- --nocapture
           cargo test --locked -p hars-native-kernel --lib mqtt_registry
           cargo clippy --locked -p hars-native-kernel --all-targets -- -D warnings
       - name: Build disposable genuine Mosquitto image
