@@ -8,10 +8,10 @@ g=json.loads((root/"config/release-gates.json").read_text())
 assert d["schema_version"]==1
 assert d["production_release"]=="NOT_PRODUCTION_READY"
 assert d["fully_certified_production_gates"]==0 and d["total_production_gates"]==15
-assert [c["case_id"] for c in d["cases"]]==["p8ac","p8ad","p8ae","p8af","p8ag","p8ah","p8ai","p8aj","p8ak","p8al"]
-assert [c["checks_passed"] for c in d["cases"]]==[18,11,12,13,14,15,16,10,11,9]
-assert [c["github_actions_run_id"] for c in d["cases"]]==[40243098816,40243728521,40247000475,40247834775,40250349459,40251693506,40252930987,40254861417,40255870443,40257162323]
-assert [c["pr"] for c in d["cases"]]==[103,104,105,106,108,109,110,111,112,113]
+assert [c["case_id"] for c in d["cases"]]==["p8ac","p8ad","p8ae","p8af","p8ag","p8ah","p8ai","p8aj","p8ak","p8al","p8am","p8an"]
+assert [c["checks_passed"] for c in d["cases"]]==[18,11,12,13,14,15,16,10,11,9,26,11]
+assert [c["github_actions_run_id"] for c in d["cases"]]==[40243098816,40243728521,40247000475,40247834775,40250349459,40251693506,40252930987,40254861417,40255870443,40257162323,40261132205,40263269849]
+assert [c["pr"] for c in d["cases"]]==[103,104,105,106,108,109,110,111,112,113,115,116]
 assert [c["feature_head_sha"] for c in d["cases"]]==[
  "29f9a45db72e4ef69aa0abed00dda17483d7133e",
  "73f91ea3330adfa642e40c0854a001a4eabf206d",
@@ -22,11 +22,17 @@ assert [c["feature_head_sha"] for c in d["cases"]]==[
  "6849ce2913400005e896f9dbf6e930cb4dfc0c7d",
  "e1a2c97d4a4343be6c3ddb7b24fcbbfef9a1310c",
  "e4b14d9206ec273eb5cbde6a5050aff215a5040c",
- "4cb0c9d946d029c8aee5f95ca583212535a0287a"]
+ "4cb0c9d946d029c8aee5f95ca583212535a0287a",
+ "d5849dd71b4cc36b10f8eefe1a58ab6488a27cdf",
+ "092b5dcf5f741ba0e683922476c289ccd3c5cf26"]
 assert d["cases"][3]["merged_commit_sha"]=="d8c5bee817c7b7e8ef5ea6af24d62d366fbe610a"
-assert d["cases"][-1]["merged_commit_sha"]=="a756696b60081d641ad7ec9cf43144f3361a201b"
+assert d["cases"][9]["merged_commit_sha"]=="a756696b60081d641ad7ec9cf43144f3361a201b"
+assert d["cases"][-1]["merged_commit_sha"]=="ea80ba0e461b4527270b387acd280ef1587b5582"
 for item in d["cases"]:
- assert item["status"]=="VERIFIED_IN_DISPOSABLE_REAL_HAOS_KVM_LAB_ONLY"
+ if item["case_id"] in ("p8ak","p8al"):
+  assert item["status"]=="VERIFIED_IN_DISPOSABLE_REAL_DEBIAN_SIGNED_APT_LAB_ONLY"
+ else:
+  assert item["status"]=="VERIFIED_IN_DISPOSABLE_REAL_HAOS_KVM_LAB_ONLY"
  assert item["checks_failed"]==0 and len(item["merged_commit_sha"])==40
  assert re.fullmatch("[a-f0-9]{40}",item["feature_head_sha"])
  assert item["github_actions_run_url"].endswith("/"+str(item["github_actions_run_id"]))
@@ -43,4 +49,4 @@ statuses={v["id"]:v["status"] for v in g["required_gates"]}
 assert statuses["rollback_verified"]=="blocked"
 assert statuses["packaging_updates"]=="lab_partial"
 assert "real household" in " ".join(d["critical_limits"]).lower()
-print("P8AC_THROUGH_P8AL_RUST_HOST_PROOFS_PINNED_0_OF_15_PRODUCTION_PASS")
+print("P8AC_THROUGH_P8AN_GENUINE_HAOS_KVM_PROOFS_PINNED_0_OF_15_PRODUCTION_PASS")

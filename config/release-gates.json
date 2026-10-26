@@ -8,7 +8,8 @@
       "status": "lab_partial",
       "blocked_reason": [
         "Official isolated Supervisor Ingress rejects forged peer/header requests; native Rust product App runs nonroot (GitHub runs 40004128675 and 40002933713). Still missing authorized write sessions, per-operation revocation and production-host penetration tests.",
-        "P8ah (#109 GH 40251693506) validated fixed localhost-only Rust QEMU forward, P8ai (#110 GH 40252930987) validated actual uncredentialed official Core HTTP response; neither proves production per-user authentication, RBAC or secure writable routes."
+        "P8ah (#109 GH 40251693506) validated fixed localhost-only Rust QEMU forward, P8ai (#110 GH 40252930987) validated actual uncredentialed official Core HTTP response; neither proves production per-user authentication, RBAC or secure writable routes.",
+        "P8as #122 (GH 40292676656) explicitly binds host 127.0.0.1 for one authenticated Redis lab; this is not a production per-user authenticated API/Ingress, nor outbound egress isolation."
       ],
       "certification_artifact": null
     },
@@ -32,7 +33,8 @@
       "id": "apps_9_lifecycle",
       "status": "blocked",
       "blocked_reason": [
-        "Nine-App migration fixtures remain synthetic; nine representative real Supervisor Apps still require full install, start, update, stop and rollback with persistent data checks."
+        "Nine-App migration fixtures remain synthetic; nine representative real Supervisor Apps still require full install, start, update, stop and rollback with persistent data checks.",
+        "P8ao-P8as five genuine rootless Podman App proofs (#117-#122) cover a generic app manager, real Redis lifecycle/persistence/independent backup restore and bounded localhost ingress; they do NOT validate generic 9+ Home Assistant Supervisor Apps, App dependency graph, identity, ingress, secrets, updates or transactional rollback."
       ],
       "certification_artifact": null
     },
@@ -40,7 +42,8 @@
       "id": "supervisor_apps_restore",
       "status": "lab_partial",
       "blocked_reason": [
-        "Actual official HAOS 18.3 QEMU has verified File Editor App data byte-for-byte partial restoration and disposable local App v1 to v2 version change then backup-based rollback after manager SIGKILL (run 40127707580). Does not certify arbitrary real third-party App database state, auth credentials or full Rust-native lifecycle parity."
+        "Actual official HAOS 18.3 QEMU has verified File Editor App data byte-for-byte partial restoration and disposable local App v1 to v2 version change then backup-based rollback after manager SIGKILL (run 40127707580). Does not certify arbitrary real third-party App database state, auth credentials or full Rust-native lifecycle parity.",
+        "P8aq #120 (GH 40290122155) proved one real rootless Redis named-volume SHA-verified export, altered archive rejection and separate import without touching primary; NOT Supervisor backup restore or multi-App transactional migration."
       ],
       "certification_artifact": null
     },
@@ -61,7 +64,8 @@
         "A real QEMU disposable local App v1 to v2 downgrade after manager SIGKILL did restore exact v1 bytes and version (run 40127707580). Full host migration rollback across independent machines, complete Core states, real App DBs, user accounts, physical radios and network ownership remain NOT verified.",
         "P8aa verified native redb entity-identity staging rollback in an isolated HAOS->Rust handoff (GitHub 40238122942), but whole-host Rust->HAOS rollback and all actual App/automation data remain unproved.",
         "P8ab full archive recovery via Rust escrow (run 40240344194) does not prove reverse takeover of physical devices and third-party Apps from a running Rust Home host.",
-        "P8ae (#105, SHA 4534b23, GH 40247000475, 12/12) demonstrates durable owner-private HAOS COW guest data after abrupt QEMU restart; P8af (#106, SHA 267e0fb, GH 40247834775, 13/13) demonstrates independent Rust manager reattach and double-owner exclusion in real HAOS QEMU. These do NOT prove fully running Rusty Home -> full HAOS field rollback of Core/Apps, auth and hardware."
+        "P8ae (#105, SHA 4534b23, GH 40247000475, 12/12) demonstrates durable owner-private HAOS COW guest data after abrupt QEMU restart; P8af (#106, SHA 267e0fb, GH 40247834775, 13/13) demonstrates independent Rust manager reattach and double-owner exclusion in real HAOS QEMU. These do NOT prove fully running Rusty Home -> full HAOS field rollback of Core/Apps, auth and hardware.",
+        "P8an #116 proves process recovery after QEMU SIGKILL; P8aq #120 proves one independent Redis volume restore, neither demonstrates whole-home HAOS->Rust->HAOS rollback, credentials, radio ownership or multi-volume transaction consistency."
       ],
       "certification_artifact": null
     },

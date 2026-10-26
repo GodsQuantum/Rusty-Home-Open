@@ -129,6 +129,8 @@ jobs:
         run: python3 scripts/test_p8p_cross_vm_contract.py
       - name: Immutable exact KVM proof of Rust HAOS guest boot health persist and manager reattach
         run: python3 scripts/test_p8a_guest_evidence_contract.py
+      - name: Immutable real rootless OCI App manager, backup, restore and local TCP proofs
+        run: python3 scripts/test_p8ao_oci_app_evidence_contract.py
       - name: Immutable genuine HAOS to Rust escrow to fresh HAOS rollback proof, never production
         run: python3 scripts/test_p8ab_evidence_contract.py
       - name: Immutable genuine HAOS to native Rust staged-registry laboratory proof, never production
