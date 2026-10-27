@@ -1,0 +1,36 @@
+name: P8dd native inactive App stage real SIGKILL orphan recovery
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/p8dd-native-stage-sigkill.yml"
+      - "crates/interop-moli/src/app_backup_stage.rs"
+      - "scripts/test_p8dd_native_stage_sigkill_recovery.py"
+      - "scripts/test_p8cy_native_inactive_app_stage.py"
+      - "Cargo.lock"
+permissions:
+  contents: read
+jobs:
+  native-private-stage-crash:
+    name: Real native SIGKILL and private stage orphan recovery (no HAOS)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Rust, security lint, and actual native crash recovery
+        run: |
+          set -euo pipefail
+          cargo fmt --all -- --check
+          cargo test --locked -p hars-interop-moli --lib --quiet
+          cargo clippy --locked -p hars-interop-moli --all-targets -- -D warnings
+          cargo build --locked -p hars-interop-moli --bin ha_registry_stager
+          python3 scripts/test_p8dd_native_stage_sigkill_recovery.py --binary target/debug/ha_registry_stager
+          python3 scripts/test_p8cy_native_inactive_app_stage.py --binary target/debug/ha_registry_stager
+          python3 scripts/test_p8cy_inactive_app_scope_contract.py
+      - name: Confirm no real backup or production artifacts
+        if: always()
+        run: |
+          test ! -e "$GITHUB_WORKSPACE/archive.tar"
+          test ! -e "$GITHUB_WORKSPACE/registry-shadow.redb"
