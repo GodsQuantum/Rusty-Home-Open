@@ -327,6 +327,18 @@
       "scope": "Seventh real OCI App: VictoriaMetrics TSDB HTTP samples before/after stopped 0600 SHA volume archive, tamper refused. Independent restored engine has old but not new series; source retains both. Rootless offline lab only.",
       "url": "https://github.com/GodsQuantum/Rusty-Home-Open/actions/runs/40428014004",
       "merged_pr": 177
+    },
+    {
+      "id": "oci_qdrant_eighth_vector_independent_restore",
+      "release_gate": "supervisor_apps_restore",
+      "status": "verified_lab_only",
+      "run_id": 40433087623,
+      "head_sha": "c7a6aa43dbab4cae25fda54a329374d5240c6ece",
+      "workflow": "Generic rootless OCI Registry and PostgreSQL App persistence and restore",
+      "job": "Real rootless OCI Registry HTTP and PostgreSQL SQL separate-volume restores",
+      "scope": "Eighth distinct real App: official rootless Qdrant v1.20.0 vector REST, separate private storage/snapshots volumes, SHA-checked stop/export and tamper refusal. Independent recovered point 1 but not later point 2; original unaffected; no household.",
+      "url": "https://github.com/GodsQuantum/Rusty-Home-Open/actions/runs/40433087623",
+      "merged_pr": 180
     }
   ]
 }
