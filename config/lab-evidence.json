@@ -427,12 +427,13 @@
       "id": "oci_native_dependency_service_start_stop_fencing",
       "release_gate": "apps_9_lifecycle",
       "status": "verified_lab_only",
-      "run_id": 40451163654,
-      "head_sha": "004e84685a6d535237585689592eff9893932acf",
+      "run_id": 40451443350,
+      "head_sha": "60d12557a55b3aacffdbed5842d61d52b2bda9ac",
       "workflow": "P8co genuine rootless OCI App dependency fencing",
       "job": "Real two-App rootless BindsTo/After startup, stop cascade, removal fencing and restart",
       "scope": "Two genuine offline rootless Redis 7.4 OCI Apps: native BindsTo+After dependent start activates provider, provider removal denied, provider stop cascades, restart retains separate persisted keys, child-first uninstall retains private volumes. Lab only.",
-      "url": "https://github.com/GodsQuantum/Rusty-Home-Open/actions/runs/40451163654"
+      "url": "https://github.com/GodsQuantum/Rusty-Home-Open/actions/runs/40451443350",
+      "merged_pr": 194
     }
   ]
 }
