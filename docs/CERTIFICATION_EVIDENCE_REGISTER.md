@@ -1,5 +1,10 @@
 # Rusty Home — registre canonique des preuves et anti-redondance
 
+## P8cr — paire native de deux Apps, publication atomique des descripteurs (27 octobre 2026)
+
+PR #200 fusionnée sur main 4384b4eaafc4e5002d83b4f39695fbc42f22515a, HEAD source bf51c64bd529365bb3d0ce47a4d738c75ecffc74 : **27/27 contrôles GitHub verts**. [Exécution 40469240227](https://github.com/GodsQuantum/Rusty-Home-Open/actions/runs/40469240227), job 122072034268 SUCCESS : deux vrais Redis isolés, refus de la seconde image absente sans créer la première App, installation des quatre descripteurs privés en une transaction bornée, refus d'écrasement, démarrage dépendant→fournisseur et conservation de deux volumes RDB après désinstallation. Le test Rust injecte un échec de rechargement et vérifie le retrait des quatre fichiers. **Ce n'est ni une transaction des données, ni un démarrage atomique, ni une certification HAOS ou de production.** Preuve structurée : config/lab-evidence.json, ID oci_native_atomic_two_app_descriptor_install. 0/15 critères de production.
+
+
 **Mise à jour : 24 octobre 2026.** Ce fichier est la référence pour éviter de refaire inutilement les essais. La source structurée vérifiée par CI est [`config/certification-evidence-registry.json`](../config/certification-evidence-registry.json). Toute nouvelle validation doit y être inscrite **avec le test, l'environnement, le commit exact, le run GitHub et les limites**, puis ajoutée au [journal du projet](WORK_LOG.md). Ne jamais remplacer une preuve existante par une estimation ni confondre test de laboratoire et gate de production.
 
 ## Réponse à la question « la restauration a-t-elle déjà été testée ? »
