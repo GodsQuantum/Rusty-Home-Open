@@ -183,9 +183,22 @@ def inspect_backup(path: Path, expected: set[str] | None = None) -> dict:
             if expected and not expected.issubset(addons):
                 warnings.append("missing_installed_addons_in_backup")
                 blockers.append("expected_apps_not_in_backup")
+            # Official Supervisor also writes PARTIAL backups containing only
+            # one or more App payloads, without a homeassistant.tar.gz.
+            # Previously those genuine archives were misclassified as broken.
+            # Accept only a self-consistent *unprotected* app-only PARTIAL
+            # envelope. This is structure preflight, never App restoration.
+            app_only = backup_type == "partial" and not home_part and bool(addons)
             if not home_part:
                 warnings.append("no_homeassistant_payload_identified")
-                blockers.append("homeassistant_payload_missing")
+                if not app_only:
+                    blockers.append("homeassistant_payload_missing")
+                elif protected is not False:
+                    blockers.append("app_only_partial_requires_explicit_unprotected")
+                elif candidate_addon_parts != addons:
+                    blockers.append("app_only_partial_requires_all_addon_payloads")
+            if app_only and formats["unrecognized"]:
+                blockers.append("app_only_partial_envelope_unrecognized")
             core = meta.get("homeassistant", {})
             version = core.get("version") if isinstance(core, dict) else None
             # Version is optional and sanitized; don't print raw metadata.
@@ -200,6 +213,8 @@ def inspect_backup(path: Path, expected: set[str] | None = None) -> dict:
                 "expected_installed_addons_present_count": len(addons & expected) if expected else None,
                 "missing_installed_addons_count": len(expected - addons) if expected else None,
                 "homeassistant_payload_identified": home_part,
+                "app_only_partial_archive_identified": app_only
+                    and not blockers,
                 "ha_core_version": version,
                 "protected_metadata_flag": protected,
                 "part_envelopes": formats,
