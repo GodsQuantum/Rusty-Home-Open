@@ -662,6 +662,18 @@
       "scope": "Disposable GitHub CI: native Rust atomic 2-App private stage with fictional archives; real SIGKILL after first App, safe retry, failpoints, SHA tamper and collision refusal. No real HAOS App data or runtime.",
       "url": "https://github.com/GodsQuantum/Rusty-Home-Open/actions/runs/40580113364",
       "merged_pr": 233
+    },
+    {
+      "id": "haos_real_mosquitto_native_mqtt_qos1_retained_restart",
+      "release_gate": "supervisor_apps_restore",
+      "status": "verified_lab_only",
+      "run_id": 40584249266,
+      "head_sha": "3aacb7ae71586c052d4c00d13298a47e4a0d4312",
+      "workflow": "P8dr real MQTT broker on genuine HAOS-restored native data",
+      "job": "Real Mosquitto MQTT retained publish and restart on native HAOS-restored files",
+      "scope": "Actual official HAOS18.3 QEMU Mosquitto App-only backup to private Rust staged data; upstream rootless loopback-only OCI MQTT QoS1 pub/sub/retained, new OCI persists retained packet. Synthetic new config, no HAOS auth/TLS mapping or production.",
+      "url": "https://github.com/GodsQuantum/Rusty-Home-Open/actions/runs/40584249266",
+      "merged_pr": 235
     }
   ]
 }
