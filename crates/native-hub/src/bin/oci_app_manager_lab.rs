@@ -415,6 +415,45 @@ fn pair_units(
     Ok((a, b))
 }
 
+// P8ct: different upstream stateful App engines need independent *native*
+// data mount paths. Keep the existing pair/default behavior unchanged, share
+// the SAME descriptor transaction and crash-recoverable start coordinator.
+fn heterogeneous_pair_units(
+    provider: &str,
+    provider_image: &str,
+    provider_data: &str,
+    dependent: &str,
+    dependent_image: &str,
+    dependent_data: &str,
+    uid: u32,
+) -> io::Result<(QuadletUnits, QuadletUnits)> {
+    if provider == dependent
+        || !sane_slug(provider)
+        || !sane_slug(dependent)
+        || uid == 0
+        || uid > 65533
+    {
+        return Err(bad());
+    }
+    let render = |slug, image, data| {
+        OciApp {
+            slug,
+            image,
+            // Meilisearch requires more than the 256MiB Redis-only default.
+            memory_mib: 1024,
+            pids_limit: 256,
+            run_uid: Some(uid),
+            network: AppNetwork::Offline,
+        }
+        .render_at(data)
+        .map_err(|_| bad())
+    };
+    let a = render(provider, provider_image, provider_data)?;
+    let mut b = render(dependent, dependent_image, dependent_data)?;
+    bind_native_service_dependency(&mut b, dependent, provider).map_err(|_| bad())?;
+    Ok((a, b))
+}
+
 // All-or-none publication under the graph and per-App locks. A failed
 // systemd reload rolls back all four new descriptors and reloads again.
 // Pre-existing files, containers and persistent volumes are never removed.
@@ -471,6 +510,53 @@ fn install_pair(
     uid: u32,
 ) -> io::Result<()> {
     let (a, b) = pair_units(provider, dependent, provider_image, dependent_image, uid)?;
+    install_rendered_pair(
+        dir,
+        provider,
+        provider_image,
+        dependent,
+        dependent_image,
+        &a,
+        &b,
+    )
+}
+fn install_pair_paths(
+    dir: &Path,
+    provider: &str,
+    provider_image: &str,
+    dependent: &str,
+    dependent_image: &str,
+    uid: u32,
+    data_paths: (&str, &str),
+) -> io::Result<()> {
+    let (a, b) = heterogeneous_pair_units(
+        provider,
+        provider_image,
+        data_paths.0,
+        dependent,
+        dependent_image,
+        data_paths.1,
+        uid,
+    )?;
+    install_rendered_pair(
+        dir,
+        provider,
+        provider_image,
+        dependent,
+        dependent_image,
+        &a,
+        &b,
+    )
+}
+fn install_rendered_pair(
+    dir: &Path,
+    provider: &str,
+    provider_image: &str,
+    dependent: &str,
+    dependent_image: &str,
+    a: &QuadletUnits,
+    b: &QuadletUnits,
+) -> io::Result<()> {
     let _graph_guard = lock_dependency_graph(dir)?;
     ensure_no_pair_journal(dir)?;
     let mut names = [provider, dependent];
@@ -481,7 +567,7 @@ fn install_pair(
     ];
     podman(&["image", "exists", provider_image])?;
     podman(&["image", "exists", dependent_image])?;
-    publish_pair(dir, &a, &b, || systemctl(&["--user", "daemon-reload"]))
+    publish_pair(dir, a, b, || systemctl(&["--user", "daemon-reload"]))
 }
 
 // P8cs: a single durable intent per rootless user. This journal is written
@@ -833,6 +919,18 @@ fn execute() -> io::Result<()> {
             let uid = args[6].parse::<u32>().map_err(|_| bad())?;
             install_pair(&dir, &args[2], &args[3], &args[4], &args[5], uid)
         }
+        "--install-pair-path-dependent-lab" if args.len() == 9 => {
+            let uid = args[8].parse::<u32>().map_err(|_| bad())?;
+            install_pair_paths(
+                &dir,
+                &args[2],
+                &args[3],
+                &args[5],
+                &args[6],
+                uid,
+                (&args[4], &args[7]),
+            )
+        }
         "--install-dependent-lab" if args.len() == 6 => {
             let uid = args[4].parse::<u32>().map_err(|_| bad())?;
             install(
@@ -1041,6 +1139,121 @@ mod tests {
         fs::remove_file(journal).unwrap();
         assert!(ensure_no_pair_journal(dir.path()).is_ok());
     }
+    #[test]
+    fn heterogeneous_pair_offline_quiescent_transaction_and_path_refusal() {
+        let dir = tempfile::tempdir().unwrap();
+        let redis = format!("docker.io/library/redis@sha256:{}", "a".repeat(64));
+        let meili = format!("docker.io/getmeili/meilisearch@sha256:{}", "b".repeat(64));
+        let (a, b) = heterogeneous_pair_units(
+            "hetero-provider",
+            &redis,
+            "/data",
+            "hetero-search",
+            &meili,
+            "/meili_data",
+            1000,
+        )
+        .unwrap();
+        assert!(
+            a.container
+                .contains("Image=docker.io/library/redis@sha256:")
+        );
+        assert!(
+            b.container
+                .contains("Image=docker.io/getmeili/meilisearch@sha256:")
+        );
+        assert!(a.container.contains("Network=none"));
+        assert!(b.container.contains("Network=none"));
+        assert!(a.container.contains("MemoryMax=1024M"));
+        assert!(b.container.contains("MemoryMax=1024M"));
+        assert!(b.container.contains("BindsTo=rh-hetero-provider.service"));
+        assert!(a.container.contains("/data"));
+        assert!(b.container.contains("/meili_data"));
+        assert!(a.container.contains("User=1000"));
+        assert!(b.container.contains("User=1000"));
+        // Reject path traversal, bad UID, repeated identity and mutable images
+        // BEFORE touching native descriptors or starting either engine.
+        for path in ["/../../etc", "/", "relative", "/data/../../etc"] {
+            assert!(
+                heterogeneous_pair_units(
+                    "hetero-provider",
+                    &redis,
+                    path,
+                    "hetero-search",
+                    &meili,
+                    "/meili_data",
+                    1000
+                )
+                .is_err()
+            );
+        }
+        assert!(
+            heterogeneous_pair_units(
+                "hetero-provider",
+                &redis,
+                "/data",
+                "hetero-provider",
+                &meili,
+                "/meili_data",
+                1000
+            )
+            .is_err()
+        );
+        assert!(
+            heterogeneous_pair_units(
+                "hetero-provider",
+                "redis:latest",
+                "/data",
+                "hetero-search",
+                &meili,
+                "/meili_data",
+                1000
+            )
+            .is_err()
+        );
+        assert!(
+            heterogeneous_pair_units(
+                "hetero-provider",
+                &redis,
+                "/data",
+                "hetero-search",
+                &meili,
+                "/meili_data",
+                0
+            )
+            .is_err()
+        );
+        let calls = std::cell::Cell::new(0);
+        assert!(
+            publish_pair(dir.path(), &a, &b, || {
+                calls.set(calls.get() + 1);
+                if calls.get() == 1 {
+                    Err(io::Error::other("injected daemon reload failure"))
+                } else {
+                    Ok(())
+                }
+            })
+            .is_err()
+        );
+        assert_eq!(calls.get(), 2);
+        for name in [
+            &a.container_name,
+            &a.volume_name,
+            &b.container_name,
+            &b.volume_name,
+        ] {
+            assert!(!dir.path().join(name).exists());
+        }
+        publish_pair(dir.path(), &a, &b, || Ok(())).unwrap();
+        assert_eq!(
+            installed_dependency(dir.path(), "hetero-search")
+                .unwrap()
+                .as_deref(),
+            Some("hetero-provider")
+        );
+        assert!(provider_has_dependents(dir.path(), "hetero-provider").unwrap());
+    }
+
     #[test]
     fn atomic_pair_real_filesystem_and_reload_failure() {
         let dir = tempfile::tempdir().unwrap();
