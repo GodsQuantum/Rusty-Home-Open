@@ -1,5 +1,9 @@
 # Rusty Home — registre canonique des preuves et anti-redondance
 
+## P8cx — native Rust custody of genuine HAOS App-only backup (27 October 2026)
+
+PR #210 MERGED squash b4e8701ce8ffe40c4640ccc37db93c0bd9ae1c17, source 2407f239978f557a771e32700d63e23a06005209; ALL 13/13 exact-source CI checks GREEN. Genuine isolated HAOS18.3 QEMU/KVM official File Editor selected-App-only backup https://github.com/GodsQuantum/Rusty-Home-Open/actions/runs/40518370582 job 122238075930 SUCCESS, JUnit 3/3; authentic original archive passed native Rust parser and entered existing SHA-256 fsynced private escrow, reopened and independently verified, tamper refused, original unchanged. Rust 16 tests and Clippy strict passed; synthetic adversarial test passed. Machine claim haos_real_app_only_native_sha_escrow_and_tamper_refusal. 45 lab-only claims / 41 real successful runs, NOT 45 product gates. No actual App data restore/activation in Rust, production remains 0/15.
+
 ## P8cu — vraie sauvegarde Supervisor App-only et inspection sans extraction (27 octobre 2026)
 
 PR [#206](https://github.com/GodsQuantum/Rusty-Home-Open/pull/206) fusionnée main `e46306a80525ab557f73e181f6113930df186b2b`, source `5839675720581f07c9e90f2c4052bf0c6b90d99e`, **10/10 CI exacts verts**. [CI 40514471305](https://github.com/GodsQuantum/Rusty-Home-Open/actions/runs/40514471305) job 122224674821 : HAOS 18.3 QEMU/KVM officiel, véritable File Editor public installé, sauvegarde Supervisor partielle contenant seulement son App, marqueur fictif retrouvé octet pour octet dans l'archive interne après transfert SHA-256 privé ; JUnit **3/3**, refus des archives protégées, malformées et des chemins traversants. Identifiant structuré `haos_real_selected_app_only_partial_backup_readonly_preflight`. Aucune restauration vers Rust, aucune preuve de parité des Apps ni certification de production. **0/15**.

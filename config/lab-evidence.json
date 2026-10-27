@@ -518,6 +518,18 @@
       "scope": "Genuine disposable HAOS18.3 QEMU official File Editor selected-App-only Supervisor partial backup; private SHA-256 relay, read-only exact synthetic App marker, malformed/protected/traversal denial. No Rust restore, household, radio or production.",
       "url": "https://github.com/GodsQuantum/Rusty-Home-Open/actions/runs/40514471305",
       "merged_pr": 206
+    },
+    {
+      "id": "haos_real_app_only_native_sha_escrow_and_tamper_refusal",
+      "release_gate": "supervisor_apps_restore",
+      "status": "verified_lab_only",
+      "run_id": 40518370582,
+      "head_sha": "2407f239978f557a771e32700d63e23a06005209",
+      "workflow": "P8cw real HAOS App-only archive into native Rust private SHA escrow",
+      "job": "Genuine HAOS18.3 App-only backup imported inert into native Rust SHA escrow",
+      "scope": "Genuine HAOS18.3 QEMU File Editor App-only backup passed intact SHA into native Rust private escrow; re-open, tamper refusal and original unchanged. No data restore, App execution or production.",
+      "url": "https://github.com/GodsQuantum/Rusty-Home-Open/actions/runs/40518370582",
+      "merged_pr": 210
     }
   ]
 }
