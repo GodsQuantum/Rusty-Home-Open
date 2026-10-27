@@ -12,6 +12,7 @@ for marker in (
     "P8DN_REAL_OFFICIAL_EDITOR_HTTP_WRITE_GUEST_SHA256_PASS",
     "P8DN_REAL_OFFICIAL_EDITOR_HTTP_WRITTEN_DATA_SURVIVES_SUPERVISOR_RESTART_PASS",
     "test ! -e ",
+    "any(line.startswith(",
     "sha256sum ",
     "ha apps stop ",
     "ha apps start ",
