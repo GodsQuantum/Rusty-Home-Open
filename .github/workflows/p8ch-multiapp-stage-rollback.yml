@@ -1,0 +1,40 @@
+name: P8ch real Redis and Meilisearch two-App staged restore with failure rollback
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/p8ch-multiapp-stage-rollback.yml"
+      - "scripts/test_p8ch_multiapp_stage_rollback.sh"
+      - "scripts/test_p8ch_multiapp_stage_rollback_contract.py"
+      - "crates/native-hub/src/oci_quadlet.rs"
+      - "crates/native-hub/src/bin/oci_app_manager_lab.rs"
+      - "Cargo.lock"
+permissions:
+  contents: read
+jobs:
+  real-multi-app-rollback:
+    name: Real Redis and Meilisearch staged multi-App rollback and intact originals
+    runs-on: ubuntu-24.04
+    timeout-minutes: 23
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Scope and safe-source guards
+        run: |
+          python3 scripts/test_p8ch_multiapp_stage_rollback_contract.py
+          bash -n scripts/test_p8ch_multiapp_stage_rollback.sh
+          cargo fmt --all -- --check
+          cargo test --locked -p hars-native-hub --all-targets
+          cargo clippy --locked -p hars-native-hub --all-targets -- -D warnings
+      - name: Official rootless Podman and user systemd
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends podman uidmap slirp4netns fuse-overlayfs
+          test -x /usr/bin/podman
+          test -S /run/user/$(id -u)/bus
+      - name: Real pair checkpoint, second-archive fault, rollback, restart and successful retry
+        timeout-minutes: 14
+        run: |
+          cargo build --locked -p hars-native-hub --bin oci_app_manager_lab
+          bash scripts/test_p8ch_multiapp_stage_rollback.sh

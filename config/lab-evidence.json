@@ -351,6 +351,17 @@
       "scope": "Ninth App: real rootless Meilisearch async HTTP indexing and full-text search, stopped private 0600 SHA backup/tamper denial, second engine restores only first document; source retains both. Network=none; lab only, not full lifecycle.",
       "url": "https://github.com/GodsQuantum/Rusty-Home-Open/actions/runs/40434341984",
       "merged_pr": 181
+    },
+    {
+      "id": "oci_redis_meilisearch_two_app_failure_injected_stage_rollback",
+      "release_gate": "supervisor_apps_restore",
+      "status": "verified_lab_only",
+      "run_id": 40437773496,
+      "head_sha": "0a2e8c28094c20747fb44c434438c0b576b368f2",
+      "workflow": "P8ch real Redis and Meilisearch two-App staged restore with failure rollback",
+      "job": "Real Redis and Meilisearch staged multi-App rollback and intact originals",
+      "scope": "Two real rootless Redis + Meilisearch Apps: quiesced shared snapshot, injected second-tar corruption after first restore starts, stage rollback, successful valid pair retry, both originals safe. Lab only.",
+      "url": "https://github.com/GodsQuantum/Rusty-Home-Open/actions/runs/40437773496"
     }
   ]
 }
