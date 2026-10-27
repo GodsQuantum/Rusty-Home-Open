@@ -560,3 +560,7 @@ Distinct observability TSDB after Redis, Distribution Registry, PostgreSQL, Mosq
 ## P8ce TSDB early RED — official VictoriaMetrics 30s query latency and buffer
 
 First #177 real run 40427392237 intentionally failed when POST sample was accepted but instant query returned []. VictoriaMetrics officially defaults to 30s search.latencyOffset and buffered ingestion; old fixture had no sample timestamp. New test uses explicit Prometheus millisecond timestamp 90s in past, and invokes the official /internal/force_flush ONLY on disposable isolated test instance (not production). This produces queryable real data without changing server settings; query still must prove exact samples after independent restore or FAIL. Exact GitHub rerun required, no seventh proof yet.
+
+## 27 October — P8ce VictoriaMetrics exact GitHub original HEAD evidence (LAB)
+
+PR #177 original HEAD c2a05d737fc0d41593c26ea2cc5573d158d32943, merged as 0a23aa6c195748e6c7558fdcebbece042718d22a, 11/11 CI SUCCESS on exact head. Genuine VictoriaMetrics TSDB GitHub run 40428014004, job 121938532591 logged P8CE_REAL_TSDB_WRITE_BEFORE_PASS, P8CE_REAL_VICTORIAMETRICS_STOPPED_VOLUME_SHA_TAMPER_REFUSED_PASS, P8CE_PRIMARY_TSDB_POST_CHECKPOINT_SECOND_SERIES_PASS, P8CE_SEVENTH_REAL_TSDB_INDEPENDENT_METRICS_CHECKPOINT_RESTORE_PASS, P8CE_RESTORED_TIMESERIES_APP_REMOVAL_PRESERVES_SOURCE_PASS. Prior six OCI apps ran as regressions, NOT counted as new proofs. No VM100, hardware, actual secrets or release signoff; 0/15.
