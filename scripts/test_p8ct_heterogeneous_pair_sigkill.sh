@@ -114,7 +114,16 @@ assert_offline "$REDIS" 1000 /data
 assert_offline "$SEARCH" 1000 /meili_data
 test "$(podman exec rh-$REDIS redis-cli PING)" = PONG
 podman exec rh-$REDIS redis-cli SET durable-key saved-redis | grep -Fx OK
-podman exec rh-$REDIS redis-cli SAVE | grep -Fx OK
+saved="$(podman exec rh-$REDIS redis-cli SAVE 2>&1)" || {
+  echo "P8CT_REDIS_SAVE_EXEC_FAILED: $saved" >&2
+  exit 1
+}
+if [[ "$saved" != OK ]]; then
+  echo "P8CT_REDIS_SAVE_REJECTED: $saved" >&2
+  podman logs "rh-$REDIS" 2>&1 | tail -35 >&2 || true
+  exit 1
+fi
+echo P8CT_REDIS_DISK_SAVE_CONFIRMED_PASS
 meili_helper "$SEARCH" init
 echo P8CT_TRUE_REDIS_PLUS_MEILISEARCH_BOTH_STATEFUL_ENGINES_DURABLE_DATA_PASS
 
