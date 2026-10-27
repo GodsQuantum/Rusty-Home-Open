@@ -6,7 +6,7 @@ This is a *compatibility feasibility* experiment, NOT restoration of HAOS
 Supervisor configuration, MQTT user credentials, TLS or networking. Never
 open host ports, never permit external network or access home services.
 """
-import argparse, ast, hashlib, json, os, subprocess, tempfile, time
+import argparse, ast, hashlib, json, os, re, subprocess, tempfile, time
 from pathlib import Path
 from inspect_ha_backup import inspect_backup
 
@@ -48,7 +48,7 @@ def cmd(argv,ok=True,timeout=95,env=None):
 
 cmd(["podman","pull","--quiet",IMAGE],timeout=250)
 image_id=cmd(["podman","image","inspect",IMAGE,"--format","{{.Id}}"]).stdout.strip()
-assert image_id.startswith("sha256:") and len(image_id)==71
+assert re.fullmatch(r"(?:sha256:)?[0-9a-f]{64}", image_id), "invalid immutable OCI image ID"
 assert cmd(["podman","image","inspect",IMAGE,"--format","{{.Architecture}}"]).stdout.strip()=="amd64"
 print("P8DR_UPSTREAM_REAL_MQTT_BROKER_IMAGE_DIGEST_PINNED_IN_DISPOSABLE_CI_PASS",flush=True)
 

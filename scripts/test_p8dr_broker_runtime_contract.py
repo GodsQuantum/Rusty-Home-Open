@@ -27,6 +27,7 @@ for value in (
  "persistence true", "persistence_location /mosquitto/data/",
  "mosquitto_pub", "mosquitto_sub", "p8dr-mqtt-retained.db",
  "image_id", "second!=first",
+ "re.fullmatch(r\"(?:sha256:)?[0-9a-f]{64}\", image_id)",
  "P8DR_REAL_SUPERVISOR_MOSQUITTO_BACKUP_TO_NATIVE_RUST_VERIFIED_DATA_PASS",
  "P8DR_REAL_MQTT_QOS1_PUBLISH_SUBSCRIBE_RETAINED_ON_RESTORED_NATIVE_DATA_PASS",
  "P8DR_REAL_MQTT_RETAINED_MESSAGE_DURABLE_AFTER_NEW_OCI_INSTANCE_PASS",
