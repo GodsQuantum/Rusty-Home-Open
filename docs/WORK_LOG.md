@@ -16,6 +16,10 @@ PR #224 MERGED squash main `e041856271950b0338251e6015f366bd452f920f`, exact ori
 
 # Rusty Home — journal de développement et de certification
 
+## 27 October — P8dz pin official saved MQTT Supervisor options and safe auth-delegation denial
+
+PR #243 source c0be2cf7365f74bc7bc892e182890ad9c1ccae08 merged squash main 1821993e7e84fe3860b94c6b337b0f70e647eb42, all 10 exact-head GH checks green. Actual official HAOS18.3 Mosquitto QEMU backup, Rust SHA staged private files and REAL Supervisor addon.json user.options; missing local logins => HA delegated authentication unsupported => native migration correctly refuses without anonymous fallback. Duplicate/nonfinite/wrong-layout/symlink adversarial metadata refused, genuine source unchanged. Real CI run 40599479262 job 122523719822 SUCCESS, official JUnit 3/3. One new lab-only job, 61 claims / 57 independent runs, App ladder 5/10, no production release 0/15. No privileged Supervisor token, household user, or live access.
+
 ## 27 October — P8dy real saved Supervisor Mosquitto option provenance [CI PENDING]
 
 No new privileged API calls: independently decode only the official addon.json already SHA-bound in genuine HAOS QEMU Supervisor backup and privately staged by Rust; require precisely user.options, verify private file metadata, no printing secrets and no copied production credentials. Default official HAOS logins: [] implies unimplemented delegated Home Assistant authentication: reject fail-closed rather than translate into anonymous local broker. Multiple hostile metadata variants/symlink refused. This is a new actual upstream persisted options source proof, not successful migration of HA Core accounts and not a production capability; 5/10 App 0/15 production unchanged.
