@@ -590,6 +590,18 @@
       "scope": "Real native Rust SIGKILL after first fsynced fictional App file; no partial publish, own orphan reaped on retry, active writer and existing published bytes preserved. Offline inactive data only; no HAOS App execution, VM100, production or human audit.",
       "url": "https://github.com/GodsQuantum/Rusty-Home-Open/actions/runs/40552611012",
       "merged_pr": 217
+    },
+    {
+      "id": "haos_file_editor_graceful_oci_restart_native_data",
+      "release_gate": "supervisor_apps_restore",
+      "status": "verified_lab_only",
+      "run_id": 40557039044,
+      "head_sha": "5dc7473b8cea65b4024a32e35677cb0e3137416d",
+      "workflow": "P8dh genuine File Editor native App data writes survive OCI restart",
+      "job": "Real official File Editor persists native restored App data across restart",
+      "scope": "Genuine HAOS18.3 File Editor App-only backup restored via native Rust SHA custody into rootless official OCI; synthetic shell write inside container /data survives real graceful Podman stop/start; source SHA intact. No authenticated UI.",
+      "url": "https://github.com/GodsQuantum/Rusty-Home-Open/actions/runs/40557039044",
+      "merged_pr": 220
     }
   ]
 }
