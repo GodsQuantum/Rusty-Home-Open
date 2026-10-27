@@ -630,3 +630,7 @@ PR #185 original head `5a22d43b463df346f2ec7e8bcc03919ddfc3c181`, squash merge `
 ## 27 October — P8cn exact-head real two-App runtime mismatch (VERIFIED LAB)
 
 PR #192 original bb10cfe39fa6df1e60464cf96816c25488dd1df9 merged c506baca9df746c200f1aff3a50014044d5684b5; all 10/10 exact-head CI checks SUCCESS. Run 40447523586 job 122002227274 actual Redis 7.4 + Meilisearch 1.55 private stopped checkpoints; first restored Redis healthy; second SHA-valid Meili 1.55 data rejected by genuine 1.54 runtime, both stages removed, originals retained later writes; compatible two-App retry restored earlier state after restart, originals intact. Markers and machine claim in canonical handoff/registry. No automatic group coordinator, production/VM100/radios/secrets, release 0/15.
+
+## 27 October — P8co native dependency service identity (pending real CI)
+
+P8cn validated shell-driven multi-App rollback, not actual Rust dependency orchestration. P8co implements generic same-user native Quadlet BindsTo+After for an installed rootless OCI provider; global graph flock serializes installs/removals, chain traversal denies dangling/cyclic references, removal refuses to orphan dependent. Tests added: Rust pure unit and graph lock/cycle/fencing, disposable real official Redis pair with dependent-only start, stop cascade, persistent independent RDB and clean removal. Local 27 library + 10 manager Rust tests, clippy, fmt, contract passed. **NOT VERIFIED** until exact-head GitHub runner passes and markers are inspected. No production host or device tests; release 0/15.

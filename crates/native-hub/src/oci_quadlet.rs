@@ -51,6 +51,48 @@ pub fn bind_native_secret(units: &mut QuadletUnits, name: &str) -> Result<(), Qu
     Ok(())
 }
 
+/// Native systemd dependency identity, not application-level readiness.
+/// BindsTo + After ensure an App cannot outlive its provider service and
+/// starting the dependent starts the provider first. All services are owned
+/// by the SAME rootless systemd user; no host service names are accepted.
+pub fn bind_native_service_dependency(
+    units: &mut QuadletUnits,
+    slug: &str,
+    provider: &str,
+) -> Result<(), QuadletError> {
+    let valid = |name: &str| {
+        !name.is_empty()
+            && name.len() <= 64
+            && name.as_bytes()[0].is_ascii_lowercase()
+            && name
+                .bytes()
+                .all(|b| b.is_ascii_lowercase() || b.is_ascii_digit() || b == b'-')
+    };
+    let prefix = format!(
+        "[Unit]\nDescription=Rusty Home isolated OCI App {slug} (lab only)\n\n[Container]\n"
+    );
+    if !valid(slug)
+        || !valid(provider)
+        || slug == provider
+        || units.container_name != format!("rh-{slug}.container")
+        || !units.container.starts_with(&prefix)
+        || units.container.matches("[Unit]\n").count() != 1
+        || units.container.matches("\n[Container]\n").count() != 1
+        || units.container.contains("BindsTo=")
+        || units.container.contains("After=")
+    {
+        return Err(QuadletError::InvalidResources);
+    }
+    units.container = units.container.replacen(
+        &prefix,
+        &format!(
+            "[Unit]\nDescription=Rusty Home isolated OCI App {slug} (lab only)\nBindsTo=rh-{provider}.service\nAfter=rh-{provider}.service\n\n[Container]\n"
+        ),
+        1,
+    );
+    Ok(())
+}
+
 /// Use only the native Podman tmpfs API for a private, ephemeral Unix socket
 /// directory. Keep destination restricted to /run paths, not an arbitrary
 /// host/container filesystem override. Unlike adding an app-specific wrapper
@@ -331,6 +373,38 @@ mod tests {
             run_uid: None,
             network: AppNetwork::Offline,
         }
+    }
+    #[test]
+    fn native_service_dependency_is_strictly_scoped_and_keeps_isolation() {
+        let image = format!("docker.io/library/redis@sha256:{DIGEST}");
+        let mut units = good("consumer", &image).render().unwrap();
+        bind_native_service_dependency(&mut units, "consumer", "provider").unwrap();
+        assert!(
+            units
+                .container
+                .contains("BindsTo=rh-provider.service\nAfter=rh-provider.service\n")
+        );
+        assert!(units.container.contains("Network=none\n"));
+        assert!(units.container.contains("ReadOnly=true\n"));
+        assert!(units.container.contains("DropCapability=all\n"));
+        assert!(bind_native_service_dependency(&mut units, "consumer", "another").is_err());
+        for dependency in [
+            "consumer",
+            "../other",
+            "x.service",
+            "other\n[Service]",
+            "Other",
+            "",
+            "-bad",
+        ] {
+            let mut fresh = good("consumer", &image).render().unwrap();
+            assert!(
+                bind_native_service_dependency(&mut fresh, "consumer", dependency).is_err(),
+                "{dependency}"
+            );
+        }
+        let mut mismatched = good("consumer", &image).render().unwrap();
+        assert!(bind_native_service_dependency(&mut mismatched, "wrong", "provider").is_err());
     }
     #[test]
     fn native_runtime_tmpfs_is_run_only_and_never_overrides_host() {
