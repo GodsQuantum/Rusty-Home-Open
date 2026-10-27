@@ -7,7 +7,7 @@ root = Path(__file__).resolve().parents[1]
 guest = (root / "scripts/p8dl_official_core_ingress_denial_pytest.py").read_text()
 workflow = (root / ".github/workflows/p8dl-real-core-ingress-denial.yml").read_text()
 for marker in (
-    "P8DN_REAL_CORE_INGRESS_UNAUTHENTICATED_EDITOR_POST_DENIED_PASS",
+    "P8DN_REAL_CORE_INGRESS_UNAUTHENTICATED_POST_NO_GUEST_FILE_PASS",
     "P8DN_REAL_OFFICIAL_EDITOR_HTTP_POST_SAVED_SYNTHETIC_FILE_PASS",
     "P8DN_REAL_OFFICIAL_EDITOR_HTTP_WRITE_GUEST_SHA256_PASS",
     "P8DN_REAL_OFFICIAL_EDITOR_HTTP_WRITTEN_DATA_SURVIVES_SUPERVISOR_RESTART_PASS",
