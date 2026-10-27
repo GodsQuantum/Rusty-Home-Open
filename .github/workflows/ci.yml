@@ -84,6 +84,10 @@ jobs:
           python3 scripts/test_p8u_ws_runner_cli.py
       - name: Vendor-neutral migration preflight over variable App inventories
         run: python3 scripts/test_app_migration_policy.py
+      - name: Race-safe Supervisor saved options directory-FD regression (fixture only)
+        run: |
+          python3 scripts/test_p8ea_saved_options_dirfd.py
+          python3 scripts/test_p8dy_saved_options_contract.py
       - name: Offline HAOS backup archive nofollow and duplicate-manifest negative tests
         run: python3 scripts/test_ha_backup_inspector.py
       - name: Real File Editor App data restore evidence scope and QEMU contract

@@ -15,7 +15,6 @@ import os
 import re
 import stat
 from pathlib import Path
-import pexpect
 
 ALLOWED = {"logins", "log_dest", "log_type", "require_certificate",
            "certfile", "keyfile", "cafile", "customize", "debug"}
@@ -87,6 +86,7 @@ def generate(options, destination, image_id):
     logins=check_options(options) # fail before creating any files
     password_file=destination/"passwords"
     # Requires upstream mosquitto_passwd, never passes passwords via argv.
+    import pexpect  # PTY dependency only needed for password generation
     for i,(name,password) in enumerate(logins):
         args=["run","--rm","-it","--network","none",
             "--userns=keep-id","--user",str(os.geteuid())+":"+str(os.getegid()),
