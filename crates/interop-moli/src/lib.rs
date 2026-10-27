@@ -169,6 +169,7 @@ mod tests {
 }
 
 pub mod app_backup_import;
+pub mod app_backup_pair_stage;
 pub mod app_backup_stage;
 pub mod backup_escrow;
 pub mod ha_backup_import;

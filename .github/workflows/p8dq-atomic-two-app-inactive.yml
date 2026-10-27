@@ -1,0 +1,35 @@
+name: P8dq atomic two-App native inactive private stage SIGKILL
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/p8dq-atomic-two-app-inactive.yml"
+      - "crates/interop-moli/src/app_backup_pair_stage.rs"
+      - "crates/interop-moli/src/app_backup_stage.rs"
+      - "crates/interop-moli/src/app_backup_import.rs"
+      - "crates/interop-moli/src/bin/ha_registry_stager.rs"
+      - "crates/interop-moli/src/lib.rs"
+      - "scripts/test_p8dq_native_pair_atomic.py"
+      - "Cargo.lock"
+permissions:
+  contents: read
+jobs:
+  genuine-native-pair-sigkill:
+    name: Real Rust two-App private atomic transaction with SIGKILL
+    runs-on: ubuntu-24.04
+    timeout-minutes: 22
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Validate native Rust and bounded adversarial scenario
+        run: |
+          python3 -m py_compile scripts/test_p8dq_native_pair_atomic.py
+          cargo fmt --all -- --check
+          cargo test --locked -p hars-interop-moli --lib --quiet
+          cargo clippy --locked -p hars-interop-moli --all-targets -- -D warnings
+          cargo build --locked -p hars-interop-moli --bin ha_registry_stager
+      - name: Actual two-App atomic publication, SIGKILL, orphan isolation and retry
+        timeout-minutes: 6
+        run: |
+          python3 scripts/test_p8dq_native_pair_atomic.py --binary target/debug/ha_registry_stager
