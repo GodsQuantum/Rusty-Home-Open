@@ -1,5 +1,9 @@
 # Rusty Home — journal de développement et de certification
 
+## 27 October — P8di hard SIGKILL and fresh official OCI instance [CI PENDING; NOT EVIDENCE]
+
+Distinct from concurrent #220 graceful App restart: this P8di lab intentionally SIGKILLs the actual official File Editor OCI container (without auto-restart), then explicitly starts it and recreates a completely NEW container from the SAME immutable pinned image ID. Genuine disposable HAOS18.3 selected-App backup -> Rust SHA escrow -> private native restored /data remains the prerequisite; only a fixed synthetic note written by an OCI shell is tested (NOT App-native writes, Ingress, UI, or authentication). Prove the original Supervisor archive SHA, original marker and synthetic private volume note survive crash/recreation, with rootless Podman network=none, no host ports, devices, real secrets, VM100 or production. Do not count new evidence until exact-HEAD GitHub CI is entirely green; release remains 0/15.
+
 ## 27 October — P8dg real official File Editor App OCI running on recovered Supervisor data
 
 P8df #218 source 0682b88c78fb5c03fd72bedb5b4e01f5db00d4a5, main f2e27f5c0a75451fa44664b5f7f42d9893a66e53, exact-head 10/10 checks GREEN. HAOS18.3 real selected-App source -> Rust escrow + native private /data reconstruction -> official File Editor OCI image ACTUALLY RUNNING with source marker inside container, no host network, no published ports, no credentials or privileged root, clean teardown. GH 40541956380 job 122322394014, JUnit 3/3. 48 machine CI lab claims / 44 runs; App development milestone 5/10=50%, not generic product completion. Missing ingress auth/editor HTTP usable, 9+ official App lifecycle, full restart/rollback, independent audit; release NOT_PRODUCTION_READY 0/15.
