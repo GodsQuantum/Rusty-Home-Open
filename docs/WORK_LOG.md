@@ -1,5 +1,9 @@
 # Rusty Home — journal de développement et de certification
 
+## 27 October — P8dc pin P8cy genuine HAOS inactive native App data proof
+
+PR #213 original source 6a0cffc70f1f2f421338a6012f4ceb381fec9ad3, merged squash 8a3e63bf29a9d0054224d62d6aa32a6fce76e2df. All 15 exact-head GitHub checks SUCCESS. Genuine official HAOS18.3 QEMU [run 40529254092](https://github.com/GodsQuantum/Rusty-Home-Open/actions/runs/40529254092), job 122277215922 SUCCESS: official File Editor selected-App-only Supervisor backup, Rust private SHA escrow, actual fictional App data bytes materialized to private inert native files; fault-before-commit rollback zero leak, original SHA tamper denial, staged bytes persist. JUnit 3/3, Rust 16/16 and local CLI adversarial PASS. Separate LXC700 local 12 concurrent dual-writer staging pairs one winner/one refused (not CI-certified). Machine claim haos_real_app_only_native_inactive_files verified_lab_only, 47 claims / 43 distinct CI runs. NO App execution, VM100, household, secrets, radios, 72h or independent signoff; release 0/15.
+
 ## 27 October — P8cy native offline App-data materialization with atomic rollback [CI pending]
 
 A true further milestone AFTER actual P8cw HAOS App-only backup Rust SHA escrow: native Rust file materializer reconstructs bounded, ordinary, verified data under PRECREATED private inert directory without ever running HAOS App. Owner 0700 parent, every file 0600, directory 0700, RENAME_NOREPLACE and fsync; test fault-before-commit cleans temp and refuses damaged source, duplicate target, symlink and insecure parent. Genuine QEMU real File Editor bytes SHA-to-Rust staged-file proof pending; no production/home data, 0/15.
