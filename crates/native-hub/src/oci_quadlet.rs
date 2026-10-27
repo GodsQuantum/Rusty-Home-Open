@@ -133,6 +133,62 @@ pub fn bind_native_nested_existing_volume(
     Ok(())
 }
 
+/// Add a strictly same-application-root sibling *existing named* Podman
+/// volume, e.g. /qdrant/storage plus /qdrant/snapshots. Never a host bind,
+/// mount of OS directories or arbitrary destination outside this app root.
+pub fn bind_native_sibling_existing_volume(
+    units: &mut QuadletUnits,
+    slug: &str,
+    data_path: &str,
+    volume: &str,
+    sibling_path: &str,
+) -> Result<(), QuadletError> {
+    let expected = format!("rh-{slug}-extra");
+    let (parent_dir, _) = data_path
+        .rsplit_once('/')
+        .ok_or(QuadletError::InvalidResources)?;
+    let (sibling_dir, _) = sibling_path
+        .rsplit_once('/')
+        .ok_or(QuadletError::InvalidResources)?;
+    if slug.is_empty()
+        || !slug
+            .bytes()
+            .all(|b| b.is_ascii_lowercase() || b.is_ascii_digit() || b == b'-')
+        || volume != expected
+        || data_path == sibling_path
+        || parent_dir != sibling_dir
+        || parent_dir.is_empty()
+        || parent_dir == "/"
+        || matches!(
+            parent_dir,
+            "/etc" | "/dev" | "/sys" | "/proc" | "/run" | "/var" | "/root" | "/home"
+        )
+        || units.container.matches("Pull=never\n").count() != 1
+        || units.container.contains(&format!("Volume={volume}:"))
+        || !units
+            .container
+            .contains(&format!("Volume=rh-{slug}-data.volume:{data_path}:U\n"))
+        || !sibling_path.starts_with('/')
+        || sibling_path.len() > 120
+        || sibling_path.split('/').skip(1).any(|segment| {
+            segment.is_empty()
+                || segment == "."
+                || segment == ".."
+                || !segment
+                    .bytes()
+                    .all(|b| b.is_ascii_alphanumeric() || b"_-.".contains(&b))
+        })
+    {
+        return Err(QuadletError::InvalidResources);
+    }
+    units.container = units.container.replacen(
+        "Pull=never\n",
+        &format!("Pull=never\nVolume={volume}:{sibling_path}:U\n"),
+        1,
+    );
+    Ok(())
+}
+
 impl OciApp<'_> {
     /// A Podman-managed named volume, never a host-path bind.
     /// Custom OCI storage destinations must be absolute safe container paths.
@@ -314,6 +370,63 @@ mod tests {
         }
     }
 
+    #[test]
+    fn native_same_app_sibling_volume_preserves_ro_rootfs_and_blocks_os_paths() {
+        let image = format!("ghcr.io/qdrant/qdrant/qdrant@sha256:{DIGEST}");
+        let mut app = good("vec", &image);
+        app.run_uid = Some(1000);
+        let mut units = app.render_at("/qdrant/storage").unwrap();
+        bind_native_sibling_existing_volume(
+            &mut units,
+            "vec",
+            "/qdrant/storage",
+            "rh-vec-extra",
+            "/qdrant/snapshots",
+        )
+        .unwrap();
+        assert!(
+            units
+                .container
+                .contains("Volume=rh-vec-data.volume:/qdrant/storage:U\n")
+        );
+        assert!(
+            units
+                .container
+                .contains("Volume=rh-vec-extra:/qdrant/snapshots:U\n")
+        );
+        assert!(units.container.contains("Network=none\n"));
+        assert!(units.container.contains("ReadOnly=true\n"));
+        assert!(
+            bind_native_sibling_existing_volume(
+                &mut units,
+                "vec",
+                "/qdrant/storage",
+                "rh-vec-extra",
+                "/qdrant/extra",
+            )
+            .is_err()
+        );
+        for (data, volume, sibling) in [
+            ("/qdrant/storage", "other-owner", "/qdrant/snapshots"),
+            ("/qdrant/storage", "rh-vec-extra", "/etc/passwd"),
+            ("/qdrant/storage", "rh-vec-extra", "/qdrant/../etc"),
+            ("/qdrant/storage", "rh-vec-extra", "/qdrant//snapshots"),
+            ("/qdrant/storage", "rh-vec-extra", "/qdrant/storage/inside"),
+            (
+                "/qdrant/storage",
+                "rh-vec-extra",
+                "/qdrant/snapshots\nImage=evil",
+            ),
+            ("/var/log", "rh-vec-extra", "/var/run"),
+        ] {
+            let mut clean = app.render_at(data).unwrap();
+            assert!(
+                bind_native_sibling_existing_volume(&mut clean, "vec", data, volume, sibling,)
+                    .is_err(),
+                "{data}, {volume}, {sibling}"
+            );
+        }
+    }
     #[test]
     fn native_nested_volume_prevents_anonymous_image_data_mounts() {
         let image = format!("docker.io/library/eclipse-mosquitto@sha256:{DIGEST}");
