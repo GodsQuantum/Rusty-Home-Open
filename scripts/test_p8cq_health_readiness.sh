@@ -24,7 +24,7 @@ IMAGE="$(podman image inspect docker.io/library/redis:7.4-alpine --format '{{ind
 
 # A real upstream Redis process starts, but its deliberately wrong localhost
 # port makes its native Podman healthcheck fail. systemd must NOT mark ready.
-manager --install-health-lab p8cq-provider "$IMAGE" 999 'redis-cli -p 6399 ping'
+manager --install-health-ready-lab p8cq-provider "$IMAGE" 999 'redis-cli -p 6399 ping'
 manager --install-dependent-lab p8cq-child "$IMAGE" 999 p8cq-provider
 grep -Fx 'Notify=healthy' "$QD/rh-p8cq-provider.container"
 grep -Fx 'BindsTo=rh-p8cq-provider.service' "$QD/rh-p8cq-child.container"
@@ -56,9 +56,9 @@ test ! -e "$QD/rh-p8cq-child.container"
 echo P8CQ_FAILED_HEALTH_START_CLEANUP_NO_DANGLING_UNITS_PASS
 
 # Same genuine OCI engine, this time a working application-level probe.
-manager --install-health-lab p8cq-provider "$IMAGE" 999 'redis-cli ping'
-manager --install-health-dependent-lab p8cq-child "$IMAGE" 999 'redis-cli ping' p8cq-provider
-if manager --install-health-dependent-lab p8cq-poison "$IMAGE" 999 'redis-cli; id' p8cq-provider; then
+manager --install-health-ready-lab p8cq-provider "$IMAGE" 999 'redis-cli ping'
+manager --install-health-dependent-ready-lab p8cq-child "$IMAGE" 999 'redis-cli ping' p8cq-provider
+if manager --install-health-dependent-ready-lab p8cq-poison "$IMAGE" 999 'redis-cli; id' p8cq-provider; then
   echo 'unsafe health command accepted' >&2; exit 1
 fi
 test ! -e "$QD/rh-p8cq-poison.container"

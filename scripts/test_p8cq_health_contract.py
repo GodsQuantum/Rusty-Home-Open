@@ -6,7 +6,7 @@ test = Path("scripts/test_p8cq_health_readiness.sh").read_text()
 workflow = Path(".github/workflows/p8cq-native-health-readiness.yml").read_text()
 for text in (
     "Notify=healthy", "HealthOnFailure=kill", "HealthCmd={cmd}",
-    '"--install-health-dependent-lab"', "bind_native_service_dependency",
+    '"--install-health-dependent-ready-lab"', "bind_native_service_dependency",
     'env::var("GITHUB_ACTIONS")', 'env::var("HARS_DISPOSABLE_OCI_LAB")',
 ):
     assert text in manager, text
