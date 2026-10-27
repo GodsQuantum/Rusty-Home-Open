@@ -4,6 +4,10 @@ PR #224 MERGED squash main `e041856271950b0338251e6015f366bd452f920f`, exact ori
 
 # Rusty Home — journal de développement et de certification
 
+## 27 October — P8dl actual Core->Supervisor Ingress session/cookie denial [CI PENDING]
+
+Differentiated from prior P8dj trusted internal App HTML: issue three real unauthenticated requests through Home Assistant Core proxy (/api/hassio_ingress/<actual_app_ingress_url>), while the real official File Editor is running under official Supervisor in disposable HAOS18.3 QEMU. Must deny no cookie, made-up cookie and forged browser identity headers (401/403), without creating user, reading any real tokens, opening ports, contacting VM100, or faking a Core session. Retains original genuine HAOS App-only backup validation and clean App disposal. Does NOT prove positive authenticated browser traffic and does NOT advance 5/10. QEMU CI PENDING.
+
 ## 27 October — P8dj root-cause official File Editor HTTP failure, correct architecture (CI pending)
 
 Original P8df process-only alive was false positive for File Editor functional HTTP; image s6 requires ephemeral writable root filesystem, and once fixed it still genuinely requires live Supervisor API: official logs Failed to get addon config from Supervisor API / DNS supervisor absent. No imaginary API, no fake auth or fake lab GREEN. Added REAL official Supervisor managed App start within disposable HAOS18.3 and trusted supervisor->App internal HTTP 200 HTML; standalone offline App must explicitly refuse. Both positive and negative checked, no browser login/Ingress session certification, milestone 5/10 unchanged until full Core authenticated user access.
