@@ -5,6 +5,7 @@ on:
       - ".github/workflows/p8dl-real-core-ingress-denial.yml"
       - "scripts/p8dl_official_core_ingress_denial_pytest.py"
       - "scripts/test_p8dl_real_core_ingress_denial_contract.py"
+      - "scripts/test_p8dn_official_editor_http_write_contract.py"
       - "scripts/test_p8dj_official_app_internal_http.py"
       - "scripts/p8dj_official_supervisor_http_pytest.py"
       - "scripts/test_p8dj_internal_http_contract.py"
@@ -51,6 +52,7 @@ jobs:
           python3 scripts/test_p8cy_native_inactive_app_stage.py --binary target/debug/ha_registry_stager
           python3 scripts/test_p8df_official_app_runtime_contract.py
           python3 scripts/test_p8dl_real_core_ingress_denial_contract.py
+          python3 scripts/test_p8dn_official_editor_http_write_contract.py
           python3 -m py_compile scripts/test_p8dj_official_app_internal_http.py scripts/p8dj_official_supervisor_http_pytest.py
           python3 scripts/test_p8di_official_app_crash_restart_contract.py
           python3 -m py_compile scripts/test_p8df_official_app_runtime.py
@@ -112,6 +114,7 @@ jobs:
           python3 scripts/test_p8df_official_app_runtime.py --archive "$RUNNER_TEMP/hars-p8cu-app-only/archive.tar" --manifest "$RUNNER_TEMP/hars-p8cu-app-only/manifest.json" --native target/debug/ha_registry_stager
           python3 scripts/test_p8dj_official_app_internal_http.py --archive "$RUNNER_TEMP/hars-p8cu-app-only/archive.tar" --manifest "$RUNNER_TEMP/hars-p8cu-app-only/manifest.json" --native target/debug/ha_registry_stager
           echo P8DL_REAL_OFFICIAL_HAOS_CORE_INGRESS_NEGATIVE_SESSION_TEST_PASS
+          echo P8DN_REAL_OFFICIAL_FILE_EDITOR_HTTP_POST_AND_RESTART_LAB_PASS
       - name: Refuse artifact or backup exposure
         if: always()
         run: |

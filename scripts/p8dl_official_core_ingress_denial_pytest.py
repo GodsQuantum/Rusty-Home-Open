@@ -227,21 +227,55 @@ def test_hars_official_file_editor_ingress_unauthenticated_denial(shell,shell_js
         assert re.fullmatch(r"/api/hassio_ingress/[A-Za-z0-9_./-]{8,240}",path)
         # Core proxy itself forwards the request but Supervisor must reject
         # because there is no ingress_session cookie.
-        script='''import urllib.request,urllib.error
-import sys
-path=sys.argv[1]
-url="http://homeassistant:8123"+path
-checks=({"X-Remote-User-Id":"forged-ci", "X-Remote-User-Groups":"administrators"},
-        {}, {"Cookie":"ingress_session=invalid-lab-session-value"})
-for n,headers in enumerate(checks):
+        p8dn_name="rusty_home_p8dn_http_write_synthetic.txt"
+        p8dn_value=b"P8DN_OFFICIAL_FILE_EDITOR_REAL_HTTP_WRITE_20261027\n"
+        p8dn_hash=hashlib.sha256(p8dn_value).hexdigest()
+        # File Editor enforces /homeassistant as its official writable BASEPATH.
+        # This is a disposable guest Core config, never the real VM100.
+        p8dn_host="/mnt/data/supervisor/homeassistant/"+p8dn_name
+        assert shell.run_check("test -d /mnt/data/supervisor/homeassistant && echo PRESENT",
+                               timeout=30)[0].strip()=="PRESENT"
+        assert shell.run_check("test ! -e "+p8dn_host+" && echo ABSENT",timeout=30)[0].strip()=="ABSENT"
+        script='''import urllib.request as u,urllib.error as e,urllib.parse as p
+import json,sys
+path,mode=sys.argv[1:3]
+name="rusty_home_p8dn_http_write_synthetic.txt"
+value="P8DN_OFFICIAL_FILE_EDITOR_REAL_HTTP_WRITE_20261027\\n"
+form=p.urlencode({"filename":"/homeassistant/"+name,"text":value}).encode()
+headers={"Content-Type":"application/x-www-form-urlencoded"}
+if mode=="deny":
+    checks=({"X-Remote-User-Id":"forged-ci","X-Remote-User-Groups":"administrators"},
+            {},{"Cookie":"ingress_session=invalid-lab-session-value"})
+    for h in checks:
+        try:
+            with u.urlopen(u.Request("http://homeassistant:8123"+path,headers=h),timeout=15) as res:
+                code=res.status
+                res.read(1024)
+        except e.HTTPError as err:
+            code=err.code
+        assert code in (401,403), "Untrusted Core ingress GET was not denied"
+    print("P8DL_REAL_CORE_SUPERVISOR_INGRESS_MISSING_FORGED_AND_SPOOFED_HEADER_DENIED_PASS")
     try:
-        with urllib.request.urlopen(urllib.request.Request(url,headers=headers),timeout=15) as res:
+        with u.urlopen(u.Request("http://homeassistant:8123"+path.rstrip("/")+"/api/save",
+                     data=form,headers=headers),timeout=15) as res:
             code=res.status
             res.read(1024)
-    except urllib.error.HTTPError as err:
+    except e.HTTPError as err:
         code=err.code
-    assert code in (401,403), "Untrusted ingress request was not rejected by real Supervisor"
-print("P8DL_REAL_CORE_SUPERVISOR_INGRESS_MISSING_FORGED_AND_SPOOFED_HEADER_DENIED_PASS")
+    # Core may redirect to its login UI or reject the method before auth.
+    # Only the independent guest filesystem absence below proves NO WRITE.
+    assert code in (301,302,303,307,308,401,403,404,405), (
+        "Untrusted Core ingress POST was unexpectedly accepted or crashed")
+    print("P8DN_CORE_INGRESS_UNAUTHENTICATED_POST_HTTP_STATUS_"+str(code))
+elif mode=="write":
+    with u.urlopen(u.Request("http://core-configurator:8099/api/save",
+                   data=form,headers=headers),timeout=15) as res:
+        assert res.status==200
+        body=json.loads(res.read(8192))
+    assert body.get("error") is False, "Official File Editor refused genuine HTTP save"
+    print("P8DN_REAL_OFFICIAL_EDITOR_HTTP_POST_SAVED_SYNTHETIC_FILE_PASS")
+else:
+    raise AssertionError("Unknown fixture mode")
 '''
         import base64 as _base64
         import shlex as _shlex
@@ -260,13 +294,41 @@ print("P8DL_REAL_CORE_SUPERVISOR_INGRESS_MISSING_FORGED_AND_SPOOFED_HEADER_DENIE
             shell.run_check("docker cp "+guest_python+" hassio_supervisor:"+
                             guest_container,timeout=50)
             outcome=shell.run_check("docker exec hassio_supervisor python3 "+
-                                    guest_container+" "+_shlex.quote(path),timeout=90)
+                                    guest_container+" "+_shlex.quote(path)+" deny",timeout=90)
+            assert "P8DL_REAL_CORE_SUPERVISOR_INGRESS_MISSING_FORGED_AND_SPOOFED_HEADER_DENIED_PASS" in outcome
+            assert any(line.startswith("P8DN_CORE_INGRESS_UNAUTHENTICATED_POST_HTTP_STATUS_")
+                       for line in outcome), "Core ingress POST status not observed"
+            assert shell.run_check("test ! -e "+p8dn_host+" && echo ABSENT",timeout=30)[0].strip()=="ABSENT", (
+                "Unauthenticated Core ingress POST created a guest Core config file")
+            print("P8DN_REAL_CORE_INGRESS_UNAUTHENTICATED_POST_NO_GUEST_FILE_PASS")
+            positive=shell.run_check("docker exec hassio_supervisor python3 "+
+                                     guest_container+" "+_shlex.quote(path)+" write",timeout=90)
+            assert "P8DN_REAL_OFFICIAL_EDITOR_HTTP_POST_SAVED_SYNTHETIC_FILE_PASS" in positive
+            assert shell.run_check("sha256sum "+p8dn_host,timeout=30)[0].split()[0]==p8dn_hash
+            print("P8DN_REAL_OFFICIAL_EDITOR_HTTP_WRITE_GUEST_SHA256_PASS")
+            stopped=shell_json("ha apps stop "+slug+" --no-progress --raw-json",timeout=200)
+            assert stopped.get("result")=="ok", "Official Supervisor App stop failed"
+            restarted=shell_json("ha apps start "+slug+" --no-progress --raw-json",timeout=250)
+            assert restarted.get("result")=="ok", "Official Supervisor App restart failed"
+            for attempt in range(45):
+                status=shell_json("ha apps info "+slug+" --no-progress --raw-json",timeout=75)
+                if (status.get("data") or {}).get("state")=="started":
+                    break
+                if attempt<44:_sleep(2)
+            else:
+                raise AssertionError("Official File Editor did not restart")
+            assert shell.run_check("sha256sum "+p8dn_host,timeout=30)[0].split()[0]==p8dn_hash
+            post_restart=shell.run_check(command,timeout=220)
+            assert "P8DJ_REAL_OFFICIAL_SUPERVISOR_TRUSTED_INTERNAL_HTTP_200_HTML_PASS" in post_restart
+            print("P8DN_REAL_OFFICIAL_EDITOR_HTTP_WRITTEN_DATA_SURVIVES_SUPERVISOR_RESTART_PASS")
         finally:
-            # Disposable VM: no persistent probe files or archived secrets.
+            # Disposable VM: remove only our synthetic probe, never real files.
             shell.run_check("docker exec hassio_supervisor rm -f "+
                             guest_container+"; rm -f "+guest_tmp+" "+guest_python,
                             timeout=30)
-        assert "P8DL_REAL_CORE_SUPERVISOR_INGRESS_MISSING_FORGED_AND_SPOOFED_HEADER_DENIED_PASS" in outcome
+            shell.run_check("rm -f "+p8dn_host,timeout=30)
+            assert shell.run_check("test ! -e "+p8dn_host+" && echo ABSENT",
+                                   timeout=30)[0].strip()=="ABSENT"
         print("P8DL_OFFICIAL_FILE_EDITOR_CORE_INGRESS_FAIL_CLOSED_WITHOUT_BROWSER_SESSION_PASS")
         created=shell_json('ha backups new --name "P8CU Public App Only Lab" --app '
                            +slug+" --no-progress --raw-json",timeout=460)
