@@ -30,8 +30,8 @@ jobs:
           cargo build --locked -p hars-native-kernel --bin hars-native-kernel
           cargo test --locked -p hars-native-kernel --lib --quiet
           cargo build --locked -p hars-interop-moli --bin ha_registry_stager
-          python3 scripts/test_p8aa_backup_to_native_stage.py --stager target/debug/ha_registry_stager --native target/debug/hars-native-kernel
-          python3 scripts/test_p8be_automation_source.py --stager target/debug/ha_registry_stager --native target/debug/hars-native-kernel
+          python3 scripts/test_p8aa_backup_to_native_stage.py --binary target/debug/ha_registry_stager
+          python3 scripts/test_p8be_automation_source.py --binary target/debug/ha_registry_stager
       - name: Prepare pinned official HAOS QEMU harness
         run: |
           sudo apt-get update -qq

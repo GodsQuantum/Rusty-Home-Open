@@ -14,6 +14,12 @@ for t in ("ha backups new","ha backups info","protected","core.entity_registry",
  assert t in g,t
 for t in ("inspect_backup","import-unprotected-backup","--lab-ha-backup-automations-preview","explicitly_disabled_count","==6","actions_executed","device_commands","rollback","P8CL_GENUINE_HAOS_SUPERVISOR_TWO_INACTIVE_YAML_RUST_SHA_BOUND_PREVIEW_PASS"):
  assert t in h,t
+for cli in (
+ "python3 scripts/test_p8aa_backup_to_native_stage.py --binary target/debug/ha_registry_stager",
+ "python3 scripts/test_p8be_automation_source.py --binary target/debug/ha_registry_stager",
+ "python3 scripts/test_p8cl_real_haos_dual_backup.py --archive",
+):
+ assert cli in w,cli
 assert y.count("  initial_state: false")==2
 assert "initial_state: true" not in y
 assert y.count("\n- id: ")==1 and y.startswith("- id: ")
