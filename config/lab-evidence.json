@@ -602,6 +602,18 @@
       "scope": "Genuine HAOS18.3 File Editor App-only backup restored via native Rust SHA custody into rootless official OCI; synthetic shell write inside container /data survives real graceful Podman stop/start; source SHA intact. No authenticated UI.",
       "url": "https://github.com/GodsQuantum/Rusty-Home-Open/actions/runs/40557039044",
       "merged_pr": 220
+    },
+    {
+      "id": "haos_file_editor_internal_http_denial",
+      "release_gate": "supervisor_apps_restore",
+      "status": "verified_lab_only",
+      "run_id": 40560052086,
+      "head_sha": "f4d039769729db051773094906b58200a3fcb68e",
+      "workflow": "P8dj real File Editor HTTP from restored HAOS bytes in isolated OCI",
+      "job": "Real File Editor localhost HTML after HAOS native App data recovery",
+      "scope": "Real HAOS18.3 Supervisor starts File Editor: trusted internal HTTP 200 HTML. Rootless isolated OCI with recovered fictional /data and no Supervisor API exits without HTTP or host port; source SHA unchanged. No Core user Ingress, VM100 or production.",
+      "url": "https://github.com/GodsQuantum/Rusty-Home-Open/actions/runs/40560052086",
+      "merged_pr": 224
     }
   ]
 }
