@@ -154,13 +154,21 @@ with urllib.request.urlopen("http://127.0.0.1:7700/health",timeout=2) as r:
   sleep .4
 done
 journalctl --user -u "rh-$STAGE.service" --no-pager > "$WORK/old-journal.log" 2>&1 || true
-echo "P8CI_STAGE_DIAGNOSTIC state=$state failed=$failed" >&2
-systemctl --user show "rh-$STAGE.service" -p NRestarts -p ExecMainStatus -p ActiveState -p SubState >&2 || true
-tail -65 "$WORK/old-journal.log" >&2
-test "$failed" = 1
-if ! grep -Eiq '(database|version).*(incompatib|newer|downgrad|old|mismatch)|(incompatib|newer|downgrad|mismatch).*(database|version)' "$WORK/old-journal.log"; then
-  echo 'No version-specific rejection in genuine application logs:' >&2
-  tail -55 "$WORK/old-journal.log" >&2
+# Quadlet Restart=on-failure keeps a genuine crashing App in
+# activating/auto-restart, not necessarily systemd's terminal "failed".
+# Demand a nonzero process exit and an observed native restart in that case.
+state_details="$(systemctl --user show "rh-$STAGE.service" -p NRestarts -p ExecMainStatus -p SubState)"
+restarts="$(printf '%s\n' "$state_details" | sed -n 's/^NRestarts=//p')"
+exec_status="$(printf '%s\n' "$state_details" | sed -n 's/^ExecMainStatus=//p')"
+substate="$(printf '%s\n' "$state_details" | sed -n 's/^SubState=//p')"
+if [[ "$failed" != 1 ]] && ! { [[ "$restarts" =~ ^[0-9]+$ ]] && (( restarts >= 1 )) && [[ "$exec_status" == 1 && "$substate" == auto-restart ]]; }; then
+  echo "Downgrade did not produce a confirmed failed process: $state_details" >&2
+  tail -65 "$WORK/old-journal.log" >&2
+  exit 1
+fi
+if ! grep -Fq 'Your database version (1.55.0) is incompatible with your current engine version (1.54.0)' "$WORK/old-journal.log"; then
+  echo 'No exact 1.55-to-1.54 incompatibility in genuine application logs:' >&2
+  tail -65 "$WORK/old-journal.log" >&2
   exit 1
 fi
 echo P8CI_REAL_154_REFUSES_155_CHECKSUM_VALID_DATABASE_DOWNGRADE_PASS
