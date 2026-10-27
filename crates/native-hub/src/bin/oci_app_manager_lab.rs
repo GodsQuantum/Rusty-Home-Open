@@ -581,10 +581,13 @@ fn pair_journal_path(dir: &Path) -> PathBuf {
     dir.join(PAIR_START_JOURNAL)
 }
 fn ensure_no_pair_journal(dir: &Path) -> io::Result<()> {
-    match fs::symlink_metadata(pair_journal_path(dir)) {
-        Err(e) if e.kind() == io::ErrorKind::NotFound => Ok(()),
-        _ => Err(denied()),
+    for path in [pair_journal_path(dir), switch_journal_path(dir)] {
+        match fs::symlink_metadata(path) {
+            Err(e) if e.kind() == io::ErrorKind::NotFound => (),
+            _ => return Err(denied()),
+        }
     }
+    Ok(())
 }
 fn read_pair_journal(dir: &Path) -> io::Result<(String, String)> {
     let mut file = OpenOptions::new()
@@ -822,6 +825,87 @@ fn restart_from_unit(unit: &str) -> io::Result<()> {
     systemctl(&["--user", "start", unit])?;
     systemctl(&["--user", "is-active", "--quiet", unit])
 }
+// P8cv: crash-safe image switch intent; no automatic host reboot or
+// service activation outside an explicit isolated recovery invocation.
+const SWITCH_JOURNAL: &str = ".rh-image-switch.journal";
+fn switch_journal_path(dir: &Path) -> PathBuf {
+    dir.join(SWITCH_JOURNAL)
+}
+fn read_switch_journal(dir: &Path) -> io::Result<(String, String, String)> {
+    let mut f = OpenOptions::new()
+        .read(true)
+        .custom_flags(nix::libc::O_NOFOLLOW)
+        .open(switch_journal_path(dir))?;
+    let m = f.metadata()?;
+    if !m.is_file()
+        || m.uid() != unsafe { nix::libc::geteuid() }
+        || m.mode() & 0o077 != 0
+        || m.len() > 450
+    {
+        return Err(denied());
+    }
+    let mut data = String::new();
+    f.read_to_string(&mut data)?;
+    let mut lines = data.lines();
+    if lines.next() != Some("P8CV1") {
+        return Err(denied());
+    }
+    let slug = lines.next().ok_or_else(denied)?;
+    let old = lines.next().ok_or_else(denied)?;
+    let new = lines.next().ok_or_else(denied)?;
+    if lines.next().is_some() || !data.ends_with('\n') || !sane_slug(slug) || old == new {
+        return Err(denied());
+    }
+    validate_digest(slug, old)?;
+    validate_digest(slug, new)?;
+    Ok((slug.to_owned(), old.to_owned(), new.to_owned()))
+}
+fn recover_switch_locked(
+    dir: &Path,
+    slug: &str,
+    expected: &str,
+    new: &str,
+    retain_rollback: bool,
+) -> io::Result<()> {
+    let recorded = read_switch_journal(dir)?;
+    if recorded != (slug.to_owned(), expected.to_owned(), new.to_owned()) {
+        return Err(denied());
+    }
+    let (path, _, unit) = unit_paths(dir, slug)?;
+    installed_file(&path)?;
+    let current = fs::read_to_string(&path)?;
+    let rollback = path.with_extension("rollback");
+    let original = if fs::symlink_metadata(&rollback).is_ok() {
+        installed_file(&rollback)?;
+        fs::read_to_string(&rollback)?
+    } else {
+        current.clone()
+    };
+    if extract_image(&original)? != expected
+        || (current != original && current != replace_image(&original, expected, new)?)
+    {
+        return Err(denied());
+    }
+    // A failed stop, manifest restore or restart retains the journal.
+    systemctl(&["--user", "stop", &unit])?;
+    if current != original {
+        replace_private_atomic(dir, &path, &original)?;
+    }
+    restart_from_unit(&unit)?;
+    // A normal failed upgrade retains the historical manual rollback
+    // receipt. Crash recovery instead discards its incomplete receipt.
+    if !retain_rollback && fs::symlink_metadata(&rollback).is_ok() {
+        fs::remove_file(&rollback)?;
+    }
+    fs::remove_file(switch_journal_path(dir))?;
+    File::open(dir)?.sync_all()
+}
+fn recover_switch(dir: &Path) -> io::Result<()> {
+    let _graph = lock_dependency_graph(dir)?;
+    let (slug, expected, new) = read_switch_journal(dir)?;
+    let _app = lock_app(dir, &slug)?;
+    recover_switch_locked(dir, &slug, &expected, &new, false)
+}
 fn switch_image(dir: &Path, slug: &str, expected: &str, new_image: &str) -> io::Result<()> {
     let _graph_guard = lock_dependency_graph(dir)?;
     ensure_no_pair_journal(dir)?;
@@ -840,20 +924,31 @@ fn switch_image(dir: &Path, slug: &str, expected: &str, new_image: &str) -> io::
     if fs::symlink_metadata(&rollback).is_ok() {
         return Err(denied());
     }
-    // If stop fails, the old application remains untouched.
-    systemctl(&["--user", "stop", &unit])?;
-    write_private_new(&rollback, &old)?;
-    if let Err(e) = replace_private_atomic(dir, &path, &updated)
-        .and_then(|_| restart_from_unit(&unit))
-        .and_then(|_| require_health(slug, &updated))
-    {
-        // Recover the exact old digest and restart original if the new
-        // container fails systemd startup. Keep rollback file for diagnosis.
-        replace_private_atomic(dir, &path, &old)?;
+    let journal = switch_journal_path(dir);
+    write_private_new(
+        &journal,
+        &format!("P8CV1\n{slug}\n{expected}\n{new_image}\n"),
+    )?;
+    File::open(dir)?.sync_all()?;
+    let attempt = (|| {
+        systemctl(&["--user", "stop", &unit])?;
+        write_private_new(&rollback, &old)?;
+        replace_private_atomic(dir, &path, &updated)?;
+        // Deliberate SIGKILL only in disposable GitHub CI.
+        if env::var("HARS_P8CV_KILL_AFTER_SWAP").as_deref() == Ok("1")
+            && env::var("GITHUB_ACTIONS").as_deref() == Ok("true")
+        {
+            unsafe { nix::libc::kill(nix::libc::getpid(), nix::libc::SIGKILL) };
+        }
         restart_from_unit(&unit)?;
+        require_health(slug, &updated)
+    })();
+    if let Err(e) = attempt {
+        recover_switch_locked(dir, slug, expected, new_image, true)?;
         return Err(e);
     }
-    Ok(())
+    fs::remove_file(journal)?;
+    File::open(dir)?.sync_all()
 }
 fn rollback_image(dir: &Path, slug: &str) -> io::Result<()> {
     let _graph_guard = lock_dependency_graph(dir)?;
@@ -901,6 +996,7 @@ fn execute() -> io::Result<()> {
     match args[1].as_str() {
         "--start-pair-transaction-lab" if args.len() == 4 => start_pair(&dir, &args[2], &args[3]),
         "--recover-start-pair-lab" if args.len() == 2 => recover_pair(&dir),
+        "--recover-image-switch-lab" if args.len() == 2 => recover_switch(&dir),
         "--install-lab" if args.len() == 5 || args.len() == 7 => {
             let uid = args[4].parse::<u32>().map_err(|_| bad())?;
             let net = if args.len() == 7 {
