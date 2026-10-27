@@ -1,3 +1,9 @@
+## P8eb — bounded Supervisor JSON metadata depth and in-place rewrite denial (28 October 2026)
+
+- PR #246 merged squash main `2ca7804293072e0a866fa878148cb8f1223a00aa`, exact original HEAD `b25348d9365ebb0333680281fdfb8cdf8eba3836`; **10/10 GitHub checks SUCCESS**.
+- Actual native runner https://github.com/GodsQuantum/Rusty-Home-Open/actions/runs/40604609092 job `122540871430` SUCCESS; **11/11** isolated fixture tests. Valid 1500-deep JSON previously accepted RED, now denied before parse by depth 64; same-size in-place mutation denied, FIFO nonblocking refused, bracket-containing string accepted.
+- Claim `haos_supervisor_options_json_depth_and_write_race_denial` verified_lab_only. Existing HAOS QEMU checks on the SHA are regressions, not a new official guest proof. **63 claims / 59 distinct runs, production 0/15**, no Core auth, production credentials, VM100, audit or signatures.
+
 ## P8ea — inode-pinned Supervisor metadata race refusal (28 October 2026)
 
 - PR #245 merged at `21ed5dd8e246a7283940bb36d8c0210673e760ef`, exact source HEAD `c4b8f1f3b14edc52436a1e040022e52e2b5f1e38`; **12/12** checks SUCCESS.

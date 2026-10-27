@@ -1,6 +1,6 @@
-## 28 October — P8eb unbounded nested Supervisor metadata RED then bounded parser GREEN [CI PENDING]
+## 28 October — P8eb exact-head CI and merge (VERIFIED LAB ONLY)
 
-Actual LXC700 TDD RED: syntactically valid 1500-deep nested JSON within 128 KiB was returned by the official saved-options reader without a depth bound. Fix: byte-level quote/escape-aware structural nesting limit 64 before json.loads; 11/11 Python fixture tests GREEN including same-size in-place metadata write detected, FIFO refused without blocking, long brackets in JSON string accepted. Original P8dy contract GREEN. Only source and fictional test files changed; no real HAOS QEMU replay, no production or secrets. PR/CI pending; no new machine evidence yet.
+PR #246 original HEAD b25348d9365ebb0333680281fdfb8cdf8eba3836, squash main 2ca7804293072e0a866fa878148cb8f1223a00aa; all 10 exact-head checks SUCCESS. Native CI 40604609092 job 122540871430 actually ran 11/11 fixtures: prior RED 1500-deep JSON now refused by 64-level structural limit; same-size concurrent write and FIFO denied, quoted literal brackets accepted. Original P8dy contract green; QEMU CI on same SHA was regression only, not a new claim. 63 lab-only jobs / 59 distinct successful GitHub run IDs, 0/15 independent production gates. No real HAOS user or VM100 touched.
 
 ## 28 October — P8ea actual directory-FD race verified and merged
 
