@@ -339,6 +339,18 @@
       "scope": "Eighth distinct real App: official rootless Qdrant v1.20.0 vector REST, separate private storage/snapshots volumes, SHA-checked stop/export and tamper refusal. Independent recovered point 1 but not later point 2; original unaffected; no household.",
       "url": "https://github.com/GodsQuantum/Rusty-Home-Open/actions/runs/40433087623",
       "merged_pr": 180
+    },
+    {
+      "id": "oci_meilisearch_ninth_fulltext_index_independent_restore",
+      "release_gate": "supervisor_apps_restore",
+      "status": "verified_lab_only",
+      "run_id": 40434341984,
+      "head_sha": "6f61ddf1f61a5ffd4fd8cfadb88f39a462b2b831",
+      "workflow": "P8cg Ninth distinct real stateful OCI App - Meilisearch full-text index restore",
+      "job": "Real offline Meilisearch full-text HTTP indexing and independent point-in-time restore",
+      "scope": "Ninth App: real rootless Meilisearch async HTTP indexing and full-text search, stopped private 0600 SHA backup/tamper denial, second engine restores only first document; source retains both. Network=none; lab only, not full lifecycle.",
+      "url": "https://github.com/GodsQuantum/Rusty-Home-Open/actions/runs/40434341984",
+      "merged_pr": 181
     }
   ]
 }
