@@ -168,6 +168,7 @@ mod tests {
     }
 }
 
+pub mod app_backup_import;
 pub mod backup_escrow;
 pub mod ha_backup_import;
 /// Opt-in private read-only HA entity registry import staging, no device writes.
