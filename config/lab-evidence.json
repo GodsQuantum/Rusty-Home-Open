@@ -362,6 +362,18 @@
       "job": "Real Redis and Meilisearch staged multi-App rollback and intact originals",
       "scope": "Two real rootless Redis + Meilisearch Apps: quiesced shared snapshot, injected second-tar corruption after first restore starts, stage rollback, successful valid pair retry, both originals safe. Lab only.",
       "url": "https://github.com/GodsQuantum/Rusty-Home-Open/actions/runs/40437773496"
+    },
+    {
+      "id": "oci_meili_sha_valid_downgrade_refusal_safe_retry",
+      "release_gate": "supervisor_apps_restore",
+      "status": "verified_lab_only",
+      "run_id": 40440140111,
+      "head_sha": "5a22d43b463df346f2ec7e8bcc03919ddfc3c181",
+      "workflow": "P8ci real Meilisearch version-downgrade fail-closed recovery",
+      "job": "Real Meilisearch downgrade rejection and compatible restore retry",
+      "scope": "Real rootless Meilisearch 1.55 indexed SHA-valid checkpoint refused by 1.54 with version mismatch and native restart; failed stage removed, source intact; compatible 1.55 retry restored old search after restart.",
+      "url": "https://github.com/GodsQuantum/Rusty-Home-Open/actions/runs/40440140111",
+      "merged_pr": 185
     }
   ]
 }
