@@ -1,3 +1,7 @@
+## P8dj — official File Editor internal HTTP after genuine HAOS App restore [CI PENDING]
+
+This DIFFERENT lab test (not P8df mere process boot, P8di SIGKILL restart or the concurrent P8dh real state writes) runs P8cu genuine official HAOS18.3 File Editor partial Supervisor backup -> Rust SHA escrow -> P8cy private restored /data -> actual official app-configurator:6.3.0 rootless Podman. NEW acceptance: a real Python stdlib GET from INSIDE the official App process namespace to http://127.0.0.1:8099/ returns HTTP 200, HTML + Configurator text; no host port, no host net, no privileges, no tokens or data exposure. Source exact fixture SHA preserved and App OCI cleaned. This tests only internal upstream web server and is strictly NOT authenticated Core/Supervisor Ingress: do NOT promote App lane 5/10 until actual credentials, denial and authorization are proven. GitHub CI pending. CT700 only build, official QEMU/Podman disposable GitHub runners, no household/VM100.
+
 ## P8dd — stage SIGKILL recovery: PR #217 still UNVERIFIED; original CI 40535003627 failed downloading HAOS image (HTTP 500), not a test assertion. Merge-conflict repair only, no new laboratory claim.
 
 ## 27 October — P8di verified genuine official App SIGKILL and new OCI instance [LAB ONLY]
