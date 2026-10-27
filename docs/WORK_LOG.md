@@ -12,6 +12,10 @@ PR #224 MERGED squash main `e041856271950b0338251e6015f366bd452f920f`, exact ori
 
 # Rusty Home — journal de développement et de certification
 
+## 27 October — P8dr actual MQTT QoS1 retained on genuine HAOS backed native Rust data [CI PENDING]
+
+Not another App-only archive: official HAOS18.3 Supervisor Mosquitto backup -> real native Rust custody and files -> actual upstream Eclipse Mosquitto broker OCI with private staged data. Test first QoS1 MQTT retained publish/subscribe on isolated loopback, then stop and recreate OCI and prove retained message persisted. Temporary explicit fictitious config is NEW, so upstream HAOS config/users/TLS migration is NOT certified; App lane 5/10 production 0/15. No host port/network/Supervisor user credentials.
+
 ## 27 October — P8dp exact genuine Mosquitto App lab evidence [VERIFIED]
 
 After P8do #230 source 821a972e3b02422120bcd139f54f955a6e87afc1 merged main 887b33c39eae27e6b22c179efdeac1ace3275324, all 10 CI checks green. Real official QEMU HAOS18.3 Supervisor App core_mosquitto genuine backup and Rust SHA native escrow/stage, exact fictional marker, precommit failure/tamper refusal, run 40576301895/job 122443536695 PASS JUnit 3/3. Register 54th lab-only machine claim (50 distinct GH run IDs), no native MQTT execution, production 0/15 and App capability ladder 5/10.
