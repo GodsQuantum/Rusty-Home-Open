@@ -5,7 +5,7 @@
 No HAOS host, public network, incoming port mapping or Supervisor secrets.
 Not equivalent to ingress/auth/Core parity or full App lifecycle certification.
 """
-import argparse,ast,hashlib,json,os,subprocess,tempfile,time,urllib.error
+import argparse,ast,hashlib,json,os,re,subprocess,tempfile,time
 from pathlib import Path
 from inspect_ha_backup import inspect_backup
 P=argparse.ArgumentParser()
@@ -43,7 +43,11 @@ def run(command,*,expect=True,timeout=90):
 # and used unchanged throughout this single disposable test.
 run(["podman","pull","--quiet",a.image],timeout=400)
 identity=run(["podman","image","inspect",a.image,"--format","{{.Id}}"]).stdout.strip()
-assert identity.startswith("sha256:") and len(identity)==71
+# Podman versions differ: .Id can be 64 hex chars, or sha256:64 hex.
+# Normalize safely; NEVER fall back to a mutable tag for execution.
+assert re.fullmatch(r"(?:sha256:)?[0-9a-f]{64}",identity),(
+    "Unexpected non-digest Podman image ID format "+str(len(identity)))
+identity="sha256:"+identity.removeprefix("sha256:")
 assert run(["podman","image","inspect",a.image,"--format","{{.Architecture}}"]).stdout.strip()=="amd64"
 print("P8DF_GENUINE_PUBLIC_OFFICIAL_APP_CONFIGURATOR_PINNED_SESSION_IMAGE_PASS",flush=True)
 with tempfile.TemporaryDirectory(prefix="p8df-real-app-runtime-",dir=os.environ["RUNNER_TEMP"]) as tmp:
