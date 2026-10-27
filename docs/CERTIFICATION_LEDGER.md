@@ -8,6 +8,10 @@
 partial laboratory evidence; none is an independently qualified production gate.
 The nine sample Apps published here are all fictional synthetic fixtures.
 
+## 27 October — P8cu genuine HAOS App-only partial archive
+
+PR #206 MERGED squash `e46306a80525ab557f73e181f6113930df186b2b`, exact source `5839675720581f07c9e90f2c4052bf0c6b90d99e`; **10/10 GitHub checks SUCCESS**. Genuine official HAOS18.3 disposable QEMU File Editor install and Supervisor App-only partial backup, SHA-256 private relay, exact nonsecret marker recovered from real nested App payload with read-only inspection: [CI 40514471305](https://github.com/GodsQuantum/Rusty-Home-Open/actions/runs/40514471305), job 122224674821, JUnit **3/3**. Claim `haos_real_selected_app_only_partial_backup_readonly_preflight`; **44 lab claims / 40 distinct successful runs**. This does not restore an App to Rust or authorize migration, production **0/15**.
+
 ## 27 October — P8cv exact-head genuine Redis digest-switch crash proof
 
 PR #207 MERGED squash fec9636f1f5f40e4764be47273586f6abffeb3f2; exact source 0cfc4b4a32a218048043115a9011108433ffdb3c, **30/30 SUCCESS**. Disposable real Redis 7.4 image-switch coordinator SIGKILL, private fsynced journal, all mutators fenced, symlink journal denied, exact old digest and RDB restored by independent process, normal switch/rollback regression and persistent volume preserved: [CI 40506098662](https://github.com/GodsQuantum/Rusty-Home-Open/actions/runs/40506098662), job 122195673271. Claim oci_native_image_switch_sigkill_durable_recovery, **43 lab claims / 39 distinct successful run IDs**. This is NOT an automatic reboot recovery, database schema rollback, whole HAOS migration or production certification. **0/15 independent gates certified.**
