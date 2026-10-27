@@ -470,6 +470,18 @@
       "scope": "Disposable rootless two-Redis: missing second image creates no units; atomic private Quadlet pair, overwrite denied, dependent-only start runs both and preserves separate RDB volumes on uninstall. Descriptor-only; not runtime/HAOS/production.",
       "url": "https://github.com/GodsQuantum/Rusty-Home-Open/actions/runs/40469240227",
       "merged_pr": 200
+    },
+    {
+      "id": "oci_native_pair_runtime_sigkill_durable_recovery",
+      "release_gate": "apps_9_lifecycle",
+      "status": "verified_lab_only",
+      "run_id": 40475360889,
+      "head_sha": "cfebe3a98f1ddfd909dd09072c683e18c0797e12",
+      "workflow": "P8cs genuine native pair coordinator SIGKILL and recovery",
+      "job": "Genuine disposable rootless Redis pair coordinator SIGKILL recovery",
+      "scope": "Real rootless two-Redis: coordinator SIGKILL between starts; fsynced 0600 intent blocks mutations; separate recovery stops both, preserves RDB keys; retry succeeds; symlink journal refused. No HAOS, reboot, data atomicity or production.",
+      "url": "https://github.com/GodsQuantum/Rusty-Home-Open/actions/runs/40475360889",
+      "merged_pr": 202
     }
   ]
 }
