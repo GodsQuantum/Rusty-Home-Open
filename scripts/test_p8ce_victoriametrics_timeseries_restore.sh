@@ -60,10 +60,16 @@ metric="p8ce_fixture_value"
 query=metric+"{phase=\""+phase+"\"}"
 value=41 if phase=="before" else 99
 if op=="write":
- data=(metric+"{phase=\""+phase+"\"} "+str(value)+"\n").encode()
+ # The official engine intentionally hides recently ingested points for
+ # 30 seconds and buffers fresh samples before they become queryable.
+ # Prometheus uses MILLIS timestamps. This is a disposable test-only flush.
+ timestamp_ms=int((time.time()-90)*1000)
+ data=(metric+"{phase="+chr(34)+phase+chr(34)+"} "+str(value)+" "+str(timestamp_ms)+chr(10)).encode()
  request=urllib.request.Request(base+"/api/v1/import/prometheus",data=data,method="POST")
  with urllib.request.urlopen(request,timeout=7) as response:
   assert response.status in (200,204),response.status
+ with urllib.request.urlopen(base+"/internal/force_flush",timeout=7) as response:
+  assert response.status==200,response.status
 expected=[] if op=="absent" else [value]
 for attempt in range(90):
  try:
