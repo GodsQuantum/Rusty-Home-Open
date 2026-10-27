@@ -530,6 +530,18 @@
       "scope": "Genuine HAOS18.3 QEMU File Editor App-only backup passed intact SHA into native Rust private escrow; re-open, tamper refusal and original unchanged. No data restore, App execution or production.",
       "url": "https://github.com/GodsQuantum/Rusty-Home-Open/actions/runs/40518370582",
       "merged_pr": 210
+    },
+    {
+      "id": "haos_app_only_native_archive_asan_fuzz",
+      "release_gate": "security_stress_fuzz",
+      "status": "verified_lab_only",
+      "run_id": 40525580760,
+      "head_sha": "23e7d33097faf82ebcf263a9dc9b056ecbaf6e69",
+      "workflow": "Rusty Home - instrumented Core, ingress and Supervisor Store fuzz",
+      "job": "Core auth, ingress and Store security (libFuzzer / AddressSanitizer)",
+      "scope": "P8cz real native App-only Rust TAR/GZIP importer: 14 fictional corpus seeds, two valid and twelve refused; 220734 libFuzzer/ASan iterations in 46s, SHA/source/inert invariants. No App restore, production, 72h soak or independent pentest.",
+      "url": "https://github.com/GodsQuantum/Rusty-Home-Open/actions/runs/40525580760",
+      "merged_pr": 212
     }
   ]
 }
