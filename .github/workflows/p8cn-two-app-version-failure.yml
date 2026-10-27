@@ -1,0 +1,40 @@
+name: P8cn real two-App SHA-valid runtime mismatch and grouped rollback
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/p8cn-two-app-version-failure.yml"
+      - "scripts/test_p8cn_two_app_version_failure_rollback.sh"
+      - "scripts/test_p8cn_two_app_version_failure_contract.py"
+      - "crates/native-hub/src/oci_quadlet.rs"
+      - "crates/native-hub/src/bin/oci_app_manager_lab.rs"
+      - "Cargo.lock"
+permissions:
+  contents: read
+jobs:
+  real-multi-app-rollback:
+    name: Real two-App valid-checkpoint incompatible runtime rollback and compatible retry
+    runs-on: ubuntu-24.04
+    timeout-minutes: 23
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Scope and safe-source guards
+        run: |
+          python3 scripts/test_p8cn_two_app_version_failure_contract.py
+          bash -n scripts/test_p8cn_two_app_version_failure_rollback.sh
+          cargo fmt --all -- --check
+          cargo test --locked -p hars-native-hub --all-targets
+          cargo clippy --locked -p hars-native-hub --all-targets -- -D warnings
+      - name: Official rootless Podman and user systemd
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends podman uidmap slirp4netns fuse-overlayfs
+          test -x /usr/bin/podman
+          test -S /run/user/$(id -u)/bus
+      - name: Real two-App checksum-valid runtime version refusal, cleanup and retry
+        timeout-minutes: 14
+        run: |
+          cargo build --locked -p hars-native-hub --bin oci_app_manager_lab
+          bash scripts/test_p8cn_two_app_version_failure_rollback.sh
