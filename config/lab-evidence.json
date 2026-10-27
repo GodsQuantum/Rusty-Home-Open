@@ -614,6 +614,18 @@
       "scope": "Real HAOS18.3 Supervisor starts File Editor: trusted internal HTTP 200 HTML. Rootless isolated OCI with recovered fictional /data and no Supervisor API exits without HTTP or host port; source SHA unchanged. No Core user Ingress, VM100 or production.",
       "url": "https://github.com/GodsQuantum/Rusty-Home-Open/actions/runs/40560052086",
       "merged_pr": 224
+    },
+    {
+      "id": "haos_real_core_ingress_unauthorized_spoofed_denied",
+      "release_gate": "supervisor_apps_restore",
+      "status": "verified_lab_only",
+      "run_id": 40570517179,
+      "head_sha": "af69100216732c2a75df823aee459079c58d0080",
+      "workflow": "P8dl actual Core Ingress denies fake sessions for official HAOS App",
+      "job": "Real Core+Supervisor Ingress denies forged sessions on File Editor",
+      "scope": "Genuine HAOS18.3 Core+Supervisor+official File Editor in QEMU; real App ingress rejects missing/invalid cookies and spoofed identity headers, actual backend HTML passes, original SHA preserved. No authorized browser login or production.",
+      "url": "https://github.com/GodsQuantum/Rusty-Home-Open/actions/runs/40570517179",
+      "merged_pr": 227
     }
   ]
 }

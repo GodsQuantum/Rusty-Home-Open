@@ -4,6 +4,10 @@ PR #224 MERGED squash main `e041856271950b0338251e6015f366bd452f920f`, exact ori
 
 # Rusty Home — journal de développement et de certification
 
+## 27 October — P8dm pin real Ingress denial CI and no authentication claims
+
+Verified PR #227 (source af69100216732c2a75df823aee459079c58d0080, merge 0bafb3761c7edb072af0690e38c3d68e27abe756). Real official HAOS QEMU run 40570517179, job 122423140783 SUCCESS and all 10/10 checks. Three real JUnit and live Core Ingress missing/bogus-cookie/spoofed-headers denial; no authorized session created. Register 53rd lab-only claim, 49 distinct green runs, still 5/10 App migration and 0/15 production release. No hardware or user identities changed.
+
 ## 27 October — P8dl actual Core->Supervisor Ingress session/cookie denial [CI PENDING]
 
 Differentiated from prior P8dj trusted internal App HTML: issue three real unauthenticated requests through Home Assistant Core proxy (/api/hassio_ingress/<actual_app_ingress_url>), while the real official File Editor is running under official Supervisor in disposable HAOS18.3 QEMU. Must deny no cookie, made-up cookie and forged browser identity headers (401/403), without creating user, reading any real tokens, opening ports, contacting VM100, or faking a Core session. Retains original genuine HAOS App-only backup validation and clean App disposal. Does NOT prove positive authenticated browser traffic and does NOT advance 5/10. QEMU CI PENDING.
