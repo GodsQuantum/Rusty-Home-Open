@@ -24,7 +24,7 @@ const MAX_DECOMPRESSED: u64 = 268_435_456;
 const MAX_FILES: usize = 20_000;
 const MAX_APPS: usize = 8;
 
-fn canonical(path: &Path, dir: bool) -> Result<String> {
+pub(crate) fn canonical(path: &Path, dir: bool) -> Result<String> {
     let full = path.to_str().context("invalid tar name encoding")?;
     let name = full.strip_prefix("./").unwrap_or(full);
     let name = if dir {
@@ -52,7 +52,7 @@ fn read_bounded<R: Read>(source: &mut R, max: u64) -> Result<Vec<u8>> {
     }
     Ok(data)
 }
-fn safe_slug(value: &str) -> bool {
+pub(crate) fn safe_slug(value: &str) -> bool {
     let b = value.as_bytes();
     !b.is_empty()
         && b.len() <= 120

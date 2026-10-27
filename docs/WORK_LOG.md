@@ -1,5 +1,8 @@
 # Rusty Home — journal de développement et de certification
 
+## 27 October — P8cy native offline App-data materialization with atomic rollback [CI pending]
+
+A true further milestone AFTER actual P8cw HAOS App-only backup Rust SHA escrow: native Rust file materializer reconstructs bounded, ordinary, verified data under PRECREATED private inert directory without ever running HAOS App. Owner 0700 parent, every file 0600, directory 0700, RENAME_NOREPLACE and fsync; test fault-before-commit cleans temp and refuses damaged source, duplicate target, symlink and insecure parent. Genuine QEMU real File Editor bytes SHA-to-Rust staged-file proof pending; no production/home data, 0/15.
 ## 27 October — P8cx pin genuine HAOS App-only native Rust escrow evidence
 
 No duplicate test. PR #210 original source 2407f239978f557a771e32700d63e23a06005209, squash main b4e8701ce8ffe40c4640ccc37db93c0bd9ae1c17. Actual green run 40518370582/job 122238075930, 13/13 exact-source CI, official File Editor selected-App-only backup into private SHA Rust escrow, independent reread, tamper refusal, original unchanged. Registered 45th verified_lab_only machine claim. Production 0/15; no App restored.

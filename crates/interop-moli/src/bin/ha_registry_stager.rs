@@ -126,6 +126,40 @@ fn run() -> Result<()> {
                 "read_only":true,"app_runtime_migrated":false,"apps_restored":false,
                 "actions_executable":false,"production_ready":false})
         }
+        "app-source-stage-inactive" => {
+            let digest = args
+                .next()
+                .ok_or_else(|| anyhow::anyhow!("missing App archive digest"))?;
+            let slug = args
+                .next()
+                .ok_or_else(|| anyhow::anyhow!("missing single App slug"))?;
+            let target = args
+                .next()
+                .ok_or_else(|| anyhow::anyhow!("missing precreated private native target root"))?;
+            if args.next().is_some() {
+                bail!("unexpected App stage arguments")
+            }
+            if digest.len() != 64
+                || !digest
+                    .bytes()
+                    .all(|c| c.is_ascii_hexdigit() && !c.is_ascii_uppercase())
+            {
+                bail!("invalid App archive digest")
+            }
+            let root = Path::new(&target);
+            if root == Path::new(&dir) {
+                bail!("source and native destination must differ")
+            }
+            let source = Path::new(&dir).join(format!("{digest}.tar"));
+            let stage = hars_interop_moli::app_backup_stage::stage_inactive_app(
+                &source, &digest, &slug, root,
+            )?;
+            serde_json::json!({"action":"stage_inactive_native_app_files",
+                "sha256":stage.archive_sha256, "app_count":1,"files":stage.files,
+                "bytes":stage.file_bytes,"staged_private_regular_files":stage.copied_as_private_regular_files,
+                "app_image_installed":false,"app_runtime_started":false,
+                "automation_executed":false,"production_ready":false})
+        }
         "app-source-verify" => {
             let digest = args
                 .next()
