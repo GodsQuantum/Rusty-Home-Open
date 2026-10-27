@@ -4,6 +4,10 @@ PR #224 MERGED squash main `e041856271950b0338251e6015f366bd452f920f`, exact ori
 
 # Rusty Home — journal de développement et de certification
 
+## 27 October — P8do genuine second HAOS App Supervisor source [CI PENDING]
+
+Different official core_mosquitto App in brand-new pinned HAOS18.3 QEMU, genuine Supervisor install and selected-App-only backup: copied SHA-exact to bounded Rust importer/escrow, real App-specific fixture bytes staged in private inactive source directory, injected fault and tamper denial. A second App class is critical to avoid successful File Editor tests masking format assumptions. Neither MQTT network listeners nor functional native broker are claimed. CI pending and gate status unchanged.
+
 ## 27 October — P8dm pin real Ingress denial CI and no authentication claims
 
 Verified PR #227 (source af69100216732c2a75df823aee459079c58d0080, merge 0bafb3761c7edb072af0690e38c3d68e27abe756). Real official HAOS QEMU run 40570517179, job 122423140783 SUCCESS and all 10/10 checks. Three real JUnit and live Core Ingress missing/bogus-cookie/spoofed-headers denial; no authorized session created. Register 53rd lab-only claim, 49 distinct green runs, still 5/10 App migration and 0/15 production release. No hardware or user identities changed.
