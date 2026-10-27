@@ -8,6 +8,10 @@
 partial laboratory evidence; none is an independently qualified production gate.
 The nine sample Apps published here are all fictional synthetic fixtures.
 
+## 27 October — P8cv exact-head genuine Redis digest-switch crash proof
+
+PR #207 MERGED squash fec9636f1f5f40e4764be47273586f6abffeb3f2; exact source 0cfc4b4a32a218048043115a9011108433ffdb3c, **30/30 SUCCESS**. Disposable real Redis 7.4 image-switch coordinator SIGKILL, private fsynced journal, all mutators fenced, symlink journal denied, exact old digest and RDB restored by independent process, normal switch/rollback regression and persistent volume preserved: [CI 40506098662](https://github.com/GodsQuantum/Rusty-Home-Open/actions/runs/40506098662), job 122195673271. Claim oci_native_image_switch_sigkill_durable_recovery, **43 lab claims / 39 distinct successful run IDs**. This is NOT an automatic reboot recovery, database schema rollback, whole HAOS migration or production certification. **0/15 independent gates certified.**
+
 ## 27 October — P8ct heterogeneous native pair exact CI evidence
 
 Merged PR #204 at `162ef61540c384567f2a0277936b3d9dfc85dc5a`, original exact head `0b1338aad59a07390efadaef597636c47c5e541f`: **29/29 checks SUCCESS**, disposable real Redis + Meilisearch crash-recovery run [40498864752](https://github.com/GodsQuantum/Rusty-Home-Open/actions/runs/40498864752), job 122171170744 SUCCESS. Seven distinct P8CT scenario markers, Redis RDB and Meili index durable after coordinator SIGKILL and new-process stop-only recovery; original volumes untouched. P8cn race regression green run 40498864583, not a new claim. Evidence ID `oci_native_heterogeneous_pair_sigkill_durable_data_recovery`, **42 lab claims / 38 successful run IDs**, release 0/15 certified, no independent signoff.

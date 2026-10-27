@@ -1,0 +1,40 @@
+name: P8cv genuine crash during native OCI image digest switch
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/p8cv-image-switch-crash.yml"
+      - "scripts/test_p8cv_image_switch_sigkill.sh"
+      - "scripts/test_p8cv_image_switch_contract.py"
+      - "crates/native-hub/src/bin/oci_app_manager_lab.rs"
+      - "crates/native-hub/src/oci_quadlet.rs"
+      - "Cargo.lock"
+permissions:
+  contents: read
+jobs:
+  crash-image-switch:
+    name: Real Redis image-switch SIGKILL, fail-closed and separate-process recovery
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Safety contract and Rust regression
+        run: |
+          python3 scripts/test_p8cv_image_switch_contract.py
+          bash -n scripts/test_p8cv_image_switch_sigkill.sh
+          cargo fmt --all -- --check
+          cargo test --locked -p hars-native-hub --all-targets
+          cargo clippy --locked -p hars-native-hub --all-targets -- -D warnings
+      - name: Install disposable rootless Podman and user systemd
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends podman uidmap slirp4netns fuse-overlayfs
+          test -S /run/user/$(id -u)/bus
+          test "$(podman info --format '{{.Host.CgroupsVersion}}')" = v2
+      - name: Genuine SIGKILL and durable Redis recovery
+        timeout-minutes: 20
+        run: |
+          cargo build --locked -p hars-native-hub --bin oci_app_manager_lab
+          bash scripts/test_p8cv_image_switch_sigkill.sh

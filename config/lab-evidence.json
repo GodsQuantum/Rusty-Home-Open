@@ -494,6 +494,18 @@
       "scope": "Disposable offline rootless Redis 7.4 UID999 plus Meilisearch 1.55 UID1000; RDB and indexed document survive SIGKILL, fsynced intent fencing, stop-only recovery and retry. No HAOS migration, data atomicity, reboot recovery or production.",
       "url": "https://github.com/GodsQuantum/Rusty-Home-Open/actions/runs/40498864752",
       "merged_pr": 204
+    },
+    {
+      "id": "oci_native_image_switch_sigkill_durable_recovery",
+      "release_gate": "rollback_verified",
+      "status": "verified_lab_only",
+      "run_id": 40506098662,
+      "head_sha": "0cfc4b4a32a218048043115a9011108433ffdb3c",
+      "workflow": "P8cv genuine crash during native OCI image digest switch",
+      "job": "Real Redis image-switch SIGKILL, fail-closed and separate-process recovery",
+      "scope": "Real disposable Redis 7.4 Alpine-to-Bookworm digest switch: Rust SIGKILL after manifest swap, fsynced 0600 journal, mutator fence, symlink denial, independent-process exact old manifest and RDB recovery. No reboot, HAOS, schema rollback or production.",
+      "url": "https://github.com/GodsQuantum/Rusty-Home-Open/actions/runs/40506098662",
+      "merged_pr": 207
     }
   ]
 }
