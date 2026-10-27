@@ -378,6 +378,110 @@ fn install(
     }
     Ok(())
 }
+
+// P8cr: bounded atomic pair installation (descriptors only). Not a
+// database/runtime transaction or HAOS migration.
+fn pair_units(
+    provider: &str,
+    dependent: &str,
+    provider_image: &str,
+    dependent_image: &str,
+    uid: u32,
+) -> io::Result<(QuadletUnits, QuadletUnits)> {
+    if provider == dependent
+        || !sane_slug(provider)
+        || !sane_slug(dependent)
+        || uid == 0
+        || uid > 65533
+    {
+        return Err(bad());
+    }
+    let make = |slug, image| {
+        OciApp {
+            slug,
+            image,
+            memory_mib: 256,
+            pids_limit: 128,
+            run_uid: Some(uid),
+            network: AppNetwork::Offline,
+        }
+        .render()
+        .map_err(|_| bad())
+    };
+    let a = make(provider, provider_image)?;
+    let mut b = make(dependent, dependent_image)?;
+    bind_native_service_dependency(&mut b, dependent, provider).map_err(|_| bad())?;
+    Ok((a, b))
+}
+
+// All-or-none publication under the graph and per-App locks. A failed
+// systemd reload rolls back all four new descriptors and reloads again.
+// Pre-existing files, containers and persistent volumes are never removed.
+fn publish_pair<F>(dir: &Path, a: &QuadletUnits, b: &QuadletUnits, reload: F) -> io::Result<()>
+where
+    F: Fn() -> io::Result<()>,
+{
+    let entries = [
+        (dir.join(&a.container_name), a.container.as_str()),
+        (dir.join(&a.volume_name), a.volume.as_str()),
+        (dir.join(&b.container_name), b.container.as_str()),
+        (dir.join(&b.volume_name), b.volume.as_str()),
+    ];
+    for (path, _) in &entries {
+        match fs::symlink_metadata(path) {
+            Ok(_) => return Err(denied()),
+            Err(e) if e.kind() == io::ErrorKind::NotFound => (),
+            Err(e) => return Err(e),
+        }
+    }
+    let mut written = Vec::new();
+    let result = (|| {
+        for (path, data) in &entries {
+            // Track the inode immediately after create_new succeeds, even
+            // if a later write/fsync fails with ENOSPC or EIO.
+            let mut file = OpenOptions::new()
+                .write(true)
+                .create_new(true)
+                .mode(0o600)
+                .open(path)?;
+            written.push(path.clone());
+            file.write_all(data.as_bytes())?;
+            file.sync_all()?;
+        }
+        File::open(dir)?.sync_all()?;
+        reload()
+    })();
+    if let Err(original) = result {
+        for path in written.iter().rev() {
+            fs::remove_file(path)?;
+        }
+        File::open(dir)?.sync_all()?;
+        reload()?;
+        return Err(original);
+    }
+    Ok(())
+}
+fn install_pair(
+    dir: &Path,
+    provider: &str,
+    provider_image: &str,
+    dependent: &str,
+    dependent_image: &str,
+    uid: u32,
+) -> io::Result<()> {
+    let (a, b) = pair_units(provider, dependent, provider_image, dependent_image, uid)?;
+    let _graph_guard = lock_dependency_graph(dir)?;
+    let mut names = [provider, dependent];
+    names.sort_unstable();
+    let _locks = [
+        lock_app_install(dir, names[0])?,
+        lock_app_install(dir, names[1])?,
+    ];
+    podman(&["image", "exists", provider_image])?;
+    podman(&["image", "exists", dependent_image])?;
+    publish_pair(dir, &a, &b, || systemctl(&["--user", "daemon-reload"]))
+}
+
 fn remove(dir: &Path, slug: &str) -> io::Result<()> {
     let _graph_guard = lock_dependency_graph(dir)?;
     let _guard = lock_app(dir, slug)?;
@@ -583,6 +687,10 @@ fn execute() -> io::Result<()> {
             };
             install(&dir, &args[2], &args[3], uid, net, InstallExtras::default())
         }
+        "--install-pair-dependent-lab" if args.len() == 7 => {
+            let uid = args[6].parse::<u32>().map_err(|_| bad())?;
+            install_pair(&dir, &args[2], &args[3], &args[4], &args[5], uid)
+        }
         "--install-dependent-lab" if args.len() == 6 => {
             let uid = args[4].parse::<u32>().map_err(|_| bad())?;
             install(
@@ -753,6 +861,63 @@ fn main() {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn atomic_pair_real_filesystem_and_reload_failure() {
+        let dir = tempfile::tempdir().unwrap();
+        let digest = format!("docker.io/library/redis@sha256:{}", "a".repeat(64));
+        let (a, b) = pair_units("pair-provider", "pair-child", &digest, &digest, 999).unwrap();
+        assert!(b.container.contains("BindsTo=rh-pair-provider.service"));
+        assert!(a.container.contains("Network=none"));
+        assert!(a.container.contains("ReadOnly=true"));
+        assert!(pair_units("same", "same", &digest, &digest, 999).is_err());
+        assert!(pair_units("one", "two", &digest, &digest, 0).is_err());
+        assert!(pair_units("one", "two", "redis:latest", &digest, 999).is_err());
+        let collision = dir.path().join(&b.volume_name);
+        fs::write(&collision, "DO-NOT-OVERWRITE").unwrap();
+        assert!(publish_pair(dir.path(), &a, &b, || Ok(())).is_err());
+        assert_eq!(fs::read_to_string(&collision).unwrap(), "DO-NOT-OVERWRITE");
+        assert!(!dir.path().join(&a.container_name).exists());
+        fs::remove_file(collision).unwrap();
+        let calls = std::cell::Cell::new(0);
+        assert!(
+            publish_pair(dir.path(), &a, &b, || {
+                calls.set(calls.get() + 1);
+                if calls.get() == 1 {
+                    Err(io::Error::other("injected reload failure"))
+                } else {
+                    Ok(())
+                }
+            })
+            .is_err()
+        );
+        assert_eq!(calls.get(), 2);
+        for name in [
+            &a.container_name,
+            &a.volume_name,
+            &b.container_name,
+            &b.volume_name,
+        ] {
+            assert!(!dir.path().join(name).exists());
+        }
+        publish_pair(dir.path(), &a, &b, || Ok(())).unwrap();
+        for name in [
+            &a.container_name,
+            &a.volume_name,
+            &b.container_name,
+            &b.volume_name,
+        ] {
+            assert_eq!(
+                fs::metadata(dir.path().join(name))
+                    .unwrap()
+                    .permissions()
+                    .mode()
+                    & 0o777,
+                0o600
+            );
+        }
+        assert!(publish_pair(dir.path(), &a, &b, || Ok(())).is_err());
+    }
+
     #[test]
     fn native_dependency_chain_and_provider_removal_are_fenced() {
         let dir = tempfile::tempdir().unwrap();
