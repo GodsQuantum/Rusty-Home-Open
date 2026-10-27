@@ -102,6 +102,64 @@ async fn main() -> anyhow::Result<()> {
         println!("{}", serde_json::to_string(&proof)?);
         return Ok(());
     }
+    if args.len() == 4 && args[1] == "--lab-ha-backup-automations-preview" {
+        use anyhow::{Context, bail};
+        use hars_interop_moli::registry_stage::RegistryStager;
+        if nix::unistd::Uid::effective().is_root() {
+            bail!("backup automation preview forbids root");
+        }
+        let root = lab_registry_dir(&args[2])?;
+        let db = RegistryStager::open(&root)?;
+        let (source, bytes) = db
+            .read_backup_automations(&args[3])?
+            .context("missing SHA-bound private automation source")?;
+        if !source.inactive {
+            bail!("source automations are not known inactive");
+        }
+        let stage = db.active()?.context("no active read-only identity stage")?;
+        if stage.batch_sha256 != source.registry_sha256 || !stage.no_device_commands {
+            bail!("untrusted automation identity ownership");
+        }
+        let yaml = std::str::from_utf8(&bytes)?;
+        // Validate ALL entries before exposing any preview result; no
+        // filesystem mutations, Moli installs, token use or service calls.
+        let plans = hars_native_kernel::automation_yaml::parse_disabled_backup_plans(yaml)?;
+        for plan in &plans {
+            for entity in [
+                Some(plan.source_entity.as_str()),
+                Some(plan.proposed_target.as_str()),
+                plan.condition_entity.as_deref(),
+            ]
+            .into_iter()
+            .flatten()
+            {
+                if !stage
+                    .entities
+                    .iter()
+                    .any(|e| e.entity_id == entity && e.stable)
+                {
+                    bail!("preview references identity absent from original HAOS registry");
+                }
+            }
+        }
+        println!(
+            "{}",
+            serde_json::json!({
+                "source": "private_sha_bound_haos_backup_automation_preview",
+                "archive_sha256": source.archive_sha256,
+                "yaml_sha256": source.automation_sha256,
+                "registry_sha256": source.registry_sha256,
+                "explicitly_disabled_count": plans.len(),
+                "plans": plans,
+                "read_only": true,
+                "approval_granted": false,
+                "actions_executed": 0,
+                "device_commands": 0,
+                "production_ready": false
+            })
+        );
+        return Ok(());
+    }
     if args.len() == 4 && args[1] == "--lab-ha-backup-automation-moli" {
         use anyhow::{Context, bail};
         use hars_interop_moli::registry_stage::RegistryStager;

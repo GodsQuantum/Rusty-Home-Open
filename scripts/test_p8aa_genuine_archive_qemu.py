@@ -106,6 +106,27 @@ with tempfile.TemporaryDirectory(prefix="hars-p8aa-real-haos-private-",dir=runti
     invoke("activate",digest,"none")
     assert invoke("status")["active"]==digest
     assert invoke("status")["entities"]==4
+    # P8cj: new bounded-list preview API also accepts the exact one-entry
+    # source from a REAL official HAOS 18.3 Supervisor full backup. This is
+    # only a compatibility smoke for the new API, not a two-automation HAOS
+    # migration proof. Separate synthetic two-item archive covers atomicity.
+    core_bin=Path(__file__).resolve().parent.parent/"target/debug/hars-native-kernel"
+    preview_run=subprocess.run([str(core_bin), "--lab-ha-backup-automations-preview",
+                                str(root), manifest["sha256"]],
+                               cwd=Path(__file__).resolve().parent.parent,
+                               capture_output=True,text=True,timeout=35)
+    assert preview_run.returncode==0,preview_run.stderr[-600:]
+    preview=json.loads(preview_run.stdout)
+    assert preview["source"]=="private_sha_bound_haos_backup_automation_preview"
+    assert preview["archive_sha256"]==manifest["sha256"]
+    assert preview["yaml_sha256"]==automation_sha
+    assert preview["registry_sha256"]==digest
+    assert preview["explicitly_disabled_count"]==1 and len(preview["plans"])==1
+    assert preview["plans"][0]["source_entity"]=="binary_sensor.lab_motion"
+    assert preview["read_only"] and not preview["approval_granted"]
+    assert preview["actions_executed"]==preview["device_commands"]==0
+    assert preview["production_ready"] is False
+    print("P8CJ_REAL_SUPERVISOR_ARCHIVE_SINGLE_INACTIVE_PREVIEW_API_PASS")
     # Distinct P8bi proof: only the original disabled automation from this
     # genuine Supervisor archive may be compiled, approved for invented Moli
     # devices and executed with *no* HAOS real service/hardware access.
