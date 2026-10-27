@@ -1,5 +1,9 @@
 # Rusty Home — journal de développement et de certification
 
+## 27 October — P8df genuine Supervisor App backup → official App OCI runtime [CI pending]
+
+Distinct new REAL App startup proof instead of another preview: official HAOS18.3 File Editor creates exact nonsecret payload, native Rust escrow and materializer recover it, official ghcr.io/home-assistant/app-configurator:6.3.0 starts in isolated rootless Podman with restored /data only, no network/ports/host secrets and with fail-closed checks. Check actual real OCI process AND original source marker inside it, original SHA unchanged. Full real QEMU CI pending; don't increment milestone 5/10 without success. May expose Supervisor dependency requiring explicit adapter; avoid faking auth. Production 0/15.
+
 ## 27 October — P8de reliable progress measurements replacing misleading static 60%
 
 The user correctly challenged that gate coverage 60% did not change with significant development. Added technical maturity index scored with 15 fixed gates x 4 rigorous levels (25/60=41.7%, conventional, NOT effort), and App migration capability ladder 10 proof-checked milestones, currently 4/10=40%, compared with 2/10 immediately after #210. Gates still 9 lab_partial/6 blocked/0 certified, 47 pinned lab claims. No claim that either number is real percentage of code written or duration remaining. Real independent B-path readiness still NOT_PRODUCTION_READY; see dedicated docs progress guide and fail-closed script/tests.
