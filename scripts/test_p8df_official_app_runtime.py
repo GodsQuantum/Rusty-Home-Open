@@ -8,6 +8,7 @@ Not equivalent to ingress/auth/Core parity or full App lifecycle certification.
 import argparse,ast,hashlib,json,os,re,subprocess,tempfile,time
 from pathlib import Path
 from inspect_ha_backup import inspect_backup
+from test_p8di_official_app_crash_restart import verify_restart
 P=argparse.ArgumentParser()
 P.add_argument("--archive",type=Path,required=True)
 P.add_argument("--manifest",type=Path,required=True)
@@ -82,7 +83,7 @@ with tempfile.TemporaryDirectory(prefix="p8df-real-app-runtime-",dir=os.environ[
         # Image's s6 process startup may require internal root; this is
         # ROOTLESS PODMAN, with no NET, host ports, host devices, host API or
         # Supervisor token; never grant privileged/host networking.
-        container=run([
+        launch=[
             "podman","run","--detach","--replace","--name",name,
             "--network","none","--read-only","--cap-drop","ALL",
             "--security-opt","no-new-privileges","--pids-limit","128",
@@ -91,7 +92,8 @@ with tempfile.TemporaryDirectory(prefix="p8df-real-app-runtime-",dir=os.environ[
             "--tmpfs","/var/log:rw,size=16m,mode=0755",
             "--mount",f"type=bind,source={data_dir},destination=/data,rw=true",
             identity
-        ],expect=False,timeout=75)
+        ]
+        container=run(launch,expect=False,timeout=75)
         if container.returncode!=0:
             raise AssertionError("Official App image launch denied: "+container.stderr[-600:])
         alive=False
@@ -150,6 +152,9 @@ with tempfile.TemporaryDirectory(prefix="p8df-real-app-runtime-",dir=os.environ[
             print("P8DH_REAL_OFFICIAL_APP_STOP_RESTART_RESTORED_AND_WRITTEN_DATA_SURVIVE_PASS",flush=True)
         # A successful process is not authenticated ingress/UI.
         # Never promote milestone 6 from this rootless offline App test.
+        else:
+            verify_restart(run,name,launch,data_dir,markers[0],marker,archive,sha,identity)
+        # A running process and private marker do not prove authenticated UI.
     finally:
         run(["podman","rm","--force",name],expect=False,timeout=50)
     with archive.open("rb") as stream:

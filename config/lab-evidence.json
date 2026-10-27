@@ -566,6 +566,30 @@
       "scope": "Genuine HAOS18.3 File Editor App-only backup into SHA-exact native private stage, official app-configurator:6.3.0 OCI rootless image starts with same marker visible; no network/ports, archive unchanged. No ingress auth/UI, VM100 or production.",
       "url": "https://github.com/GodsQuantum/Rusty-Home-Open/actions/runs/40541956380",
       "merged_pr": 218
+    },
+    {
+      "id": "haos_file_editor_sigkill_oci_recreate",
+      "release_gate": "supervisor_apps_restore",
+      "status": "verified_lab_only",
+      "run_id": 40544718318,
+      "head_sha": "a0dc22d438a14749df18ae1c12cfd618df5381c9",
+      "workflow": "P8df real HAOS App-only data into official rootless OCI app runtime",
+      "job": "Real HAOS File Editor restored data mounted into official rootless OCI app",
+      "scope": "Official File Editor OCI with real HAOS18.3 restored private App data: shell-written fictional note survives actual SIGKILL, explicit restart and fresh OCI instance from same pinned image; archive SHA unchanged. No App UI/auth, VM100 or production.",
+      "url": "https://github.com/GodsQuantum/Rusty-Home-Open/actions/runs/40544718318",
+      "merged_pr": 221
+    },
+    {
+      "id": "haos_native_inactive_app_stage_sigkill_orphan_recovery",
+      "release_gate": "supervisor_apps_restore",
+      "status": "verified_lab_only",
+      "run_id": 40552611012,
+      "head_sha": "ee6763c9d33c0f41f3654b4223957556fbdb1b6b",
+      "workflow": "P8dd native inactive App stage real SIGKILL orphan recovery",
+      "job": "Real native SIGKILL and private stage orphan recovery (no HAOS)",
+      "scope": "Real native Rust SIGKILL after first fsynced fictional App file; no partial publish, own orphan reaped on retry, active writer and existing published bytes preserved. Offline inactive data only; no HAOS App execution, VM100, production or human audit.",
+      "url": "https://github.com/GodsQuantum/Rusty-Home-Open/actions/runs/40552611012",
+      "merged_pr": 217
     }
   ]
 }

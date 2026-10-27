@@ -11,6 +11,7 @@ use std::{
     ffi::CString,
     fs::{self, File, OpenOptions, Permissions},
     io::{Cursor, Read, Write},
+    os::fd::AsRawFd,
     os::unix::ffi::OsStrExt,
     os::unix::fs::{MetadataExt, OpenOptionsExt, PermissionsExt},
     path::{Path, PathBuf},
@@ -20,6 +21,108 @@ use tar::Archive;
 const MAX_PART: u64 = 134_217_728;
 const MAX_TOTAL: u64 = 268_435_456;
 const MAX_FILES: usize = 20_000;
+const STAGE_LEASE: &str = ".hars-stage-lease-v1";
+const STAGE_LEASE_MAGIC: &[u8] = b"HARS_INACTIVE_APP_STAGE_V1\n";
+
+/// Reap only our own interrupted temporary App stages. A directory flock
+/// excludes live concurrent writers, while the private lease marker prevents
+/// deleting arbitrary similarly named user directories.
+fn reap_interrupted_stages(root: &Path) -> Result<()> {
+    for entry in fs::read_dir(root)? {
+        let entry = entry?;
+        let name = entry.file_name();
+        if !name.to_string_lossy().starts_with(".inactive-app-") {
+            continue;
+        }
+        let path = entry.path();
+        let info = match fs::symlink_metadata(&path) {
+            Ok(info) => info,
+            Err(error) if error.kind() == std::io::ErrorKind::NotFound => continue,
+            Err(error) => return Err(error).context("inspect private stage"),
+        };
+        if !info.is_dir()
+            || info.file_type().is_symlink()
+            || info.uid() != nix::unistd::Uid::current().as_raw()
+            || info.permissions().mode() & 0o077 != 0
+        {
+            continue;
+        }
+        let directory = match OpenOptions::new()
+            .read(true)
+            .custom_flags(nix::libc::O_DIRECTORY | nix::libc::O_NOFOLLOW)
+            .open(&path)
+        {
+            Ok(dir) => dir,
+            Err(error) if error.kind() == std::io::ErrorKind::NotFound => continue,
+            Err(error) => return Err(error).context("open private stage"),
+        };
+        let rc = unsafe {
+            nix::libc::flock(
+                directory.as_raw_fd(),
+                nix::libc::LOCK_EX | nix::libc::LOCK_NB,
+            )
+        };
+        if rc != 0 {
+            let error = std::io::Error::last_os_error();
+            if error.kind() == std::io::ErrorKind::WouldBlock {
+                continue; // another active native stage owns the directory
+            }
+            return Err(error).context("cannot lock private stage");
+        }
+        let marker = match OpenOptions::new()
+            .read(true)
+            .custom_flags(nix::libc::O_NOFOLLOW | nix::libc::O_NONBLOCK)
+            .open(path.join(STAGE_LEASE))
+        {
+            Ok(file) => file,
+            Err(error)
+                if error.kind() == std::io::ErrorKind::NotFound
+                    || error.raw_os_error() == Some(nix::libc::ELOOP) =>
+            {
+                continue;
+            }
+            Err(error) => return Err(error).context("private stage lease"),
+        };
+        let meta = marker.metadata()?;
+        if !meta.is_file()
+            || meta.nlink() != 1
+            || meta.uid() != nix::unistd::Uid::current().as_raw()
+            || meta.len() != STAGE_LEASE_MAGIC.len() as u64
+            || meta.permissions().mode() & 0o077 != 0
+        {
+            continue;
+        }
+        let mut bytes = Vec::new();
+        marker.take(128).read_to_end(&mut bytes)?;
+        if bytes != STAGE_LEASE_MAGIC {
+            continue;
+        }
+        // Unix remove_dir_all does not traverse symlinks. The parent is an
+        // explicit caller-owned private 0700 directory, never a live mount.
+        fs::remove_dir_all(&path).context("reap interrupted private stage")?;
+        File::open(root)?.sync_all()?;
+    }
+    Ok(())
+}
+
+fn lock_private_stage(temp: &Path) -> Result<File> {
+    let directory = OpenOptions::new()
+        .read(true)
+        .custom_flags(nix::libc::O_DIRECTORY | nix::libc::O_NOFOLLOW)
+        .open(temp)?;
+    if unsafe { nix::libc::flock(directory.as_raw_fd(), nix::libc::LOCK_EX) } != 0 {
+        return Err(std::io::Error::last_os_error()).context("stage directory lock");
+    }
+    let mut marker = OpenOptions::new()
+        .write(true)
+        .create_new(true)
+        .mode(0o600)
+        .open(temp.join(STAGE_LEASE))?;
+    marker.write_all(STAGE_LEASE_MAGIC)?;
+    marker.sync_all()?;
+    File::open(temp)?.sync_all()?;
+    Ok(directory)
+}
 
 fn private_owned_directory(path: &Path) -> Result<()> {
     let info = fs::symlink_metadata(path).context("private native directory missing")?;
@@ -138,6 +241,7 @@ pub fn stage_inactive_app(
     if !part.starts_with(&[0x1f, 0x8b]) {
         bail!("encrypted or invalid selected App part")
     }
+    reap_interrupted_stages(target_root)?;
     let temp = tempfile::Builder::new()
         .prefix(".inactive-app-")
         .tempdir_in(target_root)?;
@@ -145,6 +249,7 @@ pub fn stage_inactive_app(
     // placing the first App byte, otherwise discard the temp destination.
     fs::set_permissions(temp.path(), Permissions::from_mode(0o700))?;
     private_owned_directory(temp.path()).context("temp dir")?;
+    let _stage_directory_lock = lock_private_stage(temp.path())?;
     let reader = MultiGzDecoder::new(Cursor::new(part)).take(MAX_TOTAL + 1);
     let mut nested = Archive::new(reader);
     let mut seen = BTreeSet::new();
@@ -208,6 +313,17 @@ pub fn stage_inactive_app(
             file.flush()?;
             file.sync_all()?;
             files += 1;
+            // Deterministic SIGKILL fixture only in non-release laboratory builds.
+            #[cfg(debug_assertions)]
+            if files == 1
+                && let Ok(value) = std::env::var("HARS_P8DD_LAB_PAUSE_AFTER_FIRST_FILE_MS")
+            {
+                let millis: u64 = value.parse().context("invalid lab pause")?;
+                if millis > 30_000 {
+                    bail!("lab pause exceeds 30 seconds");
+                }
+                std::thread::sleep(std::time::Duration::from_millis(millis));
+            }
         }
     }
     if files == 0 {
@@ -240,6 +356,10 @@ pub fn stage_inactive_app(
     if std::env::var("HARS_P8CY_FAIL_BEFORE_COMMIT").as_deref() == Ok("1") {
         bail!("disposable fault injected before atomic publish")
     }
+    // Never publish the internal lease as a user App data file. An extremely
+    // narrow crash here can leave an unmarked temp; it is intentionally
+    // preserved rather than risk deleting unrelated data.
+    fs::remove_file(temp.path().join(STAGE_LEASE))?;
     for d in directories.iter().rev() {
         File::open(d)?.sync_all()?;
     }
