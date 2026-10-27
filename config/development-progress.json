@@ -1,0 +1,202 @@
+{
+  "schema_version": 1,
+  "meaning": "Indicateurs reproductibles de CERTIFICATION et maturation, aucun n'est le pourcentage reel de code restant.",
+  "target_architecture": "Voie B du masterplan: gestionnaire Rust natif, Core/HACS officiels conserves comme compatibilite.",
+  "maturity_scale": {
+    "0": "Pas de prototype demonstrable sur ce gate",
+    "1": "Prototype ou preuve preliminaire bornee",
+    "2": "Au moins un sous-cas reel valide en CI isolee (genuine lab)",
+    "3": "Parite fonctionnelle et recovery de bout en bout sur ensemble representatif, sans certif prod",
+    "4": "Critere entier signe independamment pour release production"
+  },
+  "maturity_gates": [
+    {
+      "gate_id": "authenticated_host_transport",
+      "level": 2,
+      "evidence_id": "official_product_nonroot",
+      "limitation": "transport nonroot et ingress laboratoire; API write multiutilisateur absente"
+    },
+    {
+      "gate_id": "ha_core_hacs_29_runtime",
+      "level": 2,
+      "evidence_id": "official_core_rust_bridge",
+      "limitation": "Core reel vers Rust et HACS representatifs; cycles 29/29 non prouves"
+    },
+    {
+      "gate_id": "hacs_github_oauth",
+      "level": 1,
+      "evidence_id": "selected_hacs_three",
+      "limitation": "integrations HACS chargees; login/rotation OAuth reel absents"
+    },
+    {
+      "gate_id": "apps_9_lifecycle",
+      "level": 2,
+      "evidence_id": "oci_native_heterogeneous_pair_sigkill_durable_data_recovery",
+      "limitation": "vrais moteurs Redis/Meili avec reprise; 9 Apps Supervisor complets absents"
+    },
+    {
+      "gate_id": "supervisor_apps_restore",
+      "level": 2,
+      "evidence_id": "haos_real_app_only_native_inactive_files",
+      "limitation": "archive officielle vers fichiers natifs inactifs; image App pas redemarree"
+    },
+    {
+      "gate_id": "haos_backup_restore",
+      "level": 2,
+      "evidence_id": "haos_real_dual_inactive_supervisor_preview",
+      "limitation": "vraies archives et extraction/preview Rust bornes; Core complet non migre"
+    },
+    {
+      "gate_id": "rollback_verified",
+      "level": 2,
+      "evidence_id": "oci_native_image_switch_sigkill_durable_recovery",
+      "limitation": "rollback OCI reel SIGKILL; pas de rollback total foyer"
+    },
+    {
+      "gate_id": "single_radio_owner",
+      "level": 1,
+      "evidence_id": null,
+      "limitation": "verrou radio synthetique seulement; aucun transfert USB reel",
+      "source_doc": "docs/PRODUCTION_CERTIFICATION_MASTERPLAN_2026-10-24.md",
+      "source_marker": "Verrouillage multi-processus"
+    },
+    {
+      "gate_id": "ha_ws_reconnection",
+      "level": 1,
+      "evidence_id": "official_core_rust_bridge",
+      "limitation": "WS Core deja borne sur vrai Core; test 72h et reconnexion robustes absents"
+    },
+    {
+      "gate_id": "production_ui_auth",
+      "level": 1,
+      "evidence_id": "browser_chromium",
+      "limitation": "UI testee, RBAC et autorisations ecriture prod absents"
+    },
+    {
+      "gate_id": "native_drivers_services",
+      "level": 2,
+      "evidence_id": "mqtt5_live_broker_tombstone_same_id_readd",
+      "limitation": "MQTT5 broker et Moli reels limites; pilotes physiques absents"
+    },
+    {
+      "gate_id": "performance_full_stack",
+      "level": 1,
+      "evidence_id": null,
+      "limitation": "microbenchmarks epars; soak 72h et mesures stack entiere absents",
+      "source_doc": "docs/PRODUCTION_CERTIFICATION_MASTERPLAN_2026-10-24.md",
+      "source_marker": "Microbenchmarks"
+    },
+    {
+      "gate_id": "packaging_updates",
+      "level": 2,
+      "evidence_id": "apt_signed_tamper_refusal",
+      "limitation": "APT signe/paquets Debian verifies en runner, pas release reconnue"
+    },
+    {
+      "gate_id": "third_party_licenses",
+      "level": 2,
+      "evidence_id": "github_oidc_cargo_source_sbom",
+      "limitation": "SBOM Cargo atteste; audit redistribution et revue humaine manquants"
+    },
+    {
+      "gate_id": "security_stress_fuzz",
+      "level": 2,
+      "evidence_id": "haos_app_only_native_archive_asan_fuzz",
+      "limitation": "vrai libFuzzer ASan + RustSec; pentest independant absent"
+    }
+  ],
+  "active_workstream": {
+    "id": "supervisor_app_real_data_to_native_runtime",
+    "name": "Migration App HAOS vers executabilite native",
+    "denominator_kind": "jalons de labo fixes et tests individuellement verifiables",
+    "milestones": [
+      {
+        "id": "official_supervisor_app_only",
+        "verified": true,
+        "evidence_id": "haos_real_selected_app_only_partial_backup_readonly_preflight",
+        "source_file": "scripts/p8cu_official_file_editor_partial_qemu_pytest.py",
+        "source_marker": "P8CU_GENUINE_HAOS_FILE_EDITOR_APP_ONLY_PARTIAL_BACKUP_EXPORTED_PASS",
+        "acceptance": "Sauvegarde partielle officielle d'une App HAOS avec donnees fictives"
+      },
+      {
+        "id": "native_app_sha_escrow",
+        "verified": true,
+        "evidence_id": "haos_real_app_only_native_sha_escrow_and_tamper_refusal",
+        "source_file": "scripts/test_p8cw_real_app_archive_native.py",
+        "source_marker": "P8CW_GENUINE_SUPERVISOR_APP_ONLY_PRIVATE_RUST_SHA_INGEST_PASS",
+        "acceptance": "Transfert archive HAOS vers coffre natif SHA-256 avec relecture"
+      },
+      {
+        "id": "native_inactive_files",
+        "verified": true,
+        "evidence_id": "haos_real_app_only_native_inactive_files",
+        "source_file": "scripts/test_p8cy_real_supervisor_app_to_native_files.py",
+        "source_marker": "P8CY_REAL_OFFICIAL_FILE_EDITOR_APP_BYTES_INACTIVE_PRIVATE_NATIVE_STAGE_PASS",
+        "acceptance": "Restitution des vrais fichiers dans un dossier prive inactif"
+      },
+      {
+        "id": "atomic_no_partial_rollback",
+        "verified": true,
+        "evidence_id": "haos_real_app_only_native_inactive_files",
+        "source_file": "scripts/test_p8cy_real_supervisor_app_to_native_files.py",
+        "source_marker": "P8CY_REAL_SUPERVISOR_NATIVE_APP_DATA_INJECTED_FAULT_ATOMIC_ZERO_LEAK_PASS",
+        "acceptance": "Failpoint avant publication : zero fichier partiel, integrite conservee"
+      },
+      {
+        "id": "real_app_image_boot",
+        "verified": false,
+        "evidence_id": null,
+        "source_file": null,
+        "source_marker": null,
+        "acceptance": "Boot d'une vraie image App avec dossier restaure, sans acces foyer"
+      },
+      {
+        "id": "native_ingress_app_behavior",
+        "verified": false,
+        "evidence_id": null,
+        "source_file": null,
+        "source_marker": null,
+        "acceptance": "Acces fonctionnel local a l'App et aux donnees restaurees sans auth contournee"
+      },
+      {
+        "id": "restart_state_survives",
+        "verified": false,
+        "evidence_id": null,
+        "source_file": null,
+        "source_marker": null,
+        "acceptance": "Redemarrage de l'App sur le dossier restaure et donnees intactes"
+      },
+      {
+        "id": "versioned_app_update_rollback",
+        "verified": false,
+        "evidence_id": null,
+        "source_file": null,
+        "source_marker": null,
+        "acceptance": "Mise a jour App et rollback donnees/version en labo"
+      },
+      {
+        "id": "second_supervisor_app_import",
+        "verified": false,
+        "evidence_id": null,
+        "source_file": null,
+        "source_marker": null,
+        "acceptance": "Seconde App officielle heterogene reproduite et utilisee nativement"
+      },
+      {
+        "id": "multi_app_full_runtime_rollback",
+        "verified": false,
+        "evidence_id": null,
+        "source_file": null,
+        "source_marker": null,
+        "acceptance": "Scenario multi-App reel de bout en bout, panne et rollback atomiques"
+      }
+    ]
+  },
+  "guardrails": {
+    "no_fabricated_product_completion_percent": true,
+    "maturity_is_equal_weight_conventional_score_not_delivery_eta": true,
+    "new_evidence_does_not_automatically_certify_production": true,
+    "product_release_authority": "config/release-gates.json",
+    "evidence_authority": "config/lab-evidence.json"
+  }
+}
