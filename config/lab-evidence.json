@@ -542,6 +542,18 @@
       "scope": "P8cz real native App-only Rust TAR/GZIP importer: 14 fictional corpus seeds, two valid and twelve refused; 220734 libFuzzer/ASan iterations in 46s, SHA/source/inert invariants. No App restore, production, 72h soak or independent pentest.",
       "url": "https://github.com/GodsQuantum/Rusty-Home-Open/actions/runs/40525580760",
       "merged_pr": 212
+    },
+    {
+      "id": "haos_real_app_only_native_inactive_files",
+      "release_gate": "supervisor_apps_restore",
+      "status": "verified_lab_only",
+      "run_id": 40529254092,
+      "head_sha": "6a0cffc70f1f2f421338a6012f4ceb381fec9ad3",
+      "workflow": "P8cy official App-only HAOS state into inactive native private files",
+      "job": "Real official File Editor App data atomically restored to inactive native files",
+      "scope": "Genuine disposable HAOS18.3 App-only backup: exact synthetic File Editor bytes reconstructed as inactive private native files; atomic publication, failed-stage cleanup and damaged-archive refusal. No App startup, household, VM100 or production.",
+      "url": "https://github.com/GodsQuantum/Rusty-Home-Open/actions/runs/40529254092",
+      "merged_pr": 213
     }
   ]
 }

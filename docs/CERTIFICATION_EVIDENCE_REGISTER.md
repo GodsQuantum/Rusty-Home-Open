@@ -1,3 +1,7 @@
+## P8dc — genuine Supervisor App-only data reconstructed in inactive native Rust private files (27 October 2026)
+
+PR [#213](https://github.com/GodsQuantum/Rusty-Home-Open/pull/213) MERGED squash main 8a3e63bf29a9d0054224d62d6aa32a6fce76e2df, exact source 6a0cffc70f1f2f421338a6012f4ceb381fec9ad3; **15/15 exact-HEAD checks SUCCESS**. [Official HAOS18.3 CI 40529254092](https://github.com/GodsQuantum/Rusty-Home-Open/actions/runs/40529254092), job 122277215922 SUCCESS, JUnit 3/3: genuine Supervisor File Editor selected-App-only backup privately relayed by SHA-256, actual fictional App payload reconstructed to owned 0700 directory and 0600 files via native Rust fsync and exclusive atomic rename. Injected pre-commit failure refused partial publication, tampered escrow refused, prior staged bytes remained exact. No App execution, image install, automation, VM100, household data, real secrets, radio, 72h soak or human audit. Claim haos_real_app_only_native_inactive_files, verified_lab_only. **47 lab claims / 43 successful distinct run IDs, production 0/15**.
+
 # Rusty Home — registre canonique des preuves et anti-redondance
 
 ## P8da - real native App-only backup parser sanitizer fuzz (27 October 2026)
