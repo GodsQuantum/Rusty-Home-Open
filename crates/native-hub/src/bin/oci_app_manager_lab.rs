@@ -425,17 +425,19 @@ fn heterogeneous_pair_units(
     dependent: &str,
     dependent_image: &str,
     dependent_data: &str,
-    uid: u32,
+    uids: (u32, u32),
 ) -> io::Result<(QuadletUnits, QuadletUnits)> {
     if provider == dependent
         || !sane_slug(provider)
         || !sane_slug(dependent)
-        || uid == 0
-        || uid > 65533
+        || uids.0 == 0
+        || uids.0 > 65533
+        || uids.1 == 0
+        || uids.1 > 65533
     {
         return Err(bad());
     }
-    let render = |slug, image, data| {
+    let render = |slug, image, data, uid| {
         OciApp {
             slug,
             image,
@@ -448,8 +450,8 @@ fn heterogeneous_pair_units(
         .render_at(data)
         .map_err(|_| bad())
     };
-    let a = render(provider, provider_image, provider_data)?;
-    let mut b = render(dependent, dependent_image, dependent_data)?;
+    let a = render(provider, provider_image, provider_data, uids.0)?;
+    let mut b = render(dependent, dependent_image, dependent_data, uids.1)?;
     bind_native_service_dependency(&mut b, dependent, provider).map_err(|_| bad())?;
     Ok((a, b))
 }
@@ -526,7 +528,7 @@ fn install_pair_paths(
     provider_image: &str,
     dependent: &str,
     dependent_image: &str,
-    uid: u32,
+    uids: (u32, u32),
     data_paths: (&str, &str),
 ) -> io::Result<()> {
     let (a, b) = heterogeneous_pair_units(
@@ -536,7 +538,7 @@ fn install_pair_paths(
         dependent,
         dependent_image,
         data_paths.1,
-        uid,
+        uids,
     )?;
     install_rendered_pair(
         dir,
@@ -919,15 +921,16 @@ fn execute() -> io::Result<()> {
             let uid = args[6].parse::<u32>().map_err(|_| bad())?;
             install_pair(&dir, &args[2], &args[3], &args[4], &args[5], uid)
         }
-        "--install-pair-path-dependent-lab" if args.len() == 9 => {
-            let uid = args[8].parse::<u32>().map_err(|_| bad())?;
+        "--install-pair-path-dependent-lab" if args.len() == 10 => {
+            let provider_uid = args[8].parse::<u32>().map_err(|_| bad())?;
+            let dependent_uid = args[9].parse::<u32>().map_err(|_| bad())?;
             install_pair_paths(
                 &dir,
                 &args[2],
                 &args[3],
                 &args[5],
                 &args[6],
-                uid,
+                (provider_uid, dependent_uid),
                 (&args[4], &args[7]),
             )
         }
@@ -1151,7 +1154,7 @@ mod tests {
             "hetero-search",
             &meili,
             "/meili_data",
-            1000,
+            (999, 1000),
         )
         .unwrap();
         assert!(
@@ -1169,7 +1172,7 @@ mod tests {
         assert!(b.container.contains("BindsTo=rh-hetero-provider.service"));
         assert!(a.container.contains("/data"));
         assert!(b.container.contains("/meili_data"));
-        assert!(a.container.contains("User=1000"));
+        assert!(a.container.contains("User=999"));
         assert!(b.container.contains("User=1000"));
         // Reject path traversal, bad UID, repeated identity and mutable images
         // BEFORE touching native descriptors or starting either engine.
@@ -1182,7 +1185,7 @@ mod tests {
                     "hetero-search",
                     &meili,
                     "/meili_data",
-                    1000
+                    (999, 1000)
                 )
                 .is_err()
             );
@@ -1195,7 +1198,7 @@ mod tests {
                 "hetero-provider",
                 &meili,
                 "/meili_data",
-                1000
+                (999, 1000)
             )
             .is_err()
         );
@@ -1207,7 +1210,7 @@ mod tests {
                 "hetero-search",
                 &meili,
                 "/meili_data",
-                1000
+                (999, 1000)
             )
             .is_err()
         );
@@ -1219,7 +1222,19 @@ mod tests {
                 "hetero-search",
                 &meili,
                 "/meili_data",
-                0
+                (999, 0)
+            )
+            .is_err()
+        );
+        assert!(
+            heterogeneous_pair_units(
+                "hetero-provider",
+                &redis,
+                "/data",
+                "hetero-search",
+                &meili,
+                "/meili_data",
+                (0, 1000)
             )
             .is_err()
         );

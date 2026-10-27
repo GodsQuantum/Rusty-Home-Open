@@ -39,12 +39,12 @@ PY_IMAGE="$(podman image inspect docker.io/library/python:3.12-alpine --format '
 
 # No mutable image tag or path injection; preflight refuses both units.
 if manager --install-pair-path-dependent-lab "$REDIS" "$REDIS_IMAGE" /../../etc \
-  "$SEARCH" "$SEARCH_IMAGE" /meili_data 1000; then exit 1; fi
+  "$SEARCH" "$SEARCH_IMAGE" /meili_data 999 1000; then exit 1; fi
 test ! -e "$QD/rh-$REDIS.container"
 test ! -e "$QD/rh-$SEARCH.container"
 
 manager --install-pair-path-dependent-lab "$REDIS" "$REDIS_IMAGE" /data \
-  "$SEARCH" "$SEARCH_IMAGE" /meili_data 1000
+  "$SEARCH" "$SEARCH_IMAGE" /meili_data 999 1000
 test ! -e "$JOURNAL"
 for slug in "$REDIS" "$SEARCH"; do
   test "$(stat -c %a "$QD/rh-$slug.container")" = 600
@@ -110,7 +110,7 @@ assert_offline() {
 manager --start-pair-transaction-lab "$REDIS" "$SEARCH"
 test ! -e "$JOURNAL"
 ready_search
-assert_offline "$REDIS" 1000 /data
+assert_offline "$REDIS" 999 /data
 assert_offline "$SEARCH" 1000 /meili_data
 test "$(podman exec rh-$REDIS redis-cli PING)" = PONG
 podman exec rh-$REDIS redis-cli SET durable-key saved-redis | grep -Fx OK

@@ -203,11 +203,21 @@ if [[ "$failed" != 1 ]]; then
   tail -60 "$WORK/old-journal.log" >&2
   exit 1
 fi
-details="$(systemctl --user show "rh-$MS.service" -p NRestarts -p ExecMainStatus -p SubState)"
-restarts="$(printf '%s\n' "$details" | sed -n 's/^NRestarts=//p')"
-status="$(printf '%s\n' "$details" | sed -n 's/^ExecMainStatus=//p')"
-if [[ "$status" != 1 ]] && ! { [[ "$restarts" =~ ^[0-9]+$ ]] && (( restarts >= 1 )); }; then
-  echo "No nonzero second-App process exit/restart: $details" >&2
+# The real upstream incompatibility is logged before systemd updates its
+# process-exit fields. Wait for the actual nonzero exit or native restart.
+exit_observed=0
+for _ in $(seq 1 60); do
+  details="$(systemctl --user show "rh-$MS.service" -p NRestarts -p ExecMainStatus -p SubState)"
+  restarts="$(systemctl --user show "rh-$MS.service" -p NRestarts --value)"
+  status="$(systemctl --user show "rh-$MS.service" -p ExecMainStatus --value)"
+  if [[ "$status" == 1 ]] || { [[ "$restarts" =~ ^[0-9]+$ ]] && (( restarts >= 1 )); }; then
+    exit_observed=1
+    break
+  fi
+  sleep .25
+done
+if [[ "$exit_observed" != 1 ]]; then
+  echo "No nonzero second-App process exit/restart after 15s: $details" >&2
   exit 1
 fi
 if meili_ready "$MS" 2>/dev/null; then

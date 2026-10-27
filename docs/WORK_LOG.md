@@ -1,5 +1,10 @@
 # Rusty Home — journal de développement et de certification
 
+## 27 October — P8ct initial RED CI diagnosis, correction awaiting exact SHA
+
+P8ct #204 head 4125a9d7 failed actual rootless run 40478385152: Redis 7.4 SAVE returned ERR, official log `Failed opening the temp RDB file ... /data: Permission denied`. Generic shared UID1000 was unsuitable for Redis (official UID999) while Meilisearch requires UID1000. Fix makes per-App UIDs explicit with native Quadlet path-specific volumes; no host mounts. Concurrent P8cn unrelated red run 40478384897 observed authentic incompatible engine journal message but raced systemd `ExecMainStatus=0, NRestarts=0`; bounded 15s observation now waits for genuine exit/restart, never counts a log alone. Both failures excluded from evidence pending exact-head rerun.
+
+
 ## 27 October — P8ct heterogeneous rootless native crash recovery [CI pending]
 
 P8cs already verified coordinator SIGKILL on two Redis instances; new P8ct extends native pair descriptors to different OCI engines and independently validated mount paths, sharing native atomic publication, flock, fsynced journal and explicit stop-only new-process recovery. New disposable GitHub CI requires real Redis RDB and Meilisearch full-text persisted index to survive a REAL coordinator SIGKILL and reboot of both application processes. Nothing may be executed on Cloud9 other than Rust compile and static tests within CT700. This is NOT cross-engine database transaction, reboot automation or HAOS App parity. Lab CI pending, production 0/15.
