@@ -410,6 +410,18 @@
       "scope": "Real HAOS18.3 Supervisor FULL backup preserves TWO inactive fictitious YAML automations and SIX registry entities; SHA-bound Rust inert dual preview and redb rollback. No hardware, user data or action migration.",
       "url": "https://github.com/GodsQuantum/Rusty-Home-Open/actions/runs/40445899124",
       "merged_pr": 189
+    },
+    {
+      "id": "oci_two_app_sha_valid_runtime_failure_group_rollback",
+      "release_gate": "supervisor_apps_restore",
+      "status": "verified_lab_only",
+      "run_id": 40447523586,
+      "head_sha": "bb10cfe39fa6df1e60464cf96816c25488dd1df9",
+      "workflow": "P8cn real two-App SHA-valid runtime mismatch and grouped rollback",
+      "job": "Real two-App valid-checkpoint incompatible runtime rollback and compatible retry",
+      "scope": "Real Redis+Meilisearch stopped SHA-valid private backups; first restored Redis healthy, second 1.55 data refused by 1.54 engine, both stages removed, originals intact, compatible two-App retry durable after restart. No automatic coordinator.",
+      "url": "https://github.com/GodsQuantum/Rusty-Home-Open/actions/runs/40447523586",
+      "merged_pr": 192
     }
   ]
 }
