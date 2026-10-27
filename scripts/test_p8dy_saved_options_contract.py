@@ -16,7 +16,7 @@ for expected in (
  "P8DY_REAL_HAOS_SUPERVISOR_NATIVE_PERSISTED_MQTT_AUTH_OPTIONS_REFUSED_NO_BYPASS_PASS"):
  assert expected in w,expected
 for expected in (
- 'source=stage/"addon.json"', 'os.O_NOFOLLOW', 'st.st_nlink!=1',
+ 'dir_fd=directory_fd', 'os.O_DIRECTORY', 'os.O_NOFOLLOW', 'file_stat.st_nlink!=1',
  "MAX_ADDON_JSON=131072", "_unique_pairs", "_nonfinite",
  'metadata.get("user")','metadata.get("system")',
  'options=user.get("options")',

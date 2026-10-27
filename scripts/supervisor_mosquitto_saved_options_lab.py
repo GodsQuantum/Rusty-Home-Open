@@ -28,43 +28,51 @@ def _unique_pairs(pairs):
 def _nonfinite(_):
     raise SavedOptionsRefused("non-finite option number")
 
-def _owned_private(directory):
-    if directory.is_symlink():
-        raise SavedOptionsRefused("App private directory symlink")
-    try:
-        x=directory.lstat()
-    except OSError as exc:
-        raise SavedOptionsRefused("missing App private directory") from exc
-    if not stat.S_ISDIR(x.st_mode) or x.st_uid!=os.geteuid() or x.st_mode&0o077:
-        raise SavedOptionsRefused("App directory not owned private 0700")
-
 def read_staged_supervisor_options(stage):
+    # Pin the validated directory inode. Using a dirfd prevents directory
+    # substitution between the metadata security check and the file open.
     stage=Path(stage)
-    _owned_private(stage)
-    source=stage/"addon.json"
     try:
-        # Rust stager denies all tar member symlinks/hardlinks/devices;
-        # repeat the O_NOFOLLOW, hardlink and size invariants independently.
-        fd=os.open(source,os.O_RDONLY|os.O_NOFOLLOW|os.O_NONBLOCK|os.O_CLOEXEC)
+        directory_fd=os.open(stage,os.O_RDONLY|os.O_DIRECTORY|
+                             os.O_NOFOLLOW|os.O_NONBLOCK|os.O_CLOEXEC)
     except OSError as exc:
-        raise SavedOptionsRefused("missing or unsafe official addon.json") from exc
+        raise SavedOptionsRefused("missing or unsafe App private directory") from exc
     try:
-        st=os.fstat(fd)
-        if (not stat.S_ISREG(st.st_mode) or st.st_nlink!=1 or
-            st.st_uid!=os.geteuid() or st.st_mode&0o077 or
-            st.st_size<20 or st.st_size>MAX_ADDON_JSON):
-            raise SavedOptionsRefused("unsafe official App metadata inode")
-        with os.fdopen(fd,"rb",closefd=False) as stream:
-            data=stream.read(MAX_ADDON_JSON+1)
-        if len(data)!=st.st_size:
-            raise SavedOptionsRefused("metadata short or concurrent read")
+        directory_stat=os.fstat(directory_fd)
+        if (not stat.S_ISDIR(directory_stat.st_mode) or
+            directory_stat.st_uid!=os.geteuid() or
+            directory_stat.st_mode&0o077):
+            raise SavedOptionsRefused("App directory not owned private 0700")
         try:
-            metadata=json.loads(data,object_pairs_hook=_unique_pairs,
-                parse_constant=_nonfinite)
-        except (ValueError,UnicodeDecodeError) as exc:
-            raise SavedOptionsRefused("invalid official App metadata") from exc
+            fd=os.open("addon.json",os.O_RDONLY|os.O_NOFOLLOW|
+                       os.O_NONBLOCK|os.O_CLOEXEC,dir_fd=directory_fd)
+        except OSError as exc:
+            raise SavedOptionsRefused("missing or unsafe official addon.json") from exc
+        try:
+            file_stat=os.fstat(fd)
+            if (not stat.S_ISREG(file_stat.st_mode) or file_stat.st_nlink!=1 or
+                file_stat.st_uid!=os.geteuid() or file_stat.st_mode&0o077 or
+                file_stat.st_size<20 or file_stat.st_size>MAX_ADDON_JSON):
+                raise SavedOptionsRefused("unsafe official App metadata inode")
+            with os.fdopen(fd,"rb",closefd=False) as stream:
+                data=stream.read(MAX_ADDON_JSON+1)
+            if len(data)!=file_stat.st_size:
+                raise SavedOptionsRefused("metadata short or concurrent read")
+            # Reject a concurrent write to this same open regular inode.
+            after=os.fstat(fd)
+            if (after.st_size!=file_stat.st_size or
+                after.st_mtime_ns!=file_stat.st_mtime_ns or
+                after.st_ctime_ns!=file_stat.st_ctime_ns):
+                raise SavedOptionsRefused("metadata changed during read")
+            try:
+                metadata=json.loads(data,object_pairs_hook=_unique_pairs,
+                    parse_constant=_nonfinite)
+            except (ValueError,UnicodeDecodeError) as exc:
+                raise SavedOptionsRefused("invalid official App metadata") from exc
+        finally:
+            os.close(fd)
     finally:
-        os.close(fd)
+        os.close(directory_fd)
     if not isinstance(metadata,dict) or not isinstance(metadata.get("user"),dict):
         raise SavedOptionsRefused("Supervisor user metadata absent or wrong type")
     if not isinstance(metadata.get("system"),dict):
