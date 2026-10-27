@@ -14,6 +14,8 @@ on:
       - "scripts/test_p8cb_mosquitto_retained_restore_contract.py"
       - "scripts/test_p8cc_node_red_stateful_flows_restore.sh"
       - "scripts/test_p8cc_nodered_flow_restore_contract.py"
+      - "scripts/test_p8cd_grafana_dashboard_sqlite_restore.sh"
+      - "scripts/test_p8cd_grafana_restore_contract.py"
       - "scripts/p8aw_registry_http_proof.py"
       - "scripts/test_p8ar_native_oci_manager.sh"
       - "scripts/test_p8ar_manager_contract.py"
@@ -41,6 +43,7 @@ jobs:
           python3 scripts/test_p8ca_postgres_wal_crash_contract.py
           python3 scripts/test_p8cb_mosquitto_retained_restore_contract.py
           python3 scripts/test_p8cc_nodered_flow_restore_contract.py
+          python3 scripts/test_p8cd_grafana_restore_contract.py
           cargo fmt --all -- --check
           cargo test --locked -p hars-native-hub --all-targets
           cargo clippy --locked -p hars-native-hub --all-targets -- -D warnings
@@ -49,6 +52,7 @@ jobs:
           bash -n scripts/test_p8ay_postgresql17_independent_restore.sh
           bash -n scripts/test_p8cb_mosquitto_retained_restore.sh
           bash -n scripts/test_p8cc_node_red_stateful_flows_restore.sh
+          bash -n scripts/test_p8cd_grafana_dashboard_sqlite_restore.sh
           python3 -m py_compile scripts/p8aw_registry_http_proof.py
       - name: Install official rootless Podman and user systemd
         run: |
@@ -73,3 +77,7 @@ jobs:
         timeout-minutes: 10
         run: |
           bash scripts/test_p8cc_node_red_stateful_flows_restore.sh
+      - name: Sixth real stateful App - official Grafana SQLite dashboard restore
+        timeout-minutes: 10
+        run: |
+          bash scripts/test_p8cd_grafana_dashboard_sqlite_restore.sh
