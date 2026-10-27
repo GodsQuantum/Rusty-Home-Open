@@ -710,6 +710,18 @@
       "scope": "Official disposable HAOS18.3 QEMU: File Editor and Mosquitto installed together, two genuine App-only backups from same boot. Native Rust SHA escrow, real SIGKILL after first stage, no partial publish, atomic retry, corrupted second archive denied.",
       "url": "https://github.com/GodsQuantum/Rusty-Home-Open/actions/runs/40597441250",
       "merged_pr": 241
+    },
+    {
+      "id": "haos_real_supervisor_mqtt_persisted_options_default_denied",
+      "release_gate": "supervisor_apps_restore",
+      "status": "verified_lab_only",
+      "run_id": 40599479262,
+      "head_sha": "c0be2cf7365f74bc7bc892e182890ad9c1ccae08",
+      "workflow": "P8dy genuine Supervisor Mosquitto persisted options fail-closed",
+      "job": "Genuine Supervisor addon.json options authenticated migration refusal",
+      "scope": "Official HAOS18.3 QEMU Mosquitto backup through Rust SHA private staging; read true Supervisor addon.json options, default empty logins correctly denied without HA delegated auth. Malformed/symlink refused, original SHA intact. No production.",
+      "url": "https://github.com/GodsQuantum/Rusty-Home-Open/actions/runs/40599479262",
+      "merged_pr": 243
     }
   ]
 }
