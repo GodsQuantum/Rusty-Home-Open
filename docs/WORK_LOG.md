@@ -1,5 +1,9 @@
 # Rusty Home — journal de développement et de certification
 
+## 27 October — P8dh official File Editor real native /data write and restart [CI PENDING]
+
+New distinct proof attempt: upstream File Editor app-container writes *inside* its own persisted /data AFTER true HAOS->Rust backup/native reconstruction, then undergoes podman stop and podman start, and must show both original HAOS marker and newly written marker intact. Rootless/no network/no ports/no Supervisor tokens throughout. CI real genuine QEMU pending. The test does NOT qualify authentication or HTTP ingress (lane milestone 6), so must NOT skip ahead and claim 7/10. No host actions on Cloud9 besides CT700 code/build.
+
 ## 27 October — P8df genuine Supervisor App backup → official App OCI runtime [CI pending]
 
 Distinct new REAL App startup proof instead of another preview: official HAOS18.3 File Editor creates exact nonsecret payload, native Rust escrow and materializer recover it, official ghcr.io/home-assistant/app-configurator:6.3.0 starts in isolated rootless Podman with restored /data only, no network/ports/host secrets and with fail-closed checks. Check actual real OCI process AND original source marker inside it, original SHA unchanged. Full real QEMU CI pending; don't increment milestone 5/10 without success. May expose Supervisor dependency requiring explicit adapter; avoid faking auth. Production 0/15.
