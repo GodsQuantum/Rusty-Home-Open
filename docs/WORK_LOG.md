@@ -1,6 +1,10 @@
 # Rusty Home — journal de développement et de certification
 
-## 2026-10-27 — P8cj disabled multi-automation private preview [CI pending]
+## 2026-10-27 — P8ck fuzz new multi-disabled HAOS preview parser [CI pending]
+
+Previous #187 introduced read-only SHA-bound two-entry preview without service execution. Its 11/11 exact-head CI passed, official disposable HAOS 18.3 one-item backup checked, original source original SHA 81ff9a; merged main 5b76ea7. This NEW safety task instruments the multi-parser itself using existing pinned Rust nightly AddressSanitizer/libFuzzer target (prior fuzzer only exercised one automation). Add one allowed 2-item fixture and one mixed enabled/disabled adversarial fixture, reject all unauthorized network and hardware. Static scope and 5 Rust parser tests PASS. No independent pen-test or 72-hour soak, production 0/15.
+
+## 2026-10-27 — P8cj disabled multi-automation private preview [REAL CI PASSED, MERGED #187]
 
 New distinct fail-closed feature (not full migration): 1–8 uniquely identified disabled-only synthetic HA YAML entries atomically previewed by native Rust; any malicious or duplicate second entry rejects entire batch. The old executable fictitious single Moli flow remains single-item and requires separate human approval. New preview command accepts only existing private SHA-bound archived YAML with matching active stable registry entities and emits no device commands. Local Rust unit and full strict Clippy plus synthetic two-entry actual Rust archive/stager tests passed. Genuine HAOS 18.3 QEMU path will test existing one-entry Supervisor archived source via new preview command, no new true multi-automation full backup claim. No household, VM100, credentials, physical radio, 72h soak or independent security; production gate count remains 0/15.
 
