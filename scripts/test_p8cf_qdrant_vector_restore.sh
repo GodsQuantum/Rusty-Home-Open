@@ -41,9 +41,11 @@ PY_IMAGE="$(podman image inspect docker.io/library/python:3.12-alpine --format '
 
 # Upstream Qdrant binary and config untouched. Isolated offline UID 1000,
 # native persistent storage and immutable image; no host port publication.
-HARS_DISPOSABLE_OCI_LAB=1 "$BIN" --install-path-lab  "$source_slug" "$IMAGE" 1000 /qdrant/storage
+HARS_DISPOSABLE_OCI_LAB=1 "$BIN" --install-path-resources-lab  "$source_slug" "$IMAGE" 1000 /qdrant/storage 1024 256
 test "$(systemctl --user is-active rh-$source_slug.service)" = inactive
 test "$(stat -c %a "$QD/rh-$source_slug.container")" = 600
+grep -F 'MemoryMax=1024M' "$QD/rh-$source_slug.container"
+grep -F 'PidsLimit=256' "$QD/rh-$source_slug.container"
 HARS_DISPOSABLE_OCI_LAB=1 "$BIN" --start-lab "$source_slug"
 assert_offline() {
  test "$(podman inspect "$1" --format '{{.HostConfig.NetworkMode}}')" = none
@@ -104,7 +106,7 @@ except Exception:sys.exit(1)' >/dev/null 2>&1; then return 0; fi
  done
  echo "P8CF_QDRANT_UPSTREAM_START_FAILURE_DIAGNOSTICS" >&2
  systemctl --user status "$1.service" --no-pager -l >&2 || true
- journalctl --user -u "$1.service" --no-pager -n 110 >&2 || true
+ journalctl --user -u "$1.service" --no-pager -n 400 >&2 || true
  podman ps -a --format 'table {{.Names}} {{.Status}} {{.Image}}' >&2 || true
  podman logs "$1" 2>&1 | tail -40 >&2 || true
  return 1
@@ -140,7 +142,7 @@ echo P8CF_QDRANT_SOURCE_COMMITTED_SECOND_VECTOR_POST_BACKUP_PASS
 podman volume create "$restore_vol" >/dev/null
 echo "$SHA  $ARCHIVE" | sha256sum -c
 podman volume import "$restore_vol" "$ARCHIVE"
-HARS_DISPOSABLE_OCI_LAB=1 "$BIN" --install-path-lab  "$restore_slug" "$IMAGE" 1000 /qdrant/storage
+HARS_DISPOSABLE_OCI_LAB=1 "$BIN" --install-path-resources-lab  "$restore_slug" "$IMAGE" 1000 /qdrant/storage 1024 256
 test "$(systemctl --user is-active rh-$restore_slug.service)" = inactive
 HARS_DISPOSABLE_OCI_LAB=1 "$BIN" --start-lab "$restore_slug"
 ready rh-vector-restore

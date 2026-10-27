@@ -157,6 +157,7 @@ struct InstallExtras<'a> {
     secret_name: Option<&'a str>,
     runtime_tmpfs: Option<&'a str>,
     nested_volume: Option<(&'a str, &'a str)>,
+    resources: Option<(u16, u16)>,
 }
 fn install(
     dir: &Path,
@@ -169,11 +170,17 @@ fn install(
     if uid == 0 || uid > 65533 {
         return Err(bad());
     }
+    let (memory_mib, pids_limit) = extras.resources.unwrap_or((256, 128));
+    // Bound explicitly requested lab resources, retain unchanged secure
+    // production-profile defaults for ALL existing applications.
+    if !(256..=2048).contains(&memory_mib) || !(128..=512).contains(&pids_limit) {
+        return Err(bad());
+    }
     let decl = OciApp {
         slug,
         image,
-        memory_mib: 256,
-        pids_limit: 128,
+        memory_mib,
+        pids_limit,
         run_uid: Some(uid),
         network,
     };
@@ -468,6 +475,23 @@ fn execute() -> io::Result<()> {
                 network,
                 InstallExtras {
                     data_destination: Some(&args[5]),
+                    ..Default::default()
+                },
+            )
+        }
+        "--install-path-resources-lab" if args.len() == 8 => {
+            let uid = args[4].parse::<u32>().map_err(|_| bad())?;
+            let memory_mib = args[6].parse::<u16>().map_err(|_| bad())?;
+            let pids_limit = args[7].parse::<u16>().map_err(|_| bad())?;
+            install(
+                &dir,
+                &args[2],
+                &args[3],
+                uid,
+                AppNetwork::Offline,
+                InstallExtras {
+                    data_destination: Some(&args[5]),
+                    resources: Some((memory_mib, pids_limit)),
                     ..Default::default()
                 },
             )
