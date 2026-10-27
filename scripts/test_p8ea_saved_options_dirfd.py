@@ -90,6 +90,52 @@ class DirFdSecurityTests(unittest.TestCase):
         with self.assertRaises(reader.SavedOptionsRefused):
             reader.read_staged_supervisor_options(self.stage)
 
+    def test_same_size_concurrent_rewrite_after_read_denied(self):
+        # Real in-place write between the two fstat calls; size is unchanged.
+        trusted = metadata("trusted")
+        forged = metadata("forged!")
+        self.assertEqual(len(trusted), len(forged))
+        original_fstat = os.fstat
+        file_fstats = 0
+
+        def rewrite_on_second_file_stat(fd):
+            nonlocal file_fstats
+            st = original_fstat(fd)
+            if os.path.basename(os.readlink(f"/proc/self/fd/{fd}")) == "addon.json":
+                file_fstats += 1
+                if file_fstats == 2:
+                    with open(self.source, "r+b", buffering=0) as out:
+                        out.write(forged)
+                        out.flush()
+                    st = original_fstat(fd)
+            return st
+
+        with patch.object(reader.os, "fstat", side_effect=rewrite_on_second_file_stat):
+            with self.assertRaises(reader.SavedOptionsRefused):
+                reader.read_staged_supervisor_options(self.stage)
+        self.assertEqual(file_fstats, 2)
+        self.assertEqual(self.source.read_bytes(), forged)
+
+    def test_nested_json_recursion_bomb_refused_not_uncaught(self):
+        # Below 128KiB, but deep enough to trigger CPython JSON recursion.
+        payload = b'{"version":"1","system":{},"user":{"options":{"nested":' + (
+            b"[" * 1500 + b"0" + b"]" * 1500) + b"}}}"
+        self.assertLess(len(payload), reader.MAX_ADDON_JSON)
+        self.source.write_bytes(payload)
+        with self.assertRaisesRegex(reader.SavedOptionsRefused, "nesting"):
+            reader.read_staged_supervisor_options(self.stage)
+
+    def test_many_brackets_inside_json_string_are_not_nesting(self):
+        self.source.write_bytes(metadata("[" * 3000 + "}" * 3000))
+        self.assertEqual(reader.read_staged_supervisor_options(self.stage),
+                         {"marker": "[" * 3000 + "}" * 3000})
+
+    def test_fifo_metadata_refused_without_blocking(self):
+        self.source.unlink()
+        os.mkfifo(self.source, mode=0o600)
+        with self.assertRaises(reader.SavedOptionsRefused):
+            reader.read_staged_supervisor_options(self.stage)
+
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)
