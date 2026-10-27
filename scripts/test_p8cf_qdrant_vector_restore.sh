@@ -102,6 +102,10 @@ try:
 except Exception:sys.exit(1)' >/dev/null 2>&1; then return 0; fi
   sleep .25
  done
+ echo "P8CF_QDRANT_UPSTREAM_START_FAILURE_DIAGNOSTICS" >&2
+ systemctl --user status "$1.service" --no-pager -l >&2 || true
+ journalctl --user -u "$1.service" --no-pager -n 110 >&2 || true
+ podman ps -a --format 'table {{.Names}} {{.Status}} {{.Image}}' >&2 || true
  podman logs "$1" 2>&1 | tail -40 >&2 || true
  return 1
 }
