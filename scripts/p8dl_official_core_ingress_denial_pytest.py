@@ -321,6 +321,9 @@ else:
             shell.run_check("docker exec hassio_supervisor rm -f "+
                             guest_container+"; rm -f "+guest_tmp+" "+guest_python,
                             timeout=30)
+            shell.run_check("rm -f "+p8dn_host,timeout=30)
+            assert shell.run_check("test ! -e "+p8dn_host+" && echo ABSENT",
+                                   timeout=30)[0].strip()=="ABSENT"
         print("P8DL_OFFICIAL_FILE_EDITOR_CORE_INGRESS_FAIL_CLOSED_WITHOUT_BROWSER_SESSION_PASS")
         created=shell_json('ha backups new --name "P8CU Public App Only Lab" --app '
                            +slug+" --no-progress --raw-json",timeout=460)
