@@ -1,5 +1,9 @@
 # Rusty Home — journal de développement et de certification
 
+## 27 October — P8cm pinned original CI receipts (P8ck sanitizer + P8cl genuine HAOS dual)
+
+P8ck exact original head 086fe03: GitHub 40442240753, job 121985045481 green pinned nightly fuzz+ASan of new bounded inactive HAOS multi-YAML parser. P8cl exact original head cc761f6: GitHub 40445899124, job 121996993377 green official HAOS18.3 KVM genuine full Supervisor backup with two disabled fictional automations, six fictional registry entities, SHA-bound native Rust preview and safe rollback; #189 squash 5a39a57. First failed attempts excluded. Machine evidence validated independently online: 35 successful jobs, 31 unique GH run IDs. Product matrix unchanged 0/15 fully certified, 9 partial, 6 blocked.
+
 ## 27 October — P8cl genuine two-disabled-rule Supervisor backup [CI PENDING]
 
 RED CI 40444746712 on exact source 2332fca57bd727f2f6c6e444dac36ae0f08e97f0: genuine official HAOS QEMU boot and two preliminary tests passed, but serial PTY timed out while echoing an oversized one-line base64 registry fixture (pexpect 299.90s, shell stuck at continuation prompt). This is NOT a backup/preview proof. Fix transfers registry and YAML via <=96-character base64 chunks and local six-size command-boundary regression. Re-run official HAOS guest at new exact HEAD required.
