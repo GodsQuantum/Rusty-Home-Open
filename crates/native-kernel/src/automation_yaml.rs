@@ -135,6 +135,45 @@ pub fn parse_disabled_backup_plan(yaml: &str) -> Result<Plan> {
     plan_from_raw(list.pop().expect("length checked").into_raw()?)
 }
 
+/// Preview a bounded HAOS automations.yaml list. All members must be
+/// explicitly disabled, synthetic and valid; mixed batches fail atomically.
+/// Neither approval nor execution nor production migration is performed.
+pub fn parse_disabled_backup_plans(yaml: &str) -> Result<Vec<Plan>> {
+    use std::collections::HashSet;
+    check_yaml(yaml)?;
+    let items: Vec<DisabledBackupAutomation> = serde_saphyr::from_str_with_options(
+        yaml,
+        serde_saphyr::options! { reject_unsupported_tags: true },
+    )?;
+    if items.is_empty() || items.len() > 8 {
+        bail!("HAOS preview requires 1..=8 disabled automations");
+    }
+    let mut ids = HashSet::with_capacity(items.len());
+    let mut bindings = HashSet::with_capacity(items.len());
+    let mut plans = Vec::with_capacity(items.len());
+    for item in items {
+        let id = item
+            .id
+            .as_deref()
+            .ok_or_else(|| anyhow::anyhow!("missing ID"))?;
+        if id.is_empty()
+            || id.len() > 64
+            || !id
+                .bytes()
+                .all(|b| b.is_ascii_lowercase() || b.is_ascii_digit() || b == b'_')
+            || !ids.insert(id.to_owned())
+        {
+            bail!("unsafe, absent or duplicate HAOS automation ID");
+        }
+        let plan = plan_from_raw(item.into_raw()?)?;
+        if !bindings.insert((plan.source_entity.clone(), plan.proposed_target.clone())) {
+            bail!("duplicate preview trigger-target binding");
+        }
+        plans.push(plan);
+    }
+    Ok(plans)
+}
+
 pub fn parse_plan(yaml: &str) -> Result<Plan> {
     check_yaml(yaml)?;
     let raw: RawAutomation = serde_saphyr::from_str_with_options(
@@ -340,6 +379,57 @@ action:
             );
         }
     }
+    #[test]
+    fn disabled_multi_backup_preview_refuses_any_unsafe_batch_member() {
+        let first = include_str!("../../../scripts/fixtures/p8be_haos_automations.yaml");
+        let second = first
+            .replace(
+                "p8bi_official_archive_disabled_lab_motion",
+                "p8cj_second_lab_door",
+            )
+            .replace("binary_sensor.lab_motion", "binary_sensor.lab_door")
+            .replace("light.lab_room", "light.lab_entry");
+        let batch = format!("{first}\n{second}");
+        let plans = parse_disabled_backup_plans(&batch).unwrap();
+        assert_eq!(plans.len(), 2);
+        assert_eq!(plans[0].source_entity, "binary_sensor.lab_motion");
+        assert_eq!(plans[1].source_entity, "binary_sensor.lab_door");
+        assert_eq!(plans[1].proposed_target, "light.lab_entry");
+        for plan in &plans {
+            let result = simulate(plan, &plan.source_entity, "off", "on", "off");
+            assert!(result.triggered && result.read_only && !result.production_ready);
+        }
+        assert!(parse_disabled_backup_plan(&batch).is_err());
+
+        // No partially accepted result from mixed safe and hostile entries.
+        let hostile = [
+            second.replace("initial_state: false", "initial_state: true"),
+            second.replace("  initial_state: false\n", ""),
+            second.replace(
+                "p8cj_second_lab_door",
+                "p8bi_official_archive_disabled_lab_motion",
+            ),
+            second.replace("light.lab_entry", "light.real_house"),
+            second.replace("light.turn_on", "shell_command.attack"),
+            second
+                .replace("binary_sensor.lab_door", "binary_sensor.lab_motion")
+                .replace("light.lab_entry", "light.lab_room"),
+            second.replace("  mode: single", "  mode: parallel"),
+            second.replace("  mode: single", "  mode: single\n  untrusted: yes"),
+            second.replace("initial_state: false", "initial_state: !!bool false"),
+            second.replace("light.lab_entry", "{{ states('sensor.secret') }}"),
+        ];
+        for item in hostile {
+            assert!(
+                parse_disabled_backup_plans(&format!("{first}\n{item}")).is_err(),
+                "mixed safe/unsafe HAOS automation batch accepted: {item}"
+            );
+        }
+        assert!(parse_disabled_backup_plans("[]").is_err());
+        assert!(parse_disabled_backup_plans(&format!("{first}\n{second}\n").repeat(5)).is_err());
+        assert_eq!(parse_disabled_backup_plans(first).unwrap().len(), 1);
+    }
+
     #[test]
     fn malformed_or_nonlab_automations_rejected_before_execution() {
         for yaml in [
