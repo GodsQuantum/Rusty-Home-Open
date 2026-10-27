@@ -25,6 +25,7 @@ jobs:
         run: |
           python3 scripts/test_p8cu_qemu_contract.py
           python3 scripts/test_p8cu_partial_app_preflight.py
+          python3 scripts/test_p8cu_plugin_update_logic.py
           python3 -m py_compile scripts/inspect_ha_backup.py scripts/p8cu_official_file_editor_partial_qemu_pytest.py scripts/test_p8cu_genuine_file_editor_app_only_archive.py
       - name: Prepare pinned official HAOS QEMU harness
         run: |

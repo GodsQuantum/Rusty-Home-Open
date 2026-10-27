@@ -26,6 +26,7 @@ for token in (
  "ha supervisor options --auto-update --no-progress --raw-json",
  "ha supervisor reload --no-progress --raw-json",
  "P8CU_DISPOSABLE_HAOS_UPSTREAM_SUPERVISOR_PLUGIN_POLICY_READY_PASS",
+ "_ensure_disposable_plugins_current(shell_json, _sleep)",
  "ha backups remove","ha apps uninstall",
  "core_configurator","sha256sum","X-Hars-Slug:","X-Hars-Boot:",
  "P8CU_GENUINE_HAOS_FILE_EDITOR_APP_ONLY_PARTIAL_BACKUP_EXPORTED_PASS",

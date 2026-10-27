@@ -9,6 +9,49 @@ from pathlib import Path
 import pytest
 import re
 
+def _plugin_is_current(info, name):
+    """Require a genuine version match, not merely Supervisor auto_update=True."""
+    if not isinstance(info, dict) or info.get("result") != "ok":
+        raise AssertionError("Official disposable plugin info unavailable: " + name)
+    data = info.get("data")
+    if not isinstance(data, dict):
+        raise AssertionError("Official disposable plugin metadata missing: " + name)
+    version, latest = data.get("version"), data.get("version_latest")
+    if not (isinstance(version, str) and version.strip()
+            and isinstance(latest, str) and latest.strip()):
+        raise AssertionError("Official disposable plugin versions unavailable: " + name)
+    return version == latest
+
+
+def _ensure_disposable_plugins_current(shell_json, sleeper):
+    """Only upstream HA CLI updates in ephemeral QEMU; never a real host."""
+    for name in ("dns", "audio", "multicast", "cli"):
+        query = "ha " + name + " info --no-progress --raw-json"
+        if _plugin_is_current(shell_json(query, timeout=90), name):
+            continue
+        # One official update POST; never retry blindly if it disconnects CLI.
+        try:
+            response = shell_json(
+                "ha " + name + " update --no-progress --raw-json", timeout=420
+            )
+            if response.get("result") != "ok":
+                raise AssertionError("Official plugin update denied: " + name)
+        except Exception:
+            # The CLI plugin itself may terminate its own shell session.
+            # The independent version GET below is the only acceptance rule.
+            pass
+        for attempt in range(36):
+            try:
+                if _plugin_is_current(shell_json(query, timeout=90), name):
+                    break
+            except Exception:
+                pass
+            if attempt < 35:
+                sleeper(3)
+        else:
+            raise AssertionError("Official disposable plugin did not converge: " + name)
+
+
 @pytest.mark.dependency(depends=["test_start_supervisor"])
 @pytest.mark.timeout(1500)
 def test_hars_official_file_editor_app_only_partial_export(shell,shell_json):
@@ -48,6 +91,7 @@ def test_hars_official_file_editor_app_only_partial_export(shell,shell_json):
                 if check<23:_sleep(3)
             else:
                 raise AssertionError("Upstream Supervisor plugin auto-update flag never became true")
+        _ensure_disposable_plugins_current(shell_json, _sleep)
         print("P8CU_DISPOSABLE_HAOS_UPSTREAM_SUPERVISOR_PLUGIN_POLICY_READY_PASS")
         # Official Store's catalogue populates asynchronously on a fresh
         # Supervisor. Require the ACTUAL fixed public App version and
@@ -81,7 +125,32 @@ def test_hars_official_file_editor_app_only_partial_export(shell,shell_json):
         assert available is not None,"Fixed official File Editor Store catalogue not ready after bounded discovery"
         assert shell_json("ha supervisor info --no-progress --raw-json",timeout=90).get("result")=="ok"
         assert shell_json("ha core info --no-progress --raw-json",timeout=90).get("result")=="ok"
-        installed=shell_json("ha apps install "+slug+" --no-progress --raw-json",timeout=450)
+        # The official CLI may exit nonzero when the Supervisor job fails.
+        # Observe only bounded, redacted diagnostics, never raw guest logs.
+        stdout, stderr, exit_code = shell.run(
+            "ha apps install "+slug+" --no-progress --raw-json", timeout=450
+        )
+        try:
+            import json as _json
+            installed=_json.loads("\n".join(stdout))
+        except (ValueError, TypeError):
+            installed={}
+        if exit_code != 0 or installed.get("result") != "ok":
+            try:
+                current=shell_json("ha apps info "+slug+" --no-progress --raw-json",timeout=90)
+                observed=(current.get("data") or {}).get("state","unknown")
+                if observed not in ("unknown",None):
+                    added=True  # Ensure disposal of a partially installed App.
+            except Exception:
+                observed="unavailable"
+            raw=str(installed.get("message","")) + " " + " ".join(stderr or [])
+            category=("outdated_plugins" if "plugin" in raw.lower() and "up to date" in raw.lower()
+                      else "network" if "network" in raw.lower() or "pull" in raw.lower()
+                      else "permission" if "permission" in raw.lower()
+                      else "no_cli_detail")
+            raise AssertionError("Official App install refused: category="+category+
+                                 " observed_app_state="+str(observed)+
+                                 " exit_code="+str(exit_code))
         if installed.get("result")!="ok":
             # Safe disposable environment error code only, never raw tokens.
             message=str(installed.get("message","unknown"))

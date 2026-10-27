@@ -1,3 +1,7 @@
+## 27 October — P8cu plugin version postcondition, pending genuine KVM
+
+P8cu next red-run correction (CI pending): the previous real HAOS18.3 QEMU run 40503868826 reached official File Editor install but its CLI returned exit 1 with no JSON. Merely toggling Supervisor auto_update did not prove that CLI/DNS/Audio/Multicast plugins were actually updated. The disposable guest now queries each genuine plugin's current and latest version, issues at most one official update per stale plugin, and requires independently observed version convergence before the App install. It captures only redacted failure category and post-install state, including cleanup of partially installed App. Local helper postcondition/retry-negative tests and existing structural partial-backup negatives pass; actual official KVM archive export is NOT yet proven. No host, VM100, real radio or production service changes. Production 0/15.
+
 # Rusty Home — journal de développement et de certification
 
 ## 27 October — P8cu App-only partial HAOS archive structural preflight (CI pending)
