@@ -1,5 +1,9 @@
 # Rusty Home — journal de développement et de certification
 
+## 27 October — P8cw offline App-only Supervisor backup into native Rust escrow [CI pending]
+
+Native app_backup_import.rs adopts strict existing Rust tar+gzip+StrictValue/O_NOFOLLOW bounded inspection for APP-ONLY partial Supervisor archives (without Core). Reuses original P8ab fsynced 0700/0600 SHA escrow via two lab-only verbs on the already existing ha_registry_stager, rather than writing a service. Actual physical App restore and activation never performed. Full synthetic CLI adversarial tests and Rust Clippy pass. Dedicated real HAOS18.3 GitHub QEMU source + unchanged official File Editor P8cu guest scenario to be checked on exact GH HEAD; no household or VM100 touched. Release still 0/15.
+
 ## 27 October — P8cu official HAOS selected-App-only backup [EXACT CI PASS, MERGED]
 
 PR #206 source `5839675720581f07c9e90f2c4052bf0c6b90d99e`, squash main `e46306a80525ab557f73e181f6113930df186b2b`; **10/10 exact-head checks SUCCESS**. Genuine official HAOS18.3 QEMU [run 40514471305](https://github.com/GodsQuantum/Rusty-Home-Open/actions/runs/40514471305) job 122224674821 SUCCESS, **3/3 JUnit**, upstream plugin version convergence, actual public File Editor App install, exact synthetic marker saved in real App data and recovered from official selected-App-only Supervisor partial backup after SHA-bound private relay, no Core archive. Read-only structural inspector refuses malformed/protected/traversal/duplicate and never authorizes restore. Previous failed 40502576893/40503176043/40503868826 excluded. Evidence `haos_real_selected_app_only_partial_backup_readonly_preflight`; **44 claims / 40 distinct successful run IDs; 0/15 production**. No actual Rust restore, VM100, radio, production secrets, reboot, 72h or human auditor.

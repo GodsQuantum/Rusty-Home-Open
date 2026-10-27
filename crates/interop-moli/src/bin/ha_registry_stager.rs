@@ -98,6 +98,59 @@ fn run() -> Result<()> {
                 "content_returned":false,
                 "actions_executable":false,"production_ready":false})
         }
+        "app-source-ingest" => {
+            let source = args
+                .next()
+                .ok_or_else(|| anyhow::anyhow!("missing App-only backup"))?;
+            if args.next().is_some() {
+                bail!("extra App source arguments")
+            }
+            let info = hars_interop_moli::app_backup_import::inspect_unprotected_app_only(
+                Path::new(&source),
+            )?;
+            let escrow = hars_interop_moli::backup_escrow::BackupEscrow::open(Path::new(&dir))?;
+            let receipt = escrow.ingest(Path::new(&source))?;
+            if receipt.sha256 != info.archive_sha256 {
+                bail!("App escrow source changed after validation")
+            }
+            let copied = hars_interop_moli::app_backup_import::inspect_unprotected_app_only(
+                &Path::new(&dir).join(format!("{}.tar", receipt.sha256)),
+            )?;
+            if copied.archive_sha256 != receipt.sha256 || copied.files != info.files {
+                bail!("private App archive verification mismatch")
+            }
+            serde_json::json!({"action":"private_app_backup_escrow_ingest",
+                "sha256":receipt.sha256,"bytes":receipt.bytes,
+                "app_count":info.app_count,"files":info.files,
+                "declared_payload_bytes":info.declared_payload_bytes,
+                "read_only":true,"app_runtime_migrated":false,"apps_restored":false,
+                "actions_executable":false,"production_ready":false})
+        }
+        "app-source-verify" => {
+            let digest = args
+                .next()
+                .ok_or_else(|| anyhow::anyhow!("missing content digest"))?;
+            if args.next().is_some() {
+                bail!("extra App verification arguments")
+            }
+            if digest.len() != 64
+                || !digest
+                    .bytes()
+                    .all(|c| c.is_ascii_hexdigit() && !c.is_ascii_uppercase())
+            {
+                bail!("invalid source digest")
+            }
+            let path = Path::new(&dir).join(format!("{digest}.tar"));
+            let info = hars_interop_moli::app_backup_import::inspect_unprotected_app_only(&path)?;
+            if info.archive_sha256 != digest {
+                bail!("private archive was altered")
+            }
+            serde_json::json!({"action":"private_app_backup_escrow_verify",
+                "archive_sha256":digest,"app_count":info.app_count,
+                "files":info.files,"declared_payload_bytes":info.declared_payload_bytes,
+                "read_only":true,"apps_restored":false,"actions_executable":false,
+                "production_ready":false})
+        }
         "escrow-ingest" => {
             let source = args
                 .next()
