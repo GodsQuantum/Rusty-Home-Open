@@ -67,7 +67,7 @@ jobs:
           cargo +nightly-2026-10-15 fuzz run lifecycle_preflight -- -max_total_time=45 -timeout=8 -rss_limit_mb=2048
           cargo +nightly-2026-10-15 fuzz run haos_backup_import -- -max_total_time=45 -timeout=8 -rss_limit_mb=2048
           cargo +nightly-2026-10-15 fuzz run disabled_haos_automation -- -max_total_time=45 -timeout=8 -rss_limit_mb=2048
-          cargo +nightly-2026-10-15 fuzz run app_backup_import -- -max_total_time=45 -timeout=8 -rss_limit_mb=2048
+          cargo +nightly-2026-10-15 fuzz run app_backup_import -- -max_total_time=45 -max_len=65536 -timeout=8 -rss_limit_mb=2048
       - name: Extended sanitizer fuzz of all protected surfaces
         if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
         working-directory: fuzz
@@ -78,7 +78,7 @@ jobs:
           cargo +nightly-2026-10-15 fuzz run lifecycle_preflight -- -max_total_time=180 -timeout=8 -rss_limit_mb=2048
           cargo +nightly-2026-10-15 fuzz run haos_backup_import -- -max_total_time=180 -timeout=8 -rss_limit_mb=2048
           cargo +nightly-2026-10-15 fuzz run disabled_haos_automation -- -max_total_time=180 -timeout=8 -rss_limit_mb=2048
-          cargo +nightly-2026-10-15 fuzz run app_backup_import -- -max_total_time=180 -timeout=8 -rss_limit_mb=2048
+          cargo +nightly-2026-10-15 fuzz run app_backup_import -- -max_total_time=180 -max_len=65536 -timeout=8 -rss_limit_mb=2048
       - name: Attach crash artifacts only if instrumented run failed
         if: failure()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2 verified GitHub tag

@@ -15,6 +15,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 CORPUS = ROOT / "fuzz/corpus/app_backup_import"
+CHECKSUMS = ROOT / "fuzz/app_backup_corpus.sha256"
 
 def tar_bytes(members):
     buf = io.BytesIO()
@@ -162,16 +163,24 @@ def main():
         CORPUS.mkdir(parents=True, exist_ok=True)
         for name, data in cases.items():
             (CORPUS / name).write_bytes(data)
+        CHECKSUMS.write_text("".join(
+            hashlib.sha256(data).hexdigest() + "  " + name + "\n"
+            for name, data in sorted(cases.items())
+        ))
     assert CORPUS.is_dir()
     assert {p.name for p in CORPUS.iterdir()} == set(cases)
-    for name, expected in cases.items():
+    lines = [line.split("  ", 1) for line in CHECKSUMS.read_text().splitlines()]
+    assert len(lines) == len(cases)
+    expected_hashes = {name: digest for digest, name in lines}
+    assert set(expected_hashes) == set(cases)
+    for name in cases:
         actual = (CORPUS / name).read_bytes()
-        assert actual == expected, name
+        assert hashlib.sha256(actual).hexdigest() == expected_hashes[name], name
         assert 1024 <= len(actual) <= 2_097_152, name
     assert_scope()
     print("P8CZ_SYNTHETIC_APP_ONLY_CORPUS_AND_FUZZ_SCOPE_PASS")
     if args.binary:
-        native_check(args.binary, cases)
+        native_check(args.binary, {name: (CORPUS / name).read_bytes() for name in cases})
 
 if __name__ == "__main__":
     main()
