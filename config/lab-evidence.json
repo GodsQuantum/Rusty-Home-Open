@@ -315,6 +315,18 @@
       "scope": "Sixth real App: official Grafana SQLite dashboard HTTP API backup in private 0600 Podman volume; SHA corruption rejected. A new separate Grafana instance restores dashboard A but not later dashboard B; source retains both, Network=none.",
       "url": "https://github.com/GodsQuantum/Rusty-Home-Open/actions/runs/40425969403",
       "merged_pr": 175
+    },
+    {
+      "id": "oci_victoriametrics_seventh_timeseries_independent_restore",
+      "release_gate": "supervisor_apps_restore",
+      "status": "verified_lab_only",
+      "run_id": 40428014004,
+      "head_sha": "c2a05d737fc0d41593c26ea2cc5573d158d32943",
+      "workflow": "Generic rootless OCI Registry and PostgreSQL App persistence and restore",
+      "job": "Real rootless OCI Registry HTTP and PostgreSQL SQL separate-volume restores",
+      "scope": "Seventh distinct stateful OCI App: official VictoriaMetrics Prometheus import/query, stopped private SHA volume with tamper denial, independent second TSDB contains pre-checkpoint value 41 but not later value 99; source retains both. Rootless offline.",
+      "url": "https://github.com/GodsQuantum/Rusty-Home-Open/actions/runs/40428014004",
+      "merged_pr": 177
     }
   ]
 }
