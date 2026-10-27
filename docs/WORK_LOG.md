@@ -12,6 +12,10 @@ PR #224 MERGED squash main `e041856271950b0338251e6015f366bd452f920f`, exact ori
 
 # Rusty Home — journal de développement et de certification
 
+## 27 October — P8du pin genuine native MQTT local auth and denial on HAOS-restored data
+
+PR #237 exact source 1a387d72c636d9c0ae77887fee900ba639385690 merged main d2834f3d4dba0279ec5c5e9bac915d6e1e21cc84, 10/10 green. Genuine HAOS18.3 QEMU Mosquitto selected App backup and Rust SHA staging, official local-user documented-schema synthetic options mapped with upstream interactive password hashing; actual MQTT correct login permitted, invalid/anonymous denied, retained message persists after NEW rootless OCI instance. CI run 40587712888 job 122483488135 PASS JUnit 3/3. 58 lab-only machine claims across 54 distinct real successful runs. Not real HAOS user/TLS migration or authorized production release; 5/10 App lane, 0/15 production.
+
 ## 27 October — P8dt guarded local account Mosquitto auth on real HAOS restored data [CI pending]
 
 Only documented Supervisor local-login subset from synthetically constructed options, hashed via real upstream interactive password utility without secret on argv; refuses HA delegated users, prehashed HA plugin format, custom configs, TLS and incomplete credential security. Tests will assert real accepted/denied MQTT and retained new-OCI restart after official HAOS Mosquitto data native Rust stage. No real credentials or production modifications. App lane 5/10, production 0/15.

@@ -674,6 +674,18 @@
       "scope": "Actual official HAOS18.3 QEMU Mosquitto App-only backup to private Rust staged data; upstream rootless loopback-only OCI MQTT QoS1 pub/sub/retained, new OCI persists retained packet. Synthetic new config, no HAOS auth/TLS mapping or production.",
       "url": "https://github.com/GodsQuantum/Rusty-Home-Open/actions/runs/40584249266",
       "merged_pr": 235
+    },
+    {
+      "id": "haos_real_mqtt_local_auth_qos1_denials_retained_restart",
+      "release_gate": "supervisor_apps_restore",
+      "status": "verified_lab_only",
+      "run_id": 40587712888,
+      "head_sha": "1a387d72c636d9c0ae77887fee900ba639385690",
+      "workflow": "P8dt genuine native Mosquitto login allow-deny from HAOS data",
+      "job": "Real MQTT local Supervisor-option auth and retained restart after HAOS Rust restore",
+      "scope": "Real HAOS18.3 QEMU Mosquitto archive -> private Rust staged data -> genuine rootless MQTT. Fictional official-schema local account allowed, bad and anonymous denied, retained survives fresh OCI. No HA Core user delegation, TLS or production.",
+      "url": "https://github.com/GodsQuantum/Rusty-Home-Open/actions/runs/40587712888",
+      "merged_pr": 237
     }
   ]
 }
