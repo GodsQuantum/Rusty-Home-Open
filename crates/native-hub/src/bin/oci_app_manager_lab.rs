@@ -2,9 +2,11 @@
 //! No root, no household HAOS, no user device access, no production API.
 use hars_native_hub::oci_quadlet::{
     AppNetwork, OciApp, QuadletUnits, bind_native_nested_existing_volume,
-    bind_native_runtime_tmpfs, bind_native_secret, bind_native_sibling_existing_volume,
+    bind_native_runtime_tmpfs, bind_native_secret, bind_native_service_dependency,
+    bind_native_sibling_existing_volume,
 };
 use std::{
+    collections::HashSet,
     env,
     fs::{self, File, OpenOptions},
     io::{self, Write},
@@ -125,6 +127,114 @@ fn require_installed(dir: &Path, slug: &str) -> io::Result<String> {
     installed_file(&b)?;
     Ok(unit)
 }
+// A single rootless-user graph lock covers BOTH provider removal and
+// dependent installation. Keep its inode forever to avoid split-brain locks.
+fn lock_dependency_graph(dir: &Path) -> io::Result<File> {
+    let path = dir.join(".rh-dependency-graph.lock");
+    let file = OpenOptions::new()
+        .read(true)
+        .write(true)
+        .create(true)
+        .mode(0o600)
+        .custom_flags(nix::libc::O_NOFOLLOW)
+        .open(path)?;
+    let m = file.metadata()?;
+    if !m.is_file() || m.uid() != unsafe { nix::libc::geteuid() } || m.mode() & 0o077 != 0 {
+        return Err(denied());
+    }
+    let code =
+        unsafe { nix::libc::flock(file.as_raw_fd(), nix::libc::LOCK_EX | nix::libc::LOCK_NB) };
+    if code != 0 {
+        return Err(denied());
+    }
+    Ok(file)
+}
+
+fn installed_dependency(dir: &Path, slug: &str) -> io::Result<Option<String>> {
+    require_installed(dir, slug)?;
+    let (path, _, _) = unit_paths(dir, slug)?;
+    let content = fs::read_to_string(path)?;
+    let header = format!("[Unit]\nDescription=Rusty Home isolated OCI App {slug} (lab only)\n");
+    if !content.starts_with(&header)
+        || content.matches("[Unit]\n").count() != 1
+        || content.matches("\n[Container]\n").count() != 1
+    {
+        return Err(denied());
+    }
+    let mut binds = Vec::new();
+    let mut after = Vec::new();
+    for line in content.lines() {
+        if let Some(value) = line.strip_prefix("BindsTo=") {
+            binds.push(value);
+        }
+        if let Some(value) = line.strip_prefix("After=") {
+            after.push(value);
+        }
+        if line.starts_with("Requires=") || line.starts_with("Wants=") {
+            return Err(denied());
+        }
+    }
+    if binds.is_empty() && after.is_empty() {
+        return Ok(None);
+    }
+    if binds.len() != 1 || after.len() != 1 || binds[0] != after[0] {
+        return Err(denied());
+    }
+    let name = binds[0]
+        .strip_prefix("rh-")
+        .and_then(|x| x.strip_suffix(".service"))
+        .ok_or_else(denied)?;
+    if !sane_slug(name) || name == slug {
+        return Err(denied());
+    }
+    Ok(Some(name.to_string()))
+}
+
+fn walk_dependency_chain(dir: &Path, root: &str, blocked: Option<&str>) -> io::Result<()> {
+    let mut seen = HashSet::new();
+    let mut current = Some(root.to_string());
+    while let Some(slug) = current {
+        if !seen.insert(slug.clone()) || blocked == Some(slug.as_str()) {
+            return Err(denied());
+        }
+        current = installed_dependency(dir, &slug)?;
+    }
+    Ok(())
+}
+
+fn validate_dependency_chain(dir: &Path, slug: &str, provider: &str) -> io::Result<()> {
+    if !sane_slug(slug) || !sane_slug(provider) || slug == provider {
+        return Err(bad());
+    }
+    walk_dependency_chain(dir, provider, Some(slug))
+}
+
+fn provider_has_dependents(dir: &Path, provider: &str) -> io::Result<bool> {
+    if !sane_slug(provider) {
+        return Err(bad());
+    }
+    let mut has_dependent = false;
+    for entry in fs::read_dir(dir)? {
+        let entry = entry?;
+        let filename = entry.file_name();
+        let filename = filename.to_str().ok_or_else(denied)?;
+        if let Some(slug) = filename
+            .strip_prefix("rh-")
+            .and_then(|name| name.strip_suffix(".container"))
+        {
+            if !sane_slug(slug) {
+                return Err(denied());
+            }
+            // Refuse corrupt/cyclic graphs before touching ANY service.
+            walk_dependency_chain(dir, slug, None)?;
+            if slug != provider && installed_dependency(dir, slug)?.as_deref() == Some(provider) {
+                has_dependent = true;
+            }
+        }
+    }
+    Ok(has_dependent)
+}
+
 fn checked_health_cmd(cmd: &str) -> io::Result<String> {
     if cmd.is_empty() || cmd.len() > 128 || cmd.trim() != cmd || cmd.split(' ').count() > 6 {
         return Err(bad());
@@ -159,6 +269,7 @@ struct InstallExtras<'a> {
     nested_volume: Option<(&'a str, &'a str)>,
     resources: Option<(u16, u16)>,
     sibling_volume: Option<(&'a str, &'a str)>,
+    dependency: Option<&'a str>,
 }
 fn install(
     dir: &Path,
@@ -215,7 +326,12 @@ fn install(
     }
     // Flock is acquired BEFORE checking or writing descriptors: concurrent
     // installers and install/remove/start/switch may never race on a slug.
+    let _graph_guard = lock_dependency_graph(dir)?;
     let _guard = lock_app_install(dir, slug)?;
+    if let Some(provider) = extras.dependency {
+        validate_dependency_chain(dir, slug, provider)?;
+        bind_native_service_dependency(&mut q, slug, provider).map_err(|_| bad())?;
+    }
     // Bind only a previously created native secret in this same rootless store.
     // No creating, reading, printing, or marshalling secret content here.
     if let Some(name) = extras.secret_name {
@@ -242,7 +358,11 @@ fn install(
     Ok(())
 }
 fn remove(dir: &Path, slug: &str) -> io::Result<()> {
+    let _graph_guard = lock_dependency_graph(dir)?;
     let _guard = lock_app(dir, slug)?;
+    if provider_has_dependents(dir, slug)? {
+        return Err(denied());
+    }
     let unit = require_installed(dir, slug)?;
     let (a, b, _) = unit_paths(dir, slug)?;
     if fs::symlink_metadata(a.with_extension("rollback")).is_ok() {
@@ -442,6 +562,20 @@ fn execute() -> io::Result<()> {
             };
             install(&dir, &args[2], &args[3], uid, net, InstallExtras::default())
         }
+        "--install-dependent-lab" if args.len() == 6 => {
+            let uid = args[4].parse::<u32>().map_err(|_| bad())?;
+            install(
+                &dir,
+                &args[2],
+                &args[3],
+                uid,
+                AppNetwork::Offline,
+                InstallExtras {
+                    dependency: Some(&args[5]),
+                    ..Default::default()
+                },
+            )
+        }
         "--start-lab" if args.len() == 3 => {
             let _guard = lock_app(&dir, &args[2])?;
             let unit = require_installed(&dir, &args[2])?;
@@ -567,6 +701,58 @@ fn main() {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn native_dependency_chain_and_provider_removal_are_fenced() {
+        let dir = tempfile::tempdir().unwrap();
+        let image = format!("docker.io/library/redis@sha256:{}", "a".repeat(64));
+        for slug in ["provider", "consumer", "leaf"] {
+            let mut u = OciApp {
+                slug,
+                image: &image,
+                memory_mib: 256,
+                pids_limit: 128,
+                run_uid: Some(999),
+                network: AppNetwork::Offline,
+            }
+            .render()
+            .unwrap();
+            if slug == "consumer" {
+                bind_native_service_dependency(&mut u, slug, "provider").unwrap();
+            }
+            if slug == "leaf" {
+                bind_native_service_dependency(&mut u, slug, "consumer").unwrap();
+            }
+            emit_files(dir.path(), &u).unwrap();
+        }
+        validate_dependency_chain(dir.path(), "newapp", "leaf").unwrap();
+        assert!(provider_has_dependents(dir.path(), "provider").unwrap());
+        assert!(provider_has_dependents(dir.path(), "consumer").unwrap());
+        assert!(!provider_has_dependents(dir.path(), "leaf").unwrap());
+        assert!(validate_dependency_chain(dir.path(), "provider", "leaf").is_err());
+        assert!(validate_dependency_chain(dir.path(), "missing", "absent").is_err());
+        let provider = dir.path().join("rh-provider.container");
+        let old = fs::read_to_string(&provider).unwrap();
+        let corrupted = old.replace(
+            " (lab only)\n",
+            " (lab only)\nBindsTo=rh-leaf.service\nAfter=rh-leaf.service\n",
+        );
+        fs::write(&provider, corrupted).unwrap();
+        assert!(validate_dependency_chain(dir.path(), "newapp", "leaf").is_err());
+        assert!(provider_has_dependents(dir.path(), "provider").is_err());
+    }
+
+    #[test]
+    fn graph_lock_refuses_concurrent_edit_and_symlink() {
+        let dir = tempfile::tempdir().unwrap();
+        let guard = lock_dependency_graph(dir.path()).unwrap();
+        assert!(lock_dependency_graph(dir.path()).is_err());
+        drop(guard);
+        assert!(lock_dependency_graph(dir.path()).is_ok());
+        fs::remove_file(dir.path().join(".rh-dependency-graph.lock")).unwrap();
+        std::os::unix::fs::symlink("/etc/passwd", dir.path().join(".rh-dependency-graph.lock"))
+            .unwrap();
+        assert!(lock_dependency_graph(dir.path()).is_err());
+    }
     #[test]
     fn names_have_no_path_escape() {
         for ok in ["redis", "mealie", "zigbee2mqtt", "test-name-12"] {

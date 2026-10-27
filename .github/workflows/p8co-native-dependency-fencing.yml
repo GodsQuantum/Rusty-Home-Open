@@ -1,0 +1,40 @@
+name: P8co genuine rootless OCI App dependency fencing
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/p8co-native-dependency-fencing.yml"
+      - "scripts/test_p8co_native_dependency_fencing.sh"
+      - "scripts/test_p8co_native_dependency_contract.py"
+      - "crates/native-hub/src/oci_quadlet.rs"
+      - "crates/native-hub/src/bin/oci_app_manager_lab.rs"
+      - "Cargo.lock"
+permissions:
+  contents: read
+jobs:
+  real-native-dependency:
+    name: Real two-App rootless BindsTo/After startup, stop cascade, removal fencing and restart
+    runs-on: ubuntu-24.04
+    timeout-minutes: 23
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Guard code, scope and native dependency contract
+        run: |
+          python3 scripts/test_p8co_native_dependency_contract.py
+          bash -n scripts/test_p8co_native_dependency_fencing.sh
+          cargo fmt --all -- --check
+          cargo test --locked -p hars-native-hub --all-targets
+          cargo clippy --locked -p hars-native-hub --all-targets -- -D warnings
+      - name: Official rootless Podman and user systemd
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends podman uidmap slirp4netns fuse-overlayfs
+          test -x /usr/bin/podman
+          test -S /run/user/$(id -u)/bus
+      - name: Real provider and dependent lifecycle on disposable runner
+        timeout-minutes: 13
+        run: |
+          cargo build --locked -p hars-native-hub --bin oci_app_manager_lab
+          bash scripts/test_p8co_native_dependency_fencing.sh
