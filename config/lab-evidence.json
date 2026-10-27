@@ -626,6 +626,18 @@
       "scope": "Genuine HAOS18.3 Core+Supervisor+official File Editor in QEMU; real App ingress rejects missing/invalid cookies and spoofed identity headers, actual backend HTML passes, original SHA preserved. No authorized browser login or production.",
       "url": "https://github.com/GodsQuantum/Rusty-Home-Open/actions/runs/40570517179",
       "merged_pr": 227
+    },
+    {
+      "id": "haos_real_second_official_mosquitto_app_native_rust_escrow",
+      "release_gate": "supervisor_apps_restore",
+      "status": "verified_lab_only",
+      "run_id": 40576301895,
+      "head_sha": "821a972e3b02422120bcd139f54f955a6e87afc1",
+      "workflow": "P8do second genuine HAOS18.3 Supervisor Mosquitto App to native Rust",
+      "job": "Genuine Mosquitto Supervisor App-only backup enters native Rust private stage",
+      "scope": "Real HAOS18.3 QEMU Supervisor Mosquitto App-only archive -> native Rust SHA private inactive data, fictional bytes exact, atomic fault rollback and tamper denial. No broker runtime or production.",
+      "url": "https://github.com/GodsQuantum/Rusty-Home-Open/actions/runs/40576301895",
+      "merged_pr": 230
     }
   ]
 }

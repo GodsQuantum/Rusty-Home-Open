@@ -4,6 +4,10 @@ PR #224 MERGED squash main `e041856271950b0338251e6015f366bd452f920f`, exact ori
 
 # Rusty Home — journal de développement et de certification
 
+## 27 October — P8dp exact genuine Mosquitto App lab evidence [VERIFIED]
+
+After P8do #230 source 821a972e3b02422120bcd139f54f955a6e87afc1 merged main 887b33c39eae27e6b22c179efdeac1ace3275324, all 10 CI checks green. Real official QEMU HAOS18.3 Supervisor App core_mosquitto genuine backup and Rust SHA native escrow/stage, exact fictional marker, precommit failure/tamper refusal, run 40576301895/job 122443536695 PASS JUnit 3/3. Register 54th lab-only machine claim (50 distinct GH run IDs), no native MQTT execution, production 0/15 and App capability ladder 5/10.
+
 ## 27 October — P8do genuine second HAOS App Supervisor source [CI PENDING]
 
 Different official core_mosquitto App in brand-new pinned HAOS18.3 QEMU, genuine Supervisor install and selected-App-only backup: copied SHA-exact to bounded Rust importer/escrow, real App-specific fixture bytes staged in private inactive source directory, injected fault and tamper denial. A second App class is critical to avoid successful File Editor tests masking format assumptions. Neither MQTT network listeners nor functional native broker are claimed. CI pending and gate status unchanged.
