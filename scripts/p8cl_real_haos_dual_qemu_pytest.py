@@ -11,6 +11,15 @@ import json
 import pytest
 import re
 
+def write_guest_bytes_over_serial(shell, data, destination, staging):
+    """Bounded single-line console commands: labgrid/HAOS serial truncates long input."""
+    encoded = base64.b64encode(data).decode("ascii")
+    shell.run_check(": > " + staging)
+    for offset in range(0, len(encoded), 96):
+        chunk = encoded[offset:offset + 96]
+        shell.run_check("printf %s " + chunk + " >> " + staging)
+    shell.run_check("base64 -d " + staging + " > " + destination + " && rm -f " + staging)
+
 @pytest.mark.dependency(depends=["test_start_supervisor"])
 @pytest.mark.timeout(900)
 def test_hars_dual_inactive_automation_source(shell,shell_json):
@@ -29,11 +38,10 @@ def test_hars_dual_inactive_automation_source(shell,shell_json):
         {"entity_id":"light.lab_entry","platform":"fictional_lab",
          "unique_id":"fictional_lab_entry_serial","config_entry_id":"fictional_config_6"}]}},
         separators=(",",":"),sort_keys=True).encode()
-    encoded=base64.b64encode(fake).decode("ascii")
     home="/mnt/data/supervisor/homeassistant/.storage"
     source=home+"/core.entity_registry"
     shell.run_check("mkdir -p "+home)
-    shell.run_check("sh -c 'printf %s "+encoded+" | base64 -d > "+source+"'")
+    write_guest_bytes_over_serial(shell, fake, source, "/tmp/p8cl-registry.b64")
     # A new DISTINCT fixture alongside the prior 2-entity Core identity test.
     # The file is inert and never executed by the disposable Core.
     fixture=Path(os.environ["GITHUB_WORKSPACE"])/"scripts/fixtures/p8cl_two_inactive_haos_automations.yaml"
@@ -41,9 +49,8 @@ def test_hars_dual_inactive_automation_source(shell,shell_json):
     assert automation.count(b"  initial_state: false")==2
     assert b"p8cl_second_disabled_lab_door" in automation
     assert b"initial_state: true" not in automation
-    encoded_automation=base64.b64encode(automation).decode("ascii")
     automation_path="/mnt/data/supervisor/homeassistant/automations.yaml"
-    shell.run_check("sh -c 'printf %s "+encoded_automation+" | base64 -d > "+automation_path+"'")
+    write_guest_bytes_over_serial(shell, automation, automation_path, "/tmp/p8cl-automations.b64")
     assert shell.run_check("sha256sum "+automation_path)[0].split()[0] == hashlib.sha256(automation).hexdigest()
     result=shell.run_check("sha256sum "+source)
     assert len(result)==1

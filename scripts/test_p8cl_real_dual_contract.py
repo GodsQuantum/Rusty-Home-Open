@@ -20,6 +20,11 @@ for cli in (
  "python3 scripts/test_p8cl_real_haos_dual_backup.py --archive",
 ):
  assert cli in w,cli
+assert "def write_guest_bytes_over_serial(" in g
+assert "for offset in range(0, len(encoded), 96):" in g
+assert "write_guest_bytes_over_serial(shell, fake, source" in g
+assert "write_guest_bytes_over_serial(shell, automation, automation_path" in g
+assert "sh -c 'printf %s " not in g, "unbounded QEMU serial input regressed"
 assert y.count("  initial_state: false")==2
 assert "initial_state: true" not in y
 assert y.count("\n- id: ")==1 and y.startswith("- id: ")
