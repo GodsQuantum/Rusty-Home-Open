@@ -686,6 +686,18 @@
       "scope": "Real HAOS18.3 QEMU Mosquitto archive -> private Rust staged data -> genuine rootless MQTT. Fictional official-schema local account allowed, bad and anonymous denied, retained survives fresh OCI. No HA Core user delegation, TLS or production.",
       "url": "https://github.com/GodsQuantum/Rusty-Home-Open/actions/runs/40587712888",
       "merged_pr": 237
+    },
+    {
+      "id": "haos_real_mqtt_mtls_trusted_client_untrusted_denials",
+      "release_gate": "supervisor_apps_restore",
+      "status": "verified_lab_only",
+      "run_id": 40593774502,
+      "head_sha": "8ea38229ad5775cb4f324a8837b76377849d4ad9",
+      "workflow": "P8dw actual mutual TLS MQTT broker on official HAOS-restored data",
+      "job": "Real MQTT TLS and client certificate verification on SHA-bound HAOS App data",
+      "scope": "Genuine HAOS18.3 QEMU Mosquitto backup to Rust private files and real OCI MQTT TLS/mTLS. Ephemeral CA/client/server; authorized QoS1 retained after new OCI, no/rogue client or untrusted server CA denied. Not real SSL options or production.",
+      "url": "https://github.com/GodsQuantum/Rusty-Home-Open/actions/runs/40593774502",
+      "merged_pr": 239
     }
   ]
 }
