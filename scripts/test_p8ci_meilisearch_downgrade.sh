@@ -140,7 +140,7 @@ install "$STAGE" "$OLD"
 # A checksum-valid archive alone does NOT establish application compatibility.
 manager --start-lab "$STAGE" > "$WORK/old-start.log" 2>&1 || true
 failed=0
-for _ in $(seq 1 60); do
+for _ in $(seq 1 18); do
   state="$(systemctl --user is-active "rh-$STAGE.service" 2>/dev/null || true)"
   if [[ "$state" == failed || "$state" == inactive ]]; then failed=1; break; fi
   if [[ "$state" == active ]] && helper "$STAGE" '
@@ -153,8 +153,11 @@ with urllib.request.urlopen("http://127.0.0.1:7700/health",timeout=2) as r:
   fi
   sleep .4
 done
-test "$failed" = 1
 journalctl --user -u "rh-$STAGE.service" --no-pager > "$WORK/old-journal.log" 2>&1 || true
+echo "P8CI_STAGE_DIAGNOSTIC state=$state failed=$failed" >&2
+systemctl --user show "rh-$STAGE.service" -p NRestarts -p ExecMainStatus -p ActiveState -p SubState >&2 || true
+tail -65 "$WORK/old-journal.log" >&2
+test "$failed" = 1
 if ! grep -Eiq '(database|version).*(incompatib|newer|downgrad|old|mismatch)|(incompatib|newer|downgrad|mismatch).*(database|version)' "$WORK/old-journal.log"; then
   echo 'No version-specific rejection in genuine application logs:' >&2
   tail -55 "$WORK/old-journal.log" >&2
