@@ -15,16 +15,20 @@ source_slug=vector-source
 restore_slug=vector-restore
 source_vol=rh-vector-source-data
 restore_vol=rh-vector-restore-data
+source_snap=rh-vector-source-extra
+restore_snap=rh-vector-restore-extra
 test ! -e "$QD/rh-$source_slug.container"
 test ! -e "$QD/rh-$restore_slug.container"
 ! podman volume exists "$source_vol"
 ! podman volume exists "$restore_vol"
+! podman volume exists "$source_snap"
+! podman volume exists "$restore_snap"
 WORK="$(mktemp -d "$(printenv RUNNER_TEMP)/p8cf-qdrant-XXXXXX")"
 chmod 0700 "$WORK"
 cleanup() {
  HARS_DISPOSABLE_OCI_LAB=1 "$BIN" --remove-lab "$restore_slug" >/dev/null 2>&1 || true
  HARS_DISPOSABLE_OCI_LAB=1 "$BIN" --remove-lab "$source_slug" >/dev/null 2>&1 || true
- podman volume rm "$restore_vol" "$source_vol" >/dev/null 2>&1 || true
+ podman volume rm "$restore_snap" "$source_snap" "$restore_vol" "$source_vol" >/dev/null 2>&1 || true
  rm -rf "$WORK"
 }
 trap cleanup EXIT
@@ -41,17 +45,22 @@ PY_IMAGE="$(podman image inspect docker.io/library/python:3.12-alpine --format '
 
 # Upstream Qdrant binary and config untouched. Isolated offline UID 1000,
 # native persistent storage and immutable image; no host port publication.
-HARS_DISPOSABLE_OCI_LAB=1 "$BIN" --install-path-resources-lab  "$source_slug" "$IMAGE" 1000 /qdrant/storage 1024 256
+# Official Qdrant also writes /qdrant/snapshots/tmp at REST startup.
+# Keep rootfs READONLY and explicitly mount second private named volume.
+podman volume create "$source_snap" >/dev/null
+HARS_DISPOSABLE_OCI_LAB=1 "$BIN" --install-path-resources-lab  "$source_slug" "$IMAGE" 1000 /qdrant/storage 1024 256 "$source_snap" /qdrant/snapshots
 test "$(systemctl --user is-active rh-$source_slug.service)" = inactive
 test "$(stat -c %a "$QD/rh-$source_slug.container")" = 600
 grep -F 'MemoryMax=1024M' "$QD/rh-$source_slug.container"
 grep -F 'PidsLimit=256' "$QD/rh-$source_slug.container"
+grep -F "Volume=$source_snap:/qdrant/snapshots:U" "$QD/rh-$source_slug.container"
 HARS_DISPOSABLE_OCI_LAB=1 "$BIN" --start-lab "$source_slug"
 assert_offline() {
  test "$(podman inspect "$1" --format '{{.HostConfig.NetworkMode}}')" = none
  test "$(podman inspect "$1" --format '{{.HostConfig.ReadonlyRootfs}}')" = true
  test "$(podman inspect "$1" --format '{{.Config.User}}')" = 1000
  test "$(podman inspect "$1" --format '{{range .Mounts}}{{if eq .Destination "/qdrant/storage"}}{{.Name}}{{end}}{{end}}')" = "$2"
+ test "$(podman inspect "$1" --format '{{range .Mounts}}{{if eq .Destination "/qdrant/snapshots"}}{{.Name}}{{end}}{{end}}')" = "$3"
 }
 probe() {
  local container="$1" action="$2"
@@ -112,7 +121,7 @@ except Exception:sys.exit(1)' >/dev/null 2>&1; then return 0; fi
  return 1
 }
 ready rh-vector-source
-assert_offline rh-vector-source "$source_vol"
+assert_offline rh-vector-source "$source_vol" "$source_snap"
 probe rh-vector-source init
 HARS_DISPOSABLE_OCI_LAB=1 "$BIN" --stop-lab "$source_slug"
 ! podman ps --format '{{.Names}}' | grep -Fx rh-vector-source
@@ -122,6 +131,14 @@ podman volume export --output "$ARCHIVE" "$source_vol"
 chmod 0600 "$ARCHIVE"
 test -s "$ARCHIVE"
 test "$(stat -c %a "$ARCHIVE")" = 600
+# Export BOTH official Qdrant persistent volumes while writer is STOPPED.
+SNAP_ARCHIVE="$WORK/qdrant-snapshots-private.tar"
+podman volume export --output "$SNAP_ARCHIVE" "$source_snap"
+chmod 0600 "$SNAP_ARCHIVE"
+test -s "$SNAP_ARCHIVE"
+test "$(stat -c %a "$SNAP_ARCHIVE")" = 600
+SNAP_SHA="$(sha256sum "$SNAP_ARCHIVE" | cut -d' ' -f1)"
+echo "$SNAP_SHA  $SNAP_ARCHIVE" | sha256sum -c
 tar -tf "$ARCHIVE" > "$WORK/volume-manifest.txt"
 grep -Eq '(^|/)collections/' "$WORK/volume-manifest.txt"
 SHA="$(sha256sum "$ARCHIVE" | cut -d' ' -f1)"
@@ -142,16 +159,21 @@ echo P8CF_QDRANT_SOURCE_COMMITTED_SECOND_VECTOR_POST_BACKUP_PASS
 podman volume create "$restore_vol" >/dev/null
 echo "$SHA  $ARCHIVE" | sha256sum -c
 podman volume import "$restore_vol" "$ARCHIVE"
-HARS_DISPOSABLE_OCI_LAB=1 "$BIN" --install-path-resources-lab  "$restore_slug" "$IMAGE" 1000 /qdrant/storage 1024 256
+! podman volume exists "$restore_snap"
+podman volume create "$restore_snap" >/dev/null
+echo "$SNAP_SHA  $SNAP_ARCHIVE" | sha256sum -c
+podman volume import "$restore_snap" "$SNAP_ARCHIVE"
+HARS_DISPOSABLE_OCI_LAB=1 "$BIN" --install-path-resources-lab  "$restore_slug" "$IMAGE" 1000 /qdrant/storage 1024 256 "$restore_snap" /qdrant/snapshots
 test "$(systemctl --user is-active rh-$restore_slug.service)" = inactive
 HARS_DISPOSABLE_OCI_LAB=1 "$BIN" --start-lab "$restore_slug"
 ready rh-vector-restore
-assert_offline rh-vector-restore "$restore_vol"
+assert_offline rh-vector-restore "$restore_vol" "$restore_snap"
 probe rh-vector-restore first
 probe rh-vector-source both
 echo P8CF_EIGHTH_REAL_VECTOR_DATABASE_INDEPENDENT_RESTORE_POINT_IN_TIME_PASS
 
 HARS_DISPOSABLE_OCI_LAB=1 "$BIN" --remove-lab "$restore_slug"
 podman volume exists "$restore_vol"
+podman volume exists "$restore_snap"
 probe rh-vector-source both
 echo P8CF_RESTORED_VECTOR_APP_REMOVAL_PRESERVES_SOURCE_AND_CHECKPOINT_PASS
