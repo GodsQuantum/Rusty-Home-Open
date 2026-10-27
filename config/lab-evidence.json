@@ -446,6 +446,18 @@
       "scope": "Three real rootless Redis 7.4 Apps in native BindsTo+After chain: leaf-only start, intermediate removal denied, root SIGKILL auto-restart stops both dependents, leaf-only recovery retains three independent RDB keys. Disposable CI only; no production.",
       "url": "https://github.com/GodsQuantum/Rusty-Home-Open/actions/runs/40457223331",
       "merged_pr": 196
+    },
+    {
+      "id": "oci_native_health_ready_dependency_failure_fencing",
+      "release_gate": "apps_9_lifecycle",
+      "status": "verified_lab_only",
+      "run_id": 40463298099,
+      "head_sha": "ebccb083e8cd66e7ec0a0fe63a048cdff670f355",
+      "workflow": "P8cq native health readiness and dependent failure fencing",
+      "job": "Real rootless Redis health readiness, dependent gating and live health failure",
+      "scope": "Real Redis 7.4, rootless Podman 5: unhealthy running provider blocks child; native Notify=healthy gates two Apps; CLIENT PAUSE triggers native health kill, provider restart, child stop and RDB-preserving recovery. Isolated CI, no production.",
+      "url": "https://github.com/GodsQuantum/Rusty-Home-Open/actions/runs/40463298099",
+      "merged_pr": 198
     }
   ]
 }
