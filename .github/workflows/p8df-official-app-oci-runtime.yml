@@ -5,6 +5,8 @@ on:
       - ".github/workflows/p8df-official-app-oci-runtime.yml"
       - "scripts/test_p8df_official_app_runtime.py"
       - "scripts/test_p8df_official_app_runtime_contract.py"
+      - "scripts/test_p8di_official_app_crash_restart.py"
+      - "scripts/test_p8di_official_app_crash_restart_contract.py"
       - "crates/interop-moli/src/app_backup_import.rs"
       - "crates/interop-moli/src/app_backup_stage.rs"
       - "scripts/test_p8cy_real_supervisor_app_to_native_files.py"
@@ -43,6 +45,7 @@ jobs:
           python3 scripts/test_p8cy_inactive_app_scope_contract.py
           python3 scripts/test_p8cy_native_inactive_app_stage.py --binary target/debug/ha_registry_stager
           python3 scripts/test_p8df_official_app_runtime_contract.py
+          python3 scripts/test_p8di_official_app_crash_restart_contract.py
           python3 -m py_compile scripts/test_p8df_official_app_runtime.py
           python3 scripts/test_p8cu_partial_app_preflight.py
           python3 scripts/test_p8cu_plugin_update_logic.py
