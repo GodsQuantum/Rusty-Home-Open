@@ -60,7 +60,11 @@ def test_hars_official_file_editor_app_only_partial_export(shell,shell_json):
                       else "network" if "network" in message.lower() or "pull" in message.lower()
                       else "permission" if "permission" in message.lower()
                       else "other")
-            raise AssertionError("Official File Editor installation denied category="+category)
+            diagnostic=re.sub(r"[a-zA-Z0-9_-]{32,}", "[opaque]",
+                              message.replace("\\n"," "))[:190]
+            diagnostic=re.sub(r"[^a-zA-Z0-9 _.,:/()+=-]", "_",diagnostic)
+            raise AssertionError("Official File Editor installation denied category="
+                                 +category+" detail="+diagnostic)
         added=True
         data=shell_json("ha apps info "+slug+" --no-progress --raw-json",timeout=100).get("data") or {}
         assert data.get("slug")==slug
