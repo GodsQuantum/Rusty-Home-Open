@@ -9,7 +9,7 @@ use std::{
     collections::HashSet,
     env,
     fs::{self, File, OpenOptions},
-    io::{self, Write},
+    io::{self, Read, Write},
     os::unix::{
         fs::{MetadataExt, OpenOptionsExt, PermissionsExt},
         io::AsRawFd,
@@ -348,6 +348,7 @@ fn install(
     // Flock is acquired BEFORE checking or writing descriptors: concurrent
     // installers and install/remove/start/switch may never race on a slug.
     let _graph_guard = lock_dependency_graph(dir)?;
+    ensure_no_pair_journal(dir)?;
     let _guard = lock_app_install(dir, slug)?;
     if let Some(provider) = extras.dependency {
         validate_dependency_chain(dir, slug, provider)?;
@@ -471,6 +472,7 @@ fn install_pair(
 ) -> io::Result<()> {
     let (a, b) = pair_units(provider, dependent, provider_image, dependent_image, uid)?;
     let _graph_guard = lock_dependency_graph(dir)?;
+    ensure_no_pair_journal(dir)?;
     let mut names = [provider, dependent];
     names.sort_unstable();
     let _locks = [
@@ -482,8 +484,142 @@ fn install_pair(
     publish_pair(dir, &a, &b, || systemctl(&["--user", "daemon-reload"]))
 }
 
+// P8cs: a single durable intent per rootless user. This journal is written
+// and fsynced BEFORE the first native systemd start. A crashed coordinator
+// leaves the pair fenced until an explicit, conservative stop-only recovery.
+// No runtime data, volumes, or pre-existing services are ever deleted.
+const PAIR_START_JOURNAL: &str = ".rh-start-pair.journal";
+fn pair_journal_path(dir: &Path) -> PathBuf {
+    dir.join(PAIR_START_JOURNAL)
+}
+fn ensure_no_pair_journal(dir: &Path) -> io::Result<()> {
+    match fs::symlink_metadata(pair_journal_path(dir)) {
+        Err(e) if e.kind() == io::ErrorKind::NotFound => Ok(()),
+        _ => Err(denied()),
+    }
+}
+fn read_pair_journal(dir: &Path) -> io::Result<(String, String)> {
+    let mut file = OpenOptions::new()
+        .read(true)
+        .custom_flags(nix::libc::O_NOFOLLOW)
+        .open(pair_journal_path(dir))?;
+    let m = file.metadata()?;
+    if !m.is_file()
+        || m.uid() != unsafe { nix::libc::geteuid() }
+        || m.mode() & 0o077 != 0
+        || m.len() > 150
+    {
+        return Err(denied());
+    }
+    let mut content = String::new();
+    file.read_to_string(&mut content)?;
+    let mut lines = content.lines();
+    if lines.next() != Some("P8CS1") {
+        return Err(denied());
+    }
+    let provider = lines.next().ok_or_else(denied)?;
+    let child = lines.next().ok_or_else(denied)?;
+    if lines.next().is_some()
+        || !content.ends_with('\n')
+        || !sane_slug(provider)
+        || !sane_slug(child)
+        || provider == child
+        || installed_dependency(dir, child)?.as_deref() != Some(provider)
+    {
+        return Err(denied());
+    }
+    require_installed(dir, provider)?;
+    Ok((provider.to_owned(), child.to_owned()))
+}
+fn pair_locks<'a>(dir: &Path, provider: &'a str, child: &'a str) -> io::Result<[File; 2]> {
+    if provider == child || !sane_slug(provider) || !sane_slug(child) {
+        return Err(bad());
+    }
+    let mut names = [provider, child];
+    names.sort_unstable();
+    Ok([lock_app(dir, names[0])?, lock_app(dir, names[1])?])
+}
+fn pair_active(slug: &str) -> io::Result<bool> {
+    if !sane_slug(slug) {
+        return Err(bad());
+    }
+    Ok(systemctl(&[
+        "--user",
+        "is-active",
+        "--quiet",
+        &format!("rh-{slug}.service"),
+    ])
+    .is_ok())
+}
+fn recover_pair_locked(dir: &Path, provider: &str, child: &str) -> io::Result<()> {
+    let (recorded_provider, recorded_child) = read_pair_journal(dir)?;
+    if (recorded_provider.as_str(), recorded_child.as_str()) != (provider, child) {
+        return Err(denied());
+    }
+    // Always stop dependent first; if either stop fails, keep the durable
+    // journal to prevent a later invocation claiming a successful rollback.
+    let child_stop = systemctl(&["--user", "stop", &format!("rh-{child}.service")]);
+    let provider_stop = systemctl(&["--user", "stop", &format!("rh-{provider}.service")]);
+    child_stop?;
+    provider_stop?;
+    if pair_active(provider)? || pair_active(child)? {
+        return Err(io::Error::other("pair still active after recovery"));
+    }
+    fs::remove_file(pair_journal_path(dir))?;
+    File::open(dir)?.sync_all()
+}
+fn start_pair(dir: &Path, provider: &str, child: &str) -> io::Result<()> {
+    let _graph = lock_dependency_graph(dir)?;
+    ensure_no_pair_journal(dir)?;
+    let _locks = pair_locks(dir, provider, child)?;
+    require_installed(dir, provider)?;
+    if installed_dependency(dir, child)?.as_deref() != Some(provider) {
+        return Err(denied());
+    }
+    // Never stop services that were active before this invocation.
+    if pair_active(provider)? || pair_active(child)? {
+        return Err(denied());
+    }
+    let journal = pair_journal_path(dir);
+    write_private_new(&journal, &format!("P8CS1\n{provider}\n{child}\n"))?;
+    File::open(dir)?.sync_all()?;
+    let start = (|| {
+        systemctl(&["--user", "start", &format!("rh-{provider}.service")])?;
+        if !pair_active(provider)? {
+            return Err(io::Error::other("provider did not become active"));
+        }
+        // Only a disposable GitHub runner can trigger this deliberate
+        // coordinator SIGKILL. Recovery must occur in a separate process.
+        if env::var("HARS_P8CS_KILL_AFTER_PROVIDER").as_deref() == Ok("1")
+            && env::var("GITHUB_ACTIONS").as_deref() == Ok("true")
+        {
+            unsafe { nix::libc::kill(nix::libc::getpid(), nix::libc::SIGKILL) };
+        }
+        systemctl(&["--user", "start", &format!("rh-{child}.service")])?;
+        if !pair_active(provider)? || !pair_active(child)? {
+            return Err(io::Error::other(
+                "pair failed post-start health of systemd units",
+            ));
+        }
+        Ok(())
+    })();
+    if let Err(original) = start {
+        recover_pair_locked(dir, provider, child)?;
+        return Err(original);
+    }
+    fs::remove_file(journal)?;
+    File::open(dir)?.sync_all()
+}
+fn recover_pair(dir: &Path) -> io::Result<()> {
+    let _graph = lock_dependency_graph(dir)?;
+    let (provider, child) = read_pair_journal(dir)?;
+    let _locks = pair_locks(dir, &provider, &child)?;
+    recover_pair_locked(dir, &provider, &child)
+}
+
 fn remove(dir: &Path, slug: &str) -> io::Result<()> {
     let _graph_guard = lock_dependency_graph(dir)?;
+    ensure_no_pair_journal(dir)?;
     let _guard = lock_app(dir, slug)?;
     if provider_has_dependents(dir, slug)? {
         return Err(denied());
@@ -599,6 +735,8 @@ fn restart_from_unit(unit: &str) -> io::Result<()> {
     systemctl(&["--user", "is-active", "--quiet", unit])
 }
 fn switch_image(dir: &Path, slug: &str, expected: &str, new_image: &str) -> io::Result<()> {
+    let _graph_guard = lock_dependency_graph(dir)?;
+    ensure_no_pair_journal(dir)?;
     let _guard = lock_app(dir, slug)?;
     validate_digest(slug, expected)?;
     validate_digest(slug, new_image)?;
@@ -630,6 +768,8 @@ fn switch_image(dir: &Path, slug: &str, expected: &str, new_image: &str) -> io::
     Ok(())
 }
 fn rollback_image(dir: &Path, slug: &str) -> io::Result<()> {
+    let _graph_guard = lock_dependency_graph(dir)?;
+    ensure_no_pair_journal(dir)?;
     let _guard = lock_app(dir, slug)?;
     let (path, _, unit) = unit_paths(dir, slug)?;
     installed_file(&path)?;
@@ -666,11 +806,13 @@ fn execute() -> io::Result<()> {
         return Err(denied());
     }
     let args = env::args().collect::<Vec<_>>();
-    if args.len() < 3 {
+    if args.len() < 2 {
         return Err(bad());
     }
     let dir = units_dir()?;
     match args[1].as_str() {
+        "--start-pair-transaction-lab" if args.len() == 4 => start_pair(&dir, &args[2], &args[3]),
+        "--recover-start-pair-lab" if args.len() == 2 => recover_pair(&dir),
         "--install-lab" if args.len() == 5 || args.len() == 7 => {
             let uid = args[4].parse::<u32>().map_err(|_| bad())?;
             let net = if args.len() == 7 {
@@ -706,11 +848,15 @@ fn execute() -> io::Result<()> {
             )
         }
         "--start-lab" if args.len() == 3 => {
+            let _graph_guard = lock_dependency_graph(&dir)?;
+            ensure_no_pair_journal(&dir)?;
             let _guard = lock_app(&dir, &args[2])?;
             let unit = require_installed(&dir, &args[2])?;
             systemctl(&["--user", "start", &unit])
         }
         "--stop-lab" if args.len() == 3 => {
+            let _graph_guard = lock_dependency_graph(&dir)?;
+            ensure_no_pair_journal(&dir)?;
             let _guard = lock_app(&dir, &args[2])?;
             let unit = require_installed(&dir, &args[2])?;
             systemctl(&["--user", "stop", &unit])
@@ -861,6 +1007,40 @@ fn main() {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn durable_pair_journal_validates_identity_and_refuses_tampering() {
+        let dir = tempfile::tempdir().unwrap();
+        let digest = format!("docker.io/library/redis@sha256:{}", "a".repeat(64));
+        let (a, b) =
+            pair_units("durable-provider", "durable-child", &digest, &digest, 999).unwrap();
+        publish_pair(dir.path(), &a, &b, || Ok(())).unwrap();
+        let journal = pair_journal_path(dir.path());
+        assert!(ensure_no_pair_journal(dir.path()).is_ok());
+        write_private_new(&journal, "P8CS1\ndurable-provider\ndurable-child\n").unwrap();
+        assert!(ensure_no_pair_journal(dir.path()).is_err());
+        assert_eq!(
+            read_pair_journal(dir.path()).unwrap(),
+            ("durable-provider".into(), "durable-child".into())
+        );
+        assert_eq!(
+            fs::metadata(&journal).unwrap().permissions().mode() & 0o777,
+            0o600
+        );
+        fs::write(&journal, "P8CS1\ndurable-child\ndurable-provider\n").unwrap();
+        assert!(read_pair_journal(dir.path()).is_err());
+        fs::write(&journal, "P8CS1\ndurable-provider\ndurable-child\nextra\n").unwrap();
+        assert!(read_pair_journal(dir.path()).is_err());
+        fs::write(&journal, "P8CS1\ndurable-provider\ndurable-child\n").unwrap();
+        fs::set_permissions(&journal, fs::Permissions::from_mode(0o644)).unwrap();
+        assert!(read_pair_journal(dir.path()).is_err());
+        fs::remove_file(&journal).unwrap();
+        std::os::unix::fs::symlink("/etc/passwd", &journal).unwrap();
+        assert!(read_pair_journal(dir.path()).is_err());
+        assert!(ensure_no_pair_journal(dir.path()).is_err());
+        fs::remove_file(journal).unwrap();
+        assert!(ensure_no_pair_journal(dir.path()).is_ok());
+    }
     #[test]
     fn atomic_pair_real_filesystem_and_reload_failure() {
         let dir = tempfile::tempdir().unwrap();
