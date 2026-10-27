@@ -1,0 +1,39 @@
+name: P8cg Ninth distinct real stateful OCI App - Meilisearch full-text index restore
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/p8cg-meilisearch-fulltext-restore.yml"
+      - "scripts/test_p8cg_meilisearch_fulltext_restore.sh"
+      - "scripts/test_p8cg_meilisearch_restore_contract.py"
+      - "crates/native-hub/**"
+      - "Cargo.lock"
+permissions:
+  contents: read
+jobs:
+  actual-ninth-fulltext-restore:
+    name: Real offline Meilisearch full-text HTTP indexing and independent point-in-time restore
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Fail-closed offline scope, source and Python probe syntax
+        run: |
+          python3 scripts/test_p8cg_meilisearch_restore_contract.py
+          bash -n scripts/test_p8cg_meilisearch_fulltext_restore.sh
+          cargo fmt --all -- --check
+          cargo test --locked -p hars-native-hub --all-targets
+          cargo clippy --locked -p hars-native-hub --all-targets -- -D warnings
+      - name: Official Podman rootless systemd user runner
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends podman uidmap slirp4netns fuse-overlayfs
+          test -x /usr/bin/podman
+          test -S /run/user/$(id -u)/bus
+      - name: Genuine ninth upstream full-text engine data restoration
+        timeout-minutes: 10
+        run: |
+          cargo build --locked -p hars-native-hub --bin oci_app_manager_lab
+          bash scripts/test_p8cg_meilisearch_fulltext_restore.sh
