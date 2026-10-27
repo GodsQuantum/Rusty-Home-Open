@@ -698,6 +698,18 @@
       "scope": "Genuine HAOS18.3 QEMU Mosquitto backup to Rust private files and real OCI MQTT TLS/mTLS. Ephemeral CA/client/server; authorized QoS1 retained after new OCI, no/rogue client or untrusted server CA denied. Not real SSL options or production.",
       "url": "https://github.com/GodsQuantum/Rusty-Home-Open/actions/runs/40593774502",
       "merged_pr": 239
+    },
+    {
+      "id": "haos_real_dual_apps_atomic_sigkill",
+      "release_gate": "supervisor_apps_restore",
+      "status": "verified_lab_only",
+      "run_id": 40597441250,
+      "head_sha": "51456cc8d4201b57bba7421005a82dea3a8e36ce",
+      "workflow": "P8du two genuine official HAOS Apps atomic native Rust private pair",
+      "job": "Real two HAOS App archives from same guest, Rust atomic SIGKILL retry",
+      "scope": "Official disposable HAOS18.3 QEMU: File Editor and Mosquitto installed together, two genuine App-only backups from same boot. Native Rust SHA escrow, real SIGKILL after first stage, no partial publish, atomic retry, corrupted second archive denied.",
+      "url": "https://github.com/GodsQuantum/Rusty-Home-Open/actions/runs/40597441250",
+      "merged_pr": 241
     }
   ]
 }
