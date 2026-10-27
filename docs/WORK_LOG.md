@@ -12,6 +12,10 @@ PR #224 MERGED squash main `e041856271950b0338251e6015f366bd452f920f`, exact ori
 
 # Rusty Home — journal de développement et de certification
 
+## 27 October — P8dt guarded local account Mosquitto auth on real HAOS restored data [CI pending]
+
+Only documented Supervisor local-login subset from synthetically constructed options, hashed via real upstream interactive password utility without secret on argv; refuses HA delegated users, prehashed HA plugin format, custom configs, TLS and incomplete credential security. Tests will assert real accepted/denied MQTT and retained new-OCI restart after official HAOS Mosquitto data native Rust stage. No real credentials or production modifications. App lane 5/10, production 0/15.
+
 ## 27 October — P8ds exact genuine MQTT QoS1 retained runtime proof [VERIFIED]
 
 PR #235 source 3aacb7ae71586c052d4c00d13298a47e4a0d4312, squash main 77354dcbc307321eb5268a605439901d32aa94c2, 10/10 green. Actual HAOS18.3 QEMU core_mosquitto selected-App-only backup, native Rust SHA verified private bytes, real Eclipse Mosquitto OCI MQTT QoS1 pub/sub, retained packet persisted across NEW OCI instance, no host port/network, all original SHA preserved. Run 40584249266 job 122471395882 SUCCESS; QEMU JUnit 3/3. 57 lab-only claims across 53 successful run IDs. Full HAOS App options/credentials/TLS NOT migrated, App lane 5/10 and production 0/15.
