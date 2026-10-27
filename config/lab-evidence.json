@@ -374,6 +374,18 @@
       "scope": "Real rootless Meilisearch 1.55 indexed SHA-valid checkpoint refused by 1.54 with version mismatch and native restart; failed stage removed, source intact; compatible 1.55 retry restored old search after restart.",
       "url": "https://github.com/GodsQuantum/Rusty-Home-Open/actions/runs/40440140111",
       "merged_pr": 185
+    },
+    {
+      "id": "haos_sha_bound_disabled_automation_multi_preview",
+      "release_gate": "haos_backup_restore",
+      "status": "verified_lab_only",
+      "run_id": 40441235808,
+      "head_sha": "81ff9a945a00f46aab2f720e4d0b0741283d16b3",
+      "workflow": "P8aa Genuine HAOS Backup to Native Rust Staging",
+      "job": "Genuine disposable HAOS 18.3 Supervisor backup into private native Rust and rollback",
+      "scope": "Real HAOS18.3 Supervisor SHA-bound one-item disabled-YAML preview; independent private Rust importer of synthetic two-item disabled list, unsafe mixed batch refused without actions. Not genuine multi-HAOS or production.",
+      "url": "https://github.com/GodsQuantum/Rusty-Home-Open/actions/runs/40441235808",
+      "merged_pr": 187
     }
   ]
 }
