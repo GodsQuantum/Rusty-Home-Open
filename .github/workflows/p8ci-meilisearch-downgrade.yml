@@ -1,0 +1,40 @@
+name: P8ci real Meilisearch version-downgrade fail-closed recovery
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/p8ci-meilisearch-downgrade.yml"
+      - "scripts/test_p8ci_meilisearch_downgrade.sh"
+      - "scripts/test_p8ci_meilisearch_downgrade_contract.py"
+      - "crates/native-hub/src/oci_quadlet.rs"
+      - "crates/native-hub/src/bin/oci_app_manager_lab.rs"
+      - "Cargo.lock"
+permissions:
+  contents: read
+jobs:
+  real-version-mismatch:
+    name: Real Meilisearch downgrade rejection and compatible restore retry
+    runs-on: ubuntu-24.04
+    timeout-minutes: 24
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Contract and native manager checks
+        run: |
+          python3 scripts/test_p8ci_meilisearch_downgrade_contract.py
+          bash -n scripts/test_p8ci_meilisearch_downgrade.sh
+          cargo fmt --all -- --check
+          cargo test --locked -p hars-native-hub --all-targets
+          cargo clippy --locked -p hars-native-hub --all-targets -- -D warnings
+      - name: Rootless Podman and user systemd
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends podman uidmap slirp4netns fuse-overlayfs
+          test -x /usr/bin/podman
+          test -S /run/user/$(id -u)/bus
+      - name: Actual checksum-valid incompatible downgrade refusal and recovery
+        timeout-minutes: 15
+        run: |
+          cargo build --locked -p hars-native-hub --bin oci_app_manager_lab
+          bash scripts/test_p8ci_meilisearch_downgrade.sh
