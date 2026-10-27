@@ -22,6 +22,7 @@ for token in (
  assert token in w,token
 for token in (
  "ha apps install ","ha backups new","--app ","ha backups info",
+ "version_latest", "ha store reload --no-progress --raw-json", "ha core info",
  "ha backups remove","ha apps uninstall",
  "core_configurator","sha256sum","X-Hars-Slug:","X-Hars-Boot:",
  "P8CU_GENUINE_HAOS_FILE_EDITOR_APP_ONLY_PARTIAL_BACKUP_EXPORTED_PASS",

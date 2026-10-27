@@ -19,11 +19,48 @@ def test_hars_official_file_editor_app_only_partial_export(shell,shell_json):
     added=False
     backup_slug=None
     try:
-        baseline=shell_json("ha apps info "+slug+" --no-progress --raw-json",timeout=80)
-        assert baseline.get("result")=="ok"
-        assert (baseline.get("data") or {}).get("state")=="unknown", "Guest contaminated with existing App"
+        from time import sleep as _sleep
+        # Official Store's catalogue populates asynchronously on a fresh
+        # Supervisor. Require the ACTUAL fixed public App version and
+        # repository in a bounded observed GET, not merely a successful POST.
+        # This mirrors the established official p8c2 full HAOS Store harness.
+        available=None
+        for reload_index in range(2):
+            for poll in range(13):
+                try:
+                    baseline=shell_json("ha apps info "+slug+" --no-progress --raw-json",timeout=80)
+                except Exception:
+                    baseline=None
+                info=(baseline or {}).get("data") or {}
+                if (baseline and baseline.get("result")=="ok"
+                    and info.get("slug")==slug
+                    and isinstance(info.get("version_latest"),str)
+                    and info["version_latest"].strip()
+                    and info.get("repository") in ("core",None)
+                    and info.get("state")=="unknown"):
+                    available=info
+                    break
+                if poll<12:_sleep(2)
+            if available is not None:break
+            if reload_index==0:
+                try:
+                    shell_json("ha store reload --no-progress --raw-json",timeout=150)
+                except Exception:
+                    # A timed-out POST may have completed; observe the state,
+                    # never assume the POST reply guarantees Store readiness.
+                    pass
+        assert available is not None,"Fixed official File Editor Store catalogue not ready after bounded discovery"
+        assert shell_json("ha supervisor info --no-progress --raw-json",timeout=90).get("result")=="ok"
+        assert shell_json("ha core info --no-progress --raw-json",timeout=90).get("result")=="ok"
         installed=shell_json("ha apps install "+slug+" --no-progress --raw-json",timeout=450)
-        assert installed.get("result")=="ok","Official File Editor installation failed"
+        if installed.get("result")!="ok":
+            # Safe disposable environment error code only, never raw tokens.
+            message=str(installed.get("message","unknown"))
+            category=("not_found" if "not found" in message.lower()
+                      else "network" if "network" in message.lower() or "pull" in message.lower()
+                      else "permission" if "permission" in message.lower()
+                      else "other")
+            raise AssertionError("Official File Editor installation denied category="+category)
         added=True
         data=shell_json("ha apps info "+slug+" --no-progress --raw-json",timeout=100).get("data") or {}
         assert data.get("slug")==slug
