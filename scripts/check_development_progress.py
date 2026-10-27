@@ -19,6 +19,15 @@ def validate(data,release,lab):
         proof=g.get("evidence_id")
         if proof is not None:
             assert proof in known,(key,proof)
+        if level>=1 and not proof:
+            # Even the first maturity credit requires an inspectable
+            # concrete prior laboratory code/report marker.
+            source=g.get("source_doc")
+            marker=g.get("source_marker")
+            assert isinstance(source,str) and isinstance(marker,str)
+            path=ROOT/source
+            assert path.is_file() and path.is_relative_to(ROOT)
+            assert marker in path.read_text(),(key,marker)
         if level>=2:
             assert proof and known[proof]["release_gate"]==key,(key,proof)
             assert known[proof]["status"]=="verified_lab_only"

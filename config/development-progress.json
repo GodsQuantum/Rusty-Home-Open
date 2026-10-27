@@ -56,7 +56,9 @@
       "gate_id": "single_radio_owner",
       "level": 1,
       "evidence_id": null,
-      "limitation": "verrou radio synthetique seulement; aucun transfert USB reel"
+      "limitation": "verrou radio synthetique seulement; aucun transfert USB reel",
+      "source_doc": "docs/PRODUCTION_CERTIFICATION_MASTERPLAN_2026-10-24.md",
+      "source_marker": "Verrouillage multi-processus"
     },
     {
       "gate_id": "ha_ws_reconnection",
@@ -80,7 +82,9 @@
       "gate_id": "performance_full_stack",
       "level": 1,
       "evidence_id": null,
-      "limitation": "microbenchmarks epars; soak 72h et mesures stack entiere absents"
+      "limitation": "microbenchmarks epars; soak 72h et mesures stack entiere absents",
+      "source_doc": "docs/PRODUCTION_CERTIFICATION_MASTERPLAN_2026-10-24.md",
+      "source_marker": "Microbenchmarks"
     },
     {
       "gate_id": "packaging_updates",
