@@ -16,6 +16,36 @@ class SavedOptionsRefused(ValueError):
     pass
 
 MAX_ADDON_JSON=131072
+MAX_JSON_NESTING=64
+
+def _require_bounded_json_nesting(data):
+    """Bound structural depth BEFORE decoding untrusted persisted metadata.
+
+    Quotes and escaped bytes must not be mistaken for JSON structure.
+    The official Supervisor options layout is shallow; deeper input is
+    refused instead of asking the decoder to allocate arbitrary nesting.
+    """
+    depth=0
+    in_string=False
+    escaped=False
+    for byte in data:
+        if in_string:
+            if escaped:
+                escaped=False
+            elif byte==0x5c:  # backslash
+                escaped=True
+            elif byte==0x22:  # quote
+                in_string=False
+        elif byte==0x22:
+            in_string=True
+        elif byte in (0x5b,0x7b):  # [ {
+            depth+=1
+            if depth>MAX_JSON_NESTING:
+                raise SavedOptionsRefused("official App metadata nesting too deep")
+        elif byte in (0x5d,0x7d):  # ] }
+            depth-=1
+            if depth<0:
+                raise SavedOptionsRefused("invalid official App metadata nesting")
 
 def _unique_pairs(pairs):
     out={}
@@ -64,6 +94,7 @@ def read_staged_supervisor_options(stage):
                 after.st_mtime_ns!=file_stat.st_mtime_ns or
                 after.st_ctime_ns!=file_stat.st_ctime_ns):
                 raise SavedOptionsRefused("metadata changed during read")
+            _require_bounded_json_nesting(data)
             try:
                 metadata=json.loads(data,object_pairs_hook=_unique_pairs,
                     parse_constant=_nonfinite)

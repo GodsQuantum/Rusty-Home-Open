@@ -722,6 +722,18 @@
       "scope": "Official HAOS18.3 QEMU Mosquitto backup through Rust SHA private staging; read true Supervisor addon.json options, default empty logins correctly denied without HA delegated auth. Malformed/symlink refused, original SHA intact. No production.",
       "url": "https://github.com/GodsQuantum/Rusty-Home-Open/actions/runs/40599479262",
       "merged_pr": 243
+    },
+    {
+      "id": "haos_supervisor_options_dirfd_directory_swap_denial",
+      "release_gate": "supervisor_apps_restore",
+      "status": "verified_lab_only",
+      "run_id": 40603690843,
+      "head_sha": "c4b8f1f3b14edc52436a1e040022e52e2b5f1e38",
+      "workflow": "Rusty Home public CI",
+      "job": "native-rust-and-security-labs",
+      "scope": "Isolated GitHub runner fixture: seven real inode-anchored directory-fd tests including concurrent directory rename/symlink replacement; verified old trusted addon.json, rejected unsafe inode, mode and size. No new QEMU test, Core auth or production.",
+      "url": "https://github.com/GodsQuantum/Rusty-Home-Open/actions/runs/40603690843",
+      "merged_pr": 245
     }
   ]
 }
