@@ -386,6 +386,30 @@
       "scope": "Real HAOS18.3 Supervisor SHA-bound one-item disabled-YAML preview; independent private Rust importer of synthetic two-item disabled list, unsafe mixed batch refused without actions. Not genuine multi-HAOS or production.",
       "url": "https://github.com/GodsQuantum/Rusty-Home-Open/actions/runs/40441235808",
       "merged_pr": 187
+    },
+    {
+      "id": "security_disabled_automation_batch_asan_fuzz",
+      "release_gate": "security_stress_fuzz",
+      "status": "verified_lab_only",
+      "run_id": 40442240753,
+      "head_sha": "086fe030c0338cb2905c70bb5d992b875f7cb0e1",
+      "workflow": "Rusty Home - instrumented Core, ingress and Supervisor Store fuzz",
+      "job": "Core auth, ingress and Store security (libFuzzer / AddressSanitizer)",
+      "scope": "Real libFuzzer+AddressSanitizer target exercised bounded disabled HAOS multi-YAML preview parser, including synthetic accepted and mixed-unsafe seeds; 276397 iterations in 46s without sanitizer failure. Not independent penetration test.",
+      "url": "https://github.com/GodsQuantum/Rusty-Home-Open/actions/runs/40442240753",
+      "merged_pr": 188
+    },
+    {
+      "id": "haos_real_two_disabled_automation_supervisor_preview",
+      "release_gate": "haos_backup_restore",
+      "status": "verified_lab_only",
+      "run_id": 40445899124,
+      "head_sha": "cc761f63594cfef9682dda322106382e211cd33e",
+      "workflow": "P8cl real HAOS 18.3 TWO disabled automations native Rust staging",
+      "job": "Real official HAOS 18.3 two disabled automations native Rust preview",
+      "scope": "Official disposable HAOS 18.3 Supervisor full backup with TWO disabled fictional automations and six synthetic stable identities; SHA-checked Rust private stage, inert two-rule preview, no commands, rollback. No real migration.",
+      "url": "https://github.com/GodsQuantum/Rusty-Home-Open/actions/runs/40445899124",
+      "merged_pr": 189
     }
   ]
 }
