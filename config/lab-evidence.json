@@ -734,6 +734,18 @@
       "scope": "Isolated GitHub runner fixture: seven real inode-anchored directory-fd tests including concurrent directory rename/symlink replacement; verified old trusted addon.json, rejected unsafe inode, mode and size. No new QEMU test, Core auth or production.",
       "url": "https://github.com/GodsQuantum/Rusty-Home-Open/actions/runs/40603690843",
       "merged_pr": 245
+    },
+    {
+      "id": "haos_supervisor_options_json_depth_and_write_race_denial",
+      "release_gate": "supervisor_apps_restore",
+      "status": "verified_lab_only",
+      "run_id": 40604609092,
+      "head_sha": "b25348d9365ebb0333680281fdfb8cdf8eba3836",
+      "workflow": "Rusty Home public CI",
+      "job": "native-rust-and-security-labs",
+      "scope": "GitHub runner: 11 Python fixtures, 1500-deep valid JSON denied by depth-64 bound; same-size concurrent metadata rewrite and FIFO denied; literal brackets accepted. QEMU jobs are regressions. No production, real user auth or external audit.",
+      "url": "https://github.com/GodsQuantum/Rusty-Home-Open/actions/runs/40604609092",
+      "merged_pr": 246
     }
   ]
 }
