@@ -144,10 +144,10 @@
       },
       {
         "id": "real_app_image_boot",
-        "verified": false,
-        "evidence_id": null,
-        "source_file": null,
-        "source_marker": null,
+        "verified": true,
+        "evidence_id": "haos_real_file_editor_restored_native_oci_start",
+        "source_file": "scripts/test_p8df_official_app_runtime.py",
+        "source_marker": "P8DF_OFFICIAL_HAOS_FILE_EDITOR_CONTAINER_ROOTLESS_NO_NETWORK_START_PASS",
         "acceptance": "Boot d'une vraie image App avec dossier restaure, sans acces foyer"
       },
       {

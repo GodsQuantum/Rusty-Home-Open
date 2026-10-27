@@ -3,6 +3,9 @@
 ## 27 October — P8dh official File Editor real native /data write and restart [CI PENDING]
 
 New distinct proof attempt: upstream File Editor app-container writes *inside* its own persisted /data AFTER true HAOS->Rust backup/native reconstruction, then undergoes podman stop and podman start, and must show both original HAOS marker and newly written marker intact. Rootless/no network/no ports/no Supervisor tokens throughout. CI real genuine QEMU pending. The test does NOT qualify authentication or HTTP ingress (lane milestone 6), so must NOT skip ahead and claim 7/10. No host actions on Cloud9 besides CT700 code/build.
+## 27 October — P8dg real official File Editor App OCI running on recovered Supervisor data
+
+P8df #218 source 0682b88c78fb5c03fd72bedb5b4e01f5db00d4a5, main f2e27f5c0a75451fa44664b5f7f42d9893a66e53, exact-head 10/10 checks GREEN. HAOS18.3 real selected-App source -> Rust escrow + native private /data reconstruction -> official File Editor OCI image ACTUALLY RUNNING with source marker inside container, no host network, no published ports, no credentials or privileged root, clean teardown. GH 40541956380 job 122322394014, JUnit 3/3. 48 machine CI lab claims / 44 runs; App development milestone 5/10=50%, not generic product completion. Missing ingress auth/editor HTTP usable, 9+ official App lifecycle, full restart/rollback, independent audit; release NOT_PRODUCTION_READY 0/15.
 
 ## 27 October — P8df genuine Supervisor App backup → official App OCI runtime [CI pending]
 
