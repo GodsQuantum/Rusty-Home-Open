@@ -1,5 +1,9 @@
 # Rusty Home — journal de développement et de certification
 
+## 27 October — P8cx pin genuine HAOS App-only native Rust escrow evidence
+
+No duplicate test. PR #210 original source 2407f239978f557a771e32700d63e23a06005209, squash main b4e8701ce8ffe40c4640ccc37db93c0bd9ae1c17. Actual green run 40518370582/job 122238075930, 13/13 exact-source CI, official File Editor selected-App-only backup into private SHA Rust escrow, independent reread, tamper refusal, original unchanged. Registered 45th verified_lab_only machine claim. Production 0/15; no App restored.
+
 ## 27 October — P8cw offline App-only Supervisor backup into native Rust escrow [CI pending]
 
 Native app_backup_import.rs adopts strict existing Rust tar+gzip+StrictValue/O_NOFOLLOW bounded inspection for APP-ONLY partial Supervisor archives (without Core). Reuses original P8ab fsynced 0700/0600 SHA escrow via two lab-only verbs on the already existing ha_registry_stager, rather than writing a service. Actual physical App restore and activation never performed. Full synthetic CLI adversarial tests and Rust Clippy pass. Dedicated real HAOS18.3 GitHub QEMU source + unchanged official File Editor P8cu guest scenario to be checked on exact GH HEAD; no household or VM100 touched. Release still 0/15.
