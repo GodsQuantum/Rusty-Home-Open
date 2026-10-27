@@ -160,6 +160,37 @@ fn run() -> Result<()> {
                 "app_image_installed":false,"app_runtime_started":false,
                 "automation_executed":false,"production_ready":false})
         }
+        "app-source-stage-pair-inactive" => {
+            let pair_id = args
+                .next()
+                .ok_or_else(|| anyhow::anyhow!("missing pair ID"))?;
+            let first_slug = args
+                .next()
+                .ok_or_else(|| anyhow::anyhow!("missing first App"))?;
+            let first_digest = args
+                .next()
+                .ok_or_else(|| anyhow::anyhow!("missing first digest"))?;
+            let second_slug = args
+                .next()
+                .ok_or_else(|| anyhow::anyhow!("missing second App"))?;
+            let second_digest = args
+                .next()
+                .ok_or_else(|| anyhow::anyhow!("missing second digest"))?;
+            let target = args
+                .next()
+                .ok_or_else(|| anyhow::anyhow!("missing private target"))?;
+            if args.next().is_some() {
+                bail!("extra pair arguments");
+            }
+            let receipt = hars_interop_moli::app_backup_pair_stage::stage_inactive_pair(
+                Path::new(&dir),
+                (&first_slug, &first_digest),
+                (&second_slug, &second_digest),
+                Path::new(&target),
+                &pair_id,
+            )?;
+            serde_json::to_value(receipt)?
+        }
         "app-source-verify" => {
             let digest = args
                 .next()
