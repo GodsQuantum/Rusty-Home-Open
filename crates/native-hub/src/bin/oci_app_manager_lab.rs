@@ -250,7 +250,7 @@ fn checked_health_cmd(cmd: &str) -> io::Result<String> {
         }
     }
     Ok(format!(
-        "HealthCmd={cmd}\nHealthInterval=15s\nHealthTimeout=5s\nHealthRetries=2\nHealthOnFailure=kill\n"
+        "HealthCmd={cmd}\nHealthInterval=15s\nHealthTimeout=5s\nHealthRetries=2\nHealthOnFailure=kill\nNotify=healthy\n"
     ))
 }
 fn with_health(container: &str, cmd: &str) -> io::Result<String> {
@@ -586,6 +586,21 @@ fn execute() -> io::Result<()> {
             let unit = require_installed(&dir, &args[2])?;
             systemctl(&["--user", "stop", &unit])
         }
+        "--install-health-dependent-lab" if args.len() == 7 => {
+            let uid = args[4].parse::<u32>().map_err(|_| bad())?;
+            install(
+                &dir,
+                &args[2],
+                &args[3],
+                uid,
+                AppNetwork::Offline,
+                InstallExtras {
+                    health: Some(&args[5]),
+                    dependency: Some(&args[6]),
+                    ..Default::default()
+                },
+            )
+        }
         "--install-health-lab" if args.len() == 6 => {
             let uid = args[4].parse::<u32>().map_err(|_| bad())?;
             install(
@@ -841,6 +856,8 @@ mod tests {
         assert!(healthy.contains("HealthCmd=redis-cli ping\n"));
         assert!(healthy.contains("HealthTimeout=5s"));
         assert!(healthy.contains("HealthOnFailure=kill"));
+        assert!(healthy.contains("Notify=healthy\n"));
+        assert!(!original.contains("Notify=healthy"));
         assert!(healthy.contains("Network=none"));
         for bad in [
             "",
