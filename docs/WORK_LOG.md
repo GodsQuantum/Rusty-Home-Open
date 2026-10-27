@@ -1,5 +1,8 @@
 # Rusty Home — journal de développement et de certification
 
+## 27 October — P8de reliable progress measurements replacing misleading static 60%
+
+The user correctly challenged that gate coverage 60% did not change with significant development. Added technical maturity index scored with 15 fixed gates x 4 rigorous levels (25/60=41.7%, conventional, NOT effort), and App migration capability ladder 10 proof-checked milestones, currently 4/10=40%, compared with 2/10 immediately after #210. Gates still 9 lab_partial/6 blocked/0 certified, 47 pinned lab claims. No claim that either number is real percentage of code written or duration remaining. Real independent B-path readiness still NOT_PRODUCTION_READY; see dedicated docs progress guide and fail-closed script/tests.
 ## 27 October — P8dc pin P8cy genuine HAOS inactive native App data proof
 
 PR #213 original source 6a0cffc70f1f2f421338a6012f4ceb381fec9ad3, merged squash 8a3e63bf29a9d0054224d62d6aa32a6fce76e2df. All 15 exact-head GitHub checks SUCCESS. Genuine official HAOS18.3 QEMU [run 40529254092](https://github.com/GodsQuantum/Rusty-Home-Open/actions/runs/40529254092), job 122277215922 SUCCESS: official File Editor selected-App-only Supervisor backup, Rust private SHA escrow, actual fictional App data bytes materialized to private inert native files; fault-before-commit rollback zero leak, original SHA tamper denial, staged bytes persist. JUnit 3/3, Rust 16/16 and local CLI adversarial PASS. Separate LXC700 local 12 concurrent dual-writer staging pairs one winner/one refused (not CI-certified). Machine claim haos_real_app_only_native_inactive_files verified_lab_only, 47 claims / 43 distinct CI runs. NO App execution, VM100, household, secrets, radios, 72h or independent signoff; release 0/15.
