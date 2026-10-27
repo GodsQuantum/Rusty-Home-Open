@@ -22,7 +22,11 @@ bad(lambda d:d["maturity_gates"][0].update(level=4))
 bad(lambda d:d["maturity_gates"][0].update(evidence_id="fake_unverified_run"))
 bad(lambda d:d["maturity_gates"][7].update(source_marker="FABRICATED_LAB"))
 bad(lambda d:d["maturity_gates"][11].update(source_doc="../../outside.md"))
-bad(lambda d:d["active_workstream"]["milestones"][4].update(verified=True))
+next_open=next((i for i,m in enumerate(data["active_workstream"]["milestones"]) if not m["verified"]),None)
+if next_open is not None:
+    bad(lambda d:d["active_workstream"]["milestones"][next_open].update(verified=True))
+else:
+    bad(lambda d:d["active_workstream"]["milestones"][-1].update(evidence_id="fabricated_test"))
 bad(lambda d:d["active_workstream"]["milestones"][0].update(source_marker="FAKE_CI_SUCCESS"))
 bad(lambda d:d["active_workstream"]["milestones"][2].update(evidence_id="haos_app_only_native_archive_asan_fuzz"))
 bad(lambda d:d["active_workstream"]["milestones"][0].update(verified=False))

@@ -1,5 +1,9 @@
 # Rusty Home — journal de développement et de certification
 
+## 27 October — P8dg real official File Editor App OCI running on recovered Supervisor data
+
+P8df #218 source 0682b88c78fb5c03fd72bedb5b4e01f5db00d4a5, main f2e27f5c0a75451fa44664b5f7f42d9893a66e53, exact-head 10/10 checks GREEN. HAOS18.3 real selected-App source -> Rust escrow + native private /data reconstruction -> official File Editor OCI image ACTUALLY RUNNING with source marker inside container, no host network, no published ports, no credentials or privileged root, clean teardown. GH 40541956380 job 122322394014, JUnit 3/3. 48 machine CI lab claims / 44 runs; App development milestone 5/10=50%, not generic product completion. Missing ingress auth/editor HTTP usable, 9+ official App lifecycle, full restart/rollback, independent audit; release NOT_PRODUCTION_READY 0/15.
+
 ## 27 October — P8df genuine Supervisor App backup → official App OCI runtime [CI pending]
 
 Distinct new REAL App startup proof instead of another preview: official HAOS18.3 File Editor creates exact nonsecret payload, native Rust escrow and materializer recover it, official ghcr.io/home-assistant/app-configurator:6.3.0 starts in isolated rootless Podman with restored /data only, no network/ports/host secrets and with fail-closed checks. Check actual real OCI process AND original source marker inside it, original SHA unchanged. Full real QEMU CI pending; don't increment milestone 5/10 without success. May expose Supervisor dependency requiring explicit adapter; avoid faking auth. Production 0/15.
