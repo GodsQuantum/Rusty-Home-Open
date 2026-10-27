@@ -15,6 +15,7 @@ for marker in (
     "sha256sum ",
     "ha apps stop ",
     "ha apps start ",
+    "/mnt/data/supervisor/homeassistant/",
     "http://homeassistant:8123",
     "http://core-configurator:8099/api/save",
     "ingress_session=invalid-lab-session-value",
@@ -37,7 +38,7 @@ scripts = [n.value.value for n in ast.walk(tree)
 assert len(scripts) == 1
 embedded = scripts[0]
 ast.parse(embedded)
-assert '"/data/"+name' in embedded
+assert '"/homeassistant/"+name' in embedded
 assert '"http://homeassistant:8123"+path.rstrip("/")+"/api/save"' in embedded
 assert '"http://core-configurator:8099/api/save"' in embedded
 assert "body.get(\"error\") is False" in embedded

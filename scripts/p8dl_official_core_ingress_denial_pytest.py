@@ -230,14 +230,18 @@ def test_hars_official_file_editor_ingress_unauthenticated_denial(shell,shell_js
         p8dn_name="rusty_home_p8dn_http_write_synthetic.txt"
         p8dn_value=b"P8DN_OFFICIAL_FILE_EDITOR_REAL_HTTP_WRITE_20261027\n"
         p8dn_hash=hashlib.sha256(p8dn_value).hexdigest()
-        p8dn_host=matched[0]+"/"+p8dn_name
+        # File Editor enforces /homeassistant as its official writable BASEPATH.
+        # This is a disposable guest Core config, never the real VM100.
+        p8dn_host="/mnt/data/supervisor/homeassistant/"+p8dn_name
+        assert shell.run_check("test -d /mnt/data/supervisor/homeassistant && echo PRESENT",
+                               timeout=30)[0].strip()=="PRESENT"
         assert shell.run_check("test ! -e "+p8dn_host+" && echo ABSENT",timeout=30)[0].strip()=="ABSENT"
         script='''import urllib.request as u,urllib.error as e,urllib.parse as p
 import json,sys
 path,mode=sys.argv[1:3]
 name="rusty_home_p8dn_http_write_synthetic.txt"
 value="P8DN_OFFICIAL_FILE_EDITOR_REAL_HTTP_WRITE_20261027\\n"
-form=p.urlencode({"filename":"/data/"+name,"text":value}).encode()
+form=p.urlencode({"filename":"/homeassistant/"+name,"text":value}).encode()
 headers={"Content-Type":"application/x-www-form-urlencoded"}
 if mode=="deny":
     checks=({"X-Remote-User-Id":"forged-ci","X-Remote-User-Groups":"administrators"},
