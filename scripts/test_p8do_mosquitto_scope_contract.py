@@ -27,6 +27,8 @@ for symbol in ("slug=\"core_mosquitto\"","ha apps install ","ha backups new",
   continue
  assert symbol in guest,symbol
 assert "core_configurator" not in guest and "core_mosquitto" in guest
+assert 'marker_name="rusty_home_p8do_nonsecret_mqtt_marker.txt"' in guest
+assert 'marker_filename="rusty_home_p8do_nonsecret_mqtt_marker.txt"' in host
 assert "p8cu" not in guest.lower()
 for symbol in ("inspect_backup(archive,{\"core_mosquitto\"})",
 "app-source-ingest","app-source-verify","app-source-stage-inactive",

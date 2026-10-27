@@ -56,7 +56,7 @@ def _ensure_disposable_plugins_current(shell_json, sleeper):
 @pytest.mark.timeout(1500)
 def test_hars_official_mosquitto_app_only_partial_export(shell,shell_json):
     slug="core_mosquitto"
-    marker_name="rusty_home_p8do_nonsecret_synthetic_marker.txt"
+    marker_name="rusty_home_p8do_nonsecret_mqtt_marker.txt"
     marker_value=b"P8DO_REAL_OFFICIAL_MOSQUITTO_APP_BACKUP_MARKER_20261027\\n"
     marker_hash=hashlib.sha256(marker_value).hexdigest()
     added=False
@@ -213,7 +213,7 @@ def test_hars_official_mosquitto_app_only_partial_export(shell,shell_json):
         assert "P8DO_PRIVATE_EXPORT_DONE" in transfer
         # Host-side verifier independently checks the EXACT marker bytes from
         # the real official nested backup part, never runs an App operation.
-        print("P8DO_GENUINE_HAOS_FILE_EDITOR_APP_ONLY_PARTIAL_BACKUP_EXPORTED_PASS")
+        print("P8DO_GENUINE_HAOS_MOSQUITTO_APP_ONLY_PARTIAL_BACKUP_EXPORTED_PASS")
     finally:
         if backup_slug and re.fullmatch(r"[0-9a-f]{8,16}",backup_slug):
             removed=shell_json("ha backups remove "+backup_slug+
