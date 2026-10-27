@@ -140,11 +140,24 @@ sys.exit(21)
                     expect=False,timeout=175)
         if probe.returncode!=0:
             logs=run(["podman","logs",name],expect=False,timeout=25)
-            # Never log a token, shell env, App private data or secrets. Print
-            # only bounded probe diagnosis and bounded s6 startup tail.
-            diagnostic="; ".join(probe.stderr.splitlines()[-3:])[:350]
-            safe_tail="; ".join((logs.stdout+logs.stderr).splitlines()[-7:])[:600]
-            raise AssertionError("REAL_OFFICIAL_APP_HTTP_UNAVAILABLE: "+diagnostic+"; startup="+safe_tail)
+            # Diagnose the actual early failure, not only S6's shutdown
+            # messages. No tokens, environment values or App data are read.
+            # Redact opaque strings, email/IP addresses and URLs defensively.
+            diagnostic="; ".join(probe.stderr.splitlines()[-4:])[:400]
+            container_state=run(["podman","inspect",name,"--format",
+                                 "{{.State.Status}}/{{.State.ExitCode}}"],expect=False)
+            loglines=(logs.stdout+logs.stderr).splitlines()
+            interesting=[line for line in loglines if any(
+                word in line.lower() for word in
+                ("error","fail","fatal","warn","configurator","options","supervisor","not found")
+            )]
+            excerpt="; ".join(loglines[:15]+interesting[-13:])[:2800]
+            excerpt=re.sub(r"https?://[^ ;]+", "[url]",excerpt)
+            excerpt=re.sub(r"(?<![A-Za-z0-9])[A-Za-z0-9_-]{30,}(?![A-Za-z0-9])", "[opaque]",excerpt)
+            excerpt=re.sub(r"[a-zA-Z0-9_.+-]+@[a-zA-Z0-9_.-]+", "[email]",excerpt)
+            raise AssertionError("REAL_OFFICIAL_APP_HTTP_UNAVAILABLE: "+diagnostic+
+                                 "; state="+container_state.stdout.strip()[:50]+
+                                 "; startup_excerpt="+excerpt)
         assert "P8DJ_REAL_UPSTREAM_CONFIGURATOR_HTML_OK" in probe.stdout
         assert run(["podman","inspect",name,"--format","{{.HostConfig.NetworkMode}}"]).stdout.strip()=="none"
         assert run(["podman","port",name]).stdout.strip()==""
