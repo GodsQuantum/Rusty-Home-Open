@@ -20,6 +20,35 @@ def test_hars_official_file_editor_app_only_partial_export(shell,shell_json):
     backup_slug=None
     try:
         from time import sleep as _sleep
+        # Actual Supervisor 2026 policy forbids any App install when plugins
+        # are outdated and auto-update=false. The pinned official 18.3
+        # disposable QEMU fixture boots with auto-update disabled.
+        # Use ONLY upstream Supervisor options and reload within disposable
+        # QEMU; never patch Supervisor jobs or change actual user HAOS.
+        supervisor=shell_json("ha supervisor info --no-progress --raw-json",timeout=90)
+        assert supervisor.get("result")=="ok"
+        state=supervisor.get("data") or {}
+        assert isinstance(state.get("auto_update"),bool), "Supervisor auto-update state unavailable"
+        if not state["auto_update"]:
+            options=shell_json(
+                "ha supervisor options --auto-update --no-progress --raw-json",
+                timeout=120,
+            )
+            assert options.get("result")=="ok", "Official Supervisor refused fixture-only plugin update policy"
+            reloaded=shell_json("ha supervisor reload --no-progress --raw-json",timeout=200)
+            assert reloaded.get("result")=="ok", "Official Supervisor fixture reload failed"
+            for check in range(24):
+                try:
+                    current=shell_json("ha supervisor info --no-progress --raw-json",timeout=60)
+                except Exception:
+                    current=None
+                if (current and current.get("result")=="ok"
+                    and (current.get("data") or {}).get("auto_update") is True):
+                    break
+                if check<23:_sleep(3)
+            else:
+                raise AssertionError("Upstream Supervisor plugin auto-update flag never became true")
+        print("P8CU_DISPOSABLE_HAOS_UPSTREAM_SUPERVISOR_PLUGIN_POLICY_READY_PASS")
         # Official Store's catalogue populates asynchronously on a fresh
         # Supervisor. Require the ACTUAL fixed public App version and
         # repository in a bounded observed GET, not merely a successful POST.

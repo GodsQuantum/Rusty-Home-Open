@@ -23,6 +23,9 @@ for token in (
 for token in (
  "ha apps install ","ha backups new","--app ","ha backups info",
  "version_latest", "ha store reload --no-progress --raw-json", "ha core info",
+ "ha supervisor options --auto-update --no-progress --raw-json",
+ "ha supervisor reload --no-progress --raw-json",
+ "P8CU_DISPOSABLE_HAOS_UPSTREAM_SUPERVISOR_PLUGIN_POLICY_READY_PASS",
  "ha backups remove","ha apps uninstall",
  "core_configurator","sha256sum","X-Hars-Slug:","X-Hars-Boot:",
  "P8CU_GENUINE_HAOS_FILE_EDITOR_APP_ONLY_PARTIAL_BACKUP_EXPORTED_PASS",
