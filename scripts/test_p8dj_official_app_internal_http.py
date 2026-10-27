@@ -83,7 +83,10 @@ with tempfile.TemporaryDirectory(prefix="p8df-real-app-runtime-",dir=os.environ[
         # Supervisor token; never grant privileged/host networking.
         launch=[
             "podman","run","--detach","--replace","--name",name,
-            "--network","none","--read-only","--cap-drop","ALL",
+            # Official s6 preinit must write under /etc/s6-overlay before
+            # spawning the actual HTTP service. An ephemeral, WRITABLE OCI
+            # root overlay is required; it is DISPOSABLE, not a host mount.
+            "--network","none","--cap-drop","ALL",
             "--security-opt","no-new-privileges","--pids-limit","128",
             "--memory","512m","--tmpfs","/run:rw,size=64m,mode=1777",
             "--tmpfs","/tmp:rw,size=64m,mode=1777",
@@ -106,7 +109,7 @@ with tempfile.TemporaryDirectory(prefix="p8df-real-app-runtime-",dir=os.environ[
             raise AssertionError("Official image did not stay alive: "+status.stderr[-650:])
         assert run(["podman","inspect",name,"--format","{{.HostConfig.NetworkMode}}"]).stdout.strip()=="none"
         assert run(["podman","inspect",name,"--format","{{.HostConfig.Privileged}}"]).stdout.strip()=="false"
-        assert run(["podman","inspect",name,"--format","{{.HostConfig.ReadonlyRootfs}}"]).stdout.strip()=="true"
+        assert run(["podman","inspect",name,"--format","{{.HostConfig.ReadonlyRootfs}}"]).stdout.strip()=="false"
         assert run(["podman","inspect",name,"--format","{{json .HostConfig.PortBindings}}"]).stdout.strip() in ("{}","null")
         mounts=json.loads(run(["podman","inspect",name,"--format","{{json .Mounts}}"]).stdout)
         assert len([m for m in mounts if m.get("Destination")=="/data" and m.get("Source")==str(data_dir)])==1
