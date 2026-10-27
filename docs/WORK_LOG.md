@@ -12,6 +12,10 @@ PR #224 MERGED squash main `e041856271950b0338251e6015f366bd452f920f`, exact ori
 
 # Rusty Home — journal de développement et de certification
 
+## 27 October — P8dx genuine MQTT mTLS/CA trust and denial evidence pinned
+
+PR239 real source HEAD 8ea38229ad5775cb4f324a8837b76377849d4ad9, squash main 65175dd2edd4c329f3f5ec4ed672a1ab3127633c. Actual official HAOS18.3 QEMU core_mosquitto App-only backup -> Rust SHA native files -> actual rootless Eclipse Mosquitto TLS 8883, ephemeral test CA/server/client. MQTT retained QoS1 works with trusted certificate and correct local login; no/rogue client, untrusted server, bad password and anonymous denied. Survives new OCI. CI run 40593774502 job122504365064 SUCCESS 10/10 GH, HAOS JUnit 3/3. 59 lab-only claims, 55 independent runs, no genuine HAOS SSL/user migration, production still 0/15, App 5/10.
+
 ## 27 October — P8dw actual upstream mTLS MQTT on HAOS-restored Rust data [CI pending]
 
 After P8dt (#237/238) genuine HAOS App-only archive + synthetic local-account allow/deny test, P8dw extends protocol test with isolated real TLS 8883, ephemeral OpenSSL CA and server/client certificates, and client certificate REQUIRED. Negative actual MQTT clients: missing client cert, cert signed by rogue CA, client using wrong server CA, bad user password and anonymous. Positive authorized QoS1 retained message must survive new OCI on genuine archived App data, no host network, original source SHA exact. Certs are NEW fixtures and not from original Supervisor backup: does NOT certify live SSL file migration, HA delegated users, or production.
