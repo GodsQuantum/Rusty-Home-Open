@@ -1,5 +1,9 @@
 # Rusty Home — journal de développement et de certification
 
+## 27 October — P8cl genuine two-disabled-rule Supervisor backup [CI PENDING]
+
+Separate official disposable HAOS 18.3 KVM backup job, not a replay of old P8aa one-rule backup. Two different disabled fictional YAML automations plus six registry identities, official Supervisor full archive, SHA-private relay, original Rust stager, two-rule read-only preview with no approvals/device commands, refusal by prior single-rule Moli bridge, staged rollback. Strict Python/QEMU contract runs in LXC700, exact CI and logs pending. No HAOS device, household config, VM100 or release gate touched; 0/15 production.
+
 ## 2026-10-27 — P8ck fuzz new multi-disabled HAOS preview parser [CI pending]
 
 Previous #187 introduced read-only SHA-bound two-entry preview without service execution. Its 11/11 exact-head CI passed, official disposable HAOS 18.3 one-item backup checked, original source original SHA 81ff9a; merged main 5b76ea7. This NEW safety task instruments the multi-parser itself using existing pinned Rust nightly AddressSanitizer/libFuzzer target (prior fuzzer only exercised one automation). Add one allowed 2-item fixture and one mixed enabled/disabled adversarial fixture, reject all unauthorized network and hardware. Static scope and 5 Rust parser tests PASS. No independent pen-test or 72-hour soak, production 0/15.
