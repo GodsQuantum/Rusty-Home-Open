@@ -1,5 +1,9 @@
 # Rusty Home — journal de développement et de certification
 
+## 2026-10-27 — P8cf Qdrant eighth real App [EXACT GH CI SUCCESS]
+
+PR #180 original source SHA `c7a6aa43dbab4cae25fda54a329374d5240c6ece`, merged `4c48a76d39ecded1790b2719d4c4ebe62ed43ee5`. Disposable GitHub Actions run `40433087623`, job `121955234319` SUCCESS, exact source, successful real Qdrant API checkpoint/independent restore with separate writable storage/snapshots mounted under native read-only OCI rootfs; archives private 0600 SHA verified and tamper denied. Restored instance has pre-snapshot vector id1 but not source's new id2, source retains both after other instance removal. Preserve red runs in earlier P8cf journal as debugging only; do not redo successfully proven seven earlier services. Eight distinct realistic OCI restore categories, no complete HAOS add-on lifecycle or home migration. Production remains 0/15.
+
 ## 2026-10-26 — P8aw custom safe App volume path, real HTTP registry state (CI pending)
 
 - P8av #126 real Redis and Memcached independent rootless OCI lifecycles 10/10 GitHub checks MERGED 6ed03afa6d9a55a28cd4a51d28d48c21480fe57d. Prior proof preserved, no redundant re-certification.
