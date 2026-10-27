@@ -434,6 +434,18 @@
       "scope": "Two genuine offline rootless Redis 7.4 OCI Apps: native BindsTo+After dependent start activates provider, provider removal denied, provider stop cascades, restart retains separate persisted keys, child-first uninstall retains private volumes. Lab only.",
       "url": "https://github.com/GodsQuantum/Rusty-Home-Open/actions/runs/40451443350",
       "merged_pr": 194
+    },
+    {
+      "id": "oci_native_three_app_sigkill_dependency_cascade",
+      "release_gate": "apps_9_lifecycle",
+      "status": "verified_lab_only",
+      "run_id": 40457223331,
+      "head_sha": "6f3958ba55c07e37711f57a29dd5bafbaca6437d",
+      "workflow": "P8cp genuine three-App dependency crash fencing",
+      "job": "Three rootless Redis Apps, root SIGKILL, dependent fencing and durable recovery",
+      "scope": "Three real rootless Redis 7.4 Apps in native BindsTo+After chain: leaf-only start, intermediate removal denied, root SIGKILL auto-restart stops both dependents, leaf-only recovery retains three independent RDB keys. Disposable CI only; no production.",
+      "url": "https://github.com/GodsQuantum/Rusty-Home-Open/actions/runs/40457223331",
+      "merged_pr": 196
     }
   ]
 }
