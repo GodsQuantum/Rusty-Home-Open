@@ -482,6 +482,18 @@
       "scope": "Real rootless two-Redis: coordinator SIGKILL between starts; fsynced 0600 intent blocks mutations; separate recovery stops both, preserves RDB keys; retry succeeds; symlink journal refused. No HAOS, reboot, data atomicity or production.",
       "url": "https://github.com/GodsQuantum/Rusty-Home-Open/actions/runs/40475360889",
       "merged_pr": 202
+    },
+    {
+      "id": "oci_native_heterogeneous_pair_sigkill_durable_data_recovery",
+      "release_gate": "apps_9_lifecycle",
+      "status": "verified_lab_only",
+      "run_id": 40498864752,
+      "head_sha": "0b1338aad59a07390efadaef597636c47c5e541f",
+      "workflow": "P8ct genuine Redis plus Meilisearch crash-recoverable native pair",
+      "job": "Genuine rootless Redis and Meilisearch native pair coordinator SIGKILL",
+      "scope": "Disposable offline rootless Redis 7.4 UID999 plus Meilisearch 1.55 UID1000; RDB and indexed document survive SIGKILL, fsynced intent fencing, stop-only recovery and retry. No HAOS migration, data atomicity, reboot recovery or production.",
+      "url": "https://github.com/GodsQuantum/Rusty-Home-Open/actions/runs/40498864752",
+      "merged_pr": 204
     }
   ]
 }
