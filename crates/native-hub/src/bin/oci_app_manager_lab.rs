@@ -260,9 +260,23 @@ fn with_health(container: &str, cmd: &str) -> io::Result<String> {
     }
     Ok(container.replacen("Pull=never\n", &format!("Pull=never\n{config}"), 1))
 }
+// Podman >=5 native readiness. Do not apply to the legacy 4.9 health
+// path: Ubuntu 24.04's Quadlet generator does not support Notify=healthy.
+fn with_health_readiness(container: &str, cmd: &str) -> io::Result<String> {
+    let health = with_health(container, cmd)?;
+    if health.matches("HealthOnFailure=kill\n").count() != 1 || health.contains("Notify=") {
+        return Err(denied());
+    }
+    Ok(health.replacen(
+        "HealthOnFailure=kill\n",
+        "HealthOnFailure=kill\nNotify=healthy\n",
+        1,
+    ))
+}
 #[derive(Default)]
 struct InstallExtras<'a> {
     health: Option<&'a str>,
+    health_readiness: bool,
     data_destination: Option<&'a str>,
     secret_name: Option<&'a str>,
     runtime_tmpfs: Option<&'a str>,
@@ -301,8 +315,15 @@ fn install(
     } else {
         decl.render().map_err(|_| bad())?
     };
+    if extras.health_readiness && extras.health.is_none() {
+        return Err(bad());
+    }
     if let Some(healthcmd) = extras.health {
-        q.container = with_health(&q.container, healthcmd)?;
+        q.container = if extras.health_readiness {
+            with_health_readiness(&q.container, healthcmd)?
+        } else {
+            with_health(&q.container, healthcmd)?
+        };
     }
     if let Some(name) = extras.secret_name {
         bind_native_secret(&mut q, name).map_err(|_| bad())?;
@@ -586,6 +607,37 @@ fn execute() -> io::Result<()> {
             let unit = require_installed(&dir, &args[2])?;
             systemctl(&["--user", "stop", &unit])
         }
+        "--install-health-dependent-ready-lab" if args.len() == 7 => {
+            let uid = args[4].parse::<u32>().map_err(|_| bad())?;
+            install(
+                &dir,
+                &args[2],
+                &args[3],
+                uid,
+                AppNetwork::Offline,
+                InstallExtras {
+                    health: Some(&args[5]),
+                    health_readiness: true,
+                    dependency: Some(&args[6]),
+                    ..Default::default()
+                },
+            )
+        }
+        "--install-health-ready-lab" if args.len() == 6 => {
+            let uid = args[4].parse::<u32>().map_err(|_| bad())?;
+            install(
+                &dir,
+                &args[2],
+                &args[3],
+                uid,
+                AppNetwork::Offline,
+                InstallExtras {
+                    health: Some(&args[5]),
+                    health_readiness: true,
+                    ..Default::default()
+                },
+            )
+        }
         "--install-health-lab" if args.len() == 6 => {
             let uid = args[4].parse::<u32>().map_err(|_| bad())?;
             install(
@@ -841,6 +893,12 @@ mod tests {
         assert!(healthy.contains("HealthCmd=redis-cli ping\n"));
         assert!(healthy.contains("HealthTimeout=5s"));
         assert!(healthy.contains("HealthOnFailure=kill"));
+        assert!(!healthy.contains("Notify=healthy"));
+        let ready = with_health_readiness(&original, "redis-cli ping").unwrap();
+        assert!(ready.contains("Notify=healthy\n"));
+        assert!(ready.contains("HealthCmd=redis-cli ping\n"));
+        assert!(with_health_readiness(&ready, "redis-cli ping").is_err());
+        assert!(!original.contains("Notify=healthy"));
         assert!(healthy.contains("Network=none"));
         for bad in [
             "",

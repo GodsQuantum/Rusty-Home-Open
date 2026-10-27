@@ -1,0 +1,41 @@
+name: P8cq native health readiness and dependent failure fencing
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/p8cq-native-health-readiness.yml"
+      - "scripts/test_p8cq_health_readiness.sh"
+      - "scripts/test_p8cq_health_contract.py"
+      - "crates/native-hub/src/oci_quadlet.rs"
+      - "crates/native-hub/src/bin/oci_app_manager_lab.rs"
+      - "Cargo.lock"
+permissions:
+  contents: read
+jobs:
+  native-health-ready:
+    name: Real rootless Redis health readiness, dependent gating and live health failure
+    runs-on: ubuntu-26.04
+    timeout-minutes: 23
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Scope, static contract and Rust regressions
+        run: |
+          python3 scripts/test_p8cq_health_contract.py
+          bash -n scripts/test_p8cq_health_readiness.sh
+          cargo fmt --all -- --check
+          cargo test --locked -p hars-native-hub --all-targets
+          cargo clippy --locked -p hars-native-hub --all-targets -- -D warnings
+      - name: Official rootless Podman and user systemd
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends podman uidmap slirp4netns fuse-overlayfs
+          podman --version
+          test "$(podman info --format '{{.Host.CgroupsVersion}}')" = v2
+          test -S /run/user/$(id -u)/bus
+      - name: Genuine unhealthy-to-healthy service dependency and recovery
+        timeout-minutes: 13
+        run: |
+          cargo build --locked -p hars-native-hub --bin oci_app_manager_lab
+          bash scripts/test_p8cq_health_readiness.sh
