@@ -14,6 +14,8 @@ P.add_argument("--archive",type=Path,required=True)
 P.add_argument("--manifest",type=Path,required=True)
 P.add_argument("--native",type=Path,required=True)
 P.add_argument("--image",default="ghcr.io/home-assistant/app-configurator:6.3.0")
+P.add_argument("--verify-restart",action="store_true",
+               help="P8dh: real official App volume WRITE and STOP/START data durability")
 a=P.parse_args()
 assert os.environ.get("GITHUB_ACTIONS")=="true" and os.environ.get("RUNNER_TEMP")
 assert os.geteuid()!=0
@@ -116,9 +118,43 @@ with tempfile.TemporaryDirectory(prefix="p8df-real-app-runtime-",dir=os.environ[
                    expect=False,timeout=20)
         assert probe.returncode==0 and "P8DF_VISIBLE" in probe.stdout
         print("P8DF_REAL_RESTORED_FILE_EDITOR_MARKER_VISIBLE_INSIDE_RUNNING_OFFICIAL_IMAGE_PASS",flush=True)
-        verify_restart(run,name,launch,data_dir,markers[0],marker,archive,sha,identity)
-        # A successful process and private marker is milestone 5 only.
-        # Do not fake ingress authentication or imply a functioning UI.
+        if a.verify_restart:
+            # The actual official App image must WRITE its bound durable
+            # /data before a stop. Writing the source on the host would not
+            # prove App filesystem permissions or realistic OCI persistence.
+            app_state="/data/p8dh_fictional_written_inside_app.txt"
+            payload="P8DH_ORIGINAL_OFFICIAL_FILE_EDITOR_APP_WROTE_STATE_V1"
+            write=run(["podman","exec",name,"sh","-c",
+                       f"printf '%s\\n' {payload} > {app_state}"],
+                      expect=False,timeout=20)
+            assert write.returncode==0,("Official App cannot write /data (OCI UID mapping?): "
+                                        +write.stderr[-500:])
+            assert run(["podman","exec",name,"cat",app_state]).stdout.strip()==payload
+            state_path=data_dir/"p8dh_fictional_written_inside_app.txt"
+            assert state_path.read_text().strip()==payload
+            print("P8DH_REAL_OFFICIAL_APP_CONTAINER_WRITE_NATIVE_DATA_PASS",flush=True)
+            run(["podman","stop","--time","8",name],timeout=40)
+            assert run(["podman","inspect",name,"--format","{{.State.Running}}"]).stdout.strip()=="false"
+            assert state_path.read_text().strip()==payload
+            run(["podman","start",name],timeout=50)
+            for _ in range(35):
+                on=run(["podman","inspect",name,"--format","{{.State.Running}}"],expect=False)
+                if on.returncode==0 and on.stdout.strip()=="true":
+                    break
+                time.sleep(.4)
+            else:
+                raise AssertionError("Official File Editor App failed restart")
+            assert run(["podman","exec",name,"cat",app_state]).stdout.strip()==payload
+            assert run(["podman","exec",name,"cat",
+                        "/data/rusty_home_p8cu_nonsecret_synthetic_marker.txt"]).stdout.encode()==marker
+            assert run(["podman","inspect",name,"--format","{{.HostConfig.NetworkMode}}"]).stdout.strip()=="none"
+            assert run(["podman","inspect",name,"--format","{{json .HostConfig.PortBindings}}"]).stdout.strip() in ("{}","null")
+            print("P8DH_REAL_OFFICIAL_APP_STOP_RESTART_RESTORED_AND_WRITTEN_DATA_SURVIVE_PASS",flush=True)
+        # A successful process is not authenticated ingress/UI.
+        # Never promote milestone 6 from this rootless offline App test.
+        else:
+            verify_restart(run,name,launch,data_dir,markers[0],marker,archive,sha,identity)
+        # A running process and private marker do not prove authenticated UI.
     finally:
         run(["podman","rm","--force",name],expect=False,timeout=50)
     with archive.open("rb") as stream:

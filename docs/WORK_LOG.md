@@ -3,6 +3,12 @@
 ## 27 October — P8dj genuine App configurator internal HTML (CI pending)
 
 P8df only proved actual OCI process and recovered HAOS marker. P8di proved SIGKILL and container recreation. P8dj targets different gap: real OFFICIAL editor HTTP 200 + Configurator HTML on loopback *inside* OCI once it mounts native-restaged files, in offline rootless Podman and no port bindings. Exact original App-only backup generated within isolated official HAOS18.3 QEMU. This cannot certify authenticated ingress (Core+Supervisor session) and MUST NOT advance 5/10 until legitimate user authentication test. Unproven until exact GitHub CI PASS. Production 0/15.
+## 27 October — P8dh official File Editor real native /data write and restart [CI PENDING]
+
+New distinct proof attempt: upstream File Editor app-container writes *inside* its own persisted /data AFTER true HAOS->Rust backup/native reconstruction, then undergoes podman stop and podman start, and must show both original HAOS marker and newly written marker intact. Rootless/no network/no ports/no Supervisor tokens throughout. CI real genuine QEMU pending. The test does NOT qualify authentication or HTTP ingress (lane milestone 6), so must NOT skip ahead and claim 7/10. No host actions on Cloud9 besides CT700 code/build.
+## 27 October — P8dd verified actual native SIGKILL orphan recovery [LAB ONLY]
+
+PR #217 merged `75db307607d85132b97e8827159dbda10c5b2d87`, exact feature `ee6763c9d33c0f41f3654b4223957556fbdb1b6b`, 15/15 GitHub checks SUCCESS. Dedicated run 40552611012 job 122360110920 SUCCESS, actual Rust process SIGKILL after first private file, retry reaps only owned abandoned lease, concurrent writer survives, already published bytes preserved. 16/16 native Rust library tests; five P8DD PASS markers. Prior 40535003627 failed GitHub HAOS download HTTP 500 (not evidence). One new lab-only claim; total 50/46 distinct successful runs. 0/15 production release gates, no VM100, radios, production or independent audit.
 
 ## 27 October — P8di verified genuine official App SIGKILL and new OCI instance [LAB ONLY]
 
