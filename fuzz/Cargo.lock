@@ -1186,6 +1186,7 @@ dependencies = [
  "hars-native-kernel",
  "hars-supervisor-apps",
  "libfuzzer-sys",
+ "sha2",
  "tempfile",
 ]
 

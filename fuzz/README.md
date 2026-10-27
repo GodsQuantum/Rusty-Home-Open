@@ -34,3 +34,15 @@ contains only fictitious entity identities and inert YAML. No HAOS/VM100,
 network, real tokens, or devices are ever opened. A passing 45s/180s libFuzzer
 run is a limited instrumented lab result, not a penetration test, soak,
 HAOS migration certification, or production authorization.
+
+### P8cz seventh source: real native App-only backup admission (Oct 27)
+
+The existing fuzz crate now targets the *distinct* App-only partial Supervisor
+TAR/GZIP parser via `inspect_unprotected_app_only`. Its deterministic corpus
+has two valid fictional backups (one and two App payloads) and twelve unsafe
+fixtures. The target asserts exact archive SHA-256, bounded counts, unchanged
+source bytes, and that no action, runtime migration or production release is
+authorized. The dedicated Rust corpus test and native CLI checks establish
+that seeds reach the real parser; the pinned CI libFuzzer/AddressSanitizer run
+adds bounded adversarial coverage. No real archive, App extraction, VM100,
+household secret, radio, device, 72-hour soak or independent pentest.
