@@ -1,0 +1,104 @@
+name: P8dy genuine Supervisor Mosquitto persisted options fail-closed
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/p8dy-official-mosquitto-saved-options.yml"
+      - "scripts/supervisor_mosquitto_saved_options_lab.py"
+      - "scripts/test_p8dy_real_supervisor_mosquitto_saved_options.py"
+      - "scripts/test_p8dy_saved_options_contract.py"
+      - "scripts/haos_mosquitto_local_auth_lab.py"
+      - "scripts/p8do_official_mosquitto_qemu_pytest.py"
+      - "scripts/test_p8do_real_mosquitto_native_import.py"
+      - "scripts/test_p8do_mosquitto_scope_contract.py"
+      - "crates/interop-moli/src/app_backup_import.rs"
+      - "crates/interop-moli/src/app_backup_stage.rs"
+      - "crates/interop-moli/src/bin/ha_registry_stager.rs"
+      - "Cargo.lock"
+      - "scripts/p8cu_official_file_editor_partial_qemu_pytest.py"
+      - "scripts/test_p8cu_genuine_file_editor_app_only_archive.py"
+      - "scripts/test_p8cu_partial_app_preflight.py"
+      - "scripts/test_p8cu_qemu_contract.py"
+      - "scripts/inspect_ha_backup.py"
+      - "scripts/p8p_cross_vm_backup_relay.py"
+permissions:
+  contents: read
+jobs:
+  real-supervisor-app-options-private-denial:
+    name: Genuine Supervisor addon.json options authenticated migration refusal
+    runs-on: ubuntu-24.04
+    timeout-minutes: 55
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Scope and synthetic malicious archive refusal
+        run: |
+          python3 scripts/test_p8cu_qemu_contract.py
+          python3 scripts/test_p8do_mosquitto_scope_contract.py
+          python3 scripts/test_p8dy_saved_options_contract.py
+          python3 -m py_compile scripts/supervisor_mosquitto_saved_options_lab.py scripts/test_p8dy_real_supervisor_mosquitto_saved_options.py
+          cargo fmt --all -- --check
+          cargo test --locked -p hars-interop-moli --lib --quiet
+          cargo clippy --locked -p hars-interop-moli --all-targets -- -D warnings
+          cargo build --locked -p hars-interop-moli --bin ha_registry_stager
+          python3 scripts/test_p8cw_native_app_backup_stage.py --binary target/debug/ha_registry_stager
+          python3 scripts/test_p8cy_native_inactive_app_stage.py --binary target/debug/ha_registry_stager
+          python3 scripts/test_p8cu_partial_app_preflight.py
+          python3 scripts/test_p8cu_plugin_update_logic.py
+          python3 -m py_compile scripts/inspect_ha_backup.py scripts/p8cu_official_file_editor_partial_qemu_pytest.py scripts/test_p8cu_genuine_file_editor_app_only_archive.py
+          python3 -m py_compile scripts/p8do_official_mosquitto_qemu_pytest.py scripts/test_p8do_real_mosquitto_native_import.py
+      - name: Pinned library dependency for read-only upstream local-auth classification
+        run: |
+          python3 -m pip install --user 'pexpect==4.9.0' --break-system-packages
+          python3 -c "import pexpect; assert pexpect.__version__=='4.9.0'"
+      - name: Prepare pinned official HAOS QEMU harness
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends qemu-system-x86 qemu-utils ovmf xz-utils jq
+          git clone -q --depth 1 --filter=blob:none --sparse https://github.com/home-assistant/operating-system.git "$RUNNER_TEMP/haos-upstream"
+          git -C "$RUNNER_TEMP/haos-upstream" fetch -q --depth 1 origin 90fa213c3441e585d5a60387e9244d0ed38efaf8
+          git -C "$RUNNER_TEMP/haos-upstream" checkout -q 90fa213c3441e585d5a60387e9244d0ed38efaf8
+          git -C "$RUNNER_TEMP/haos-upstream" sparse-checkout set tests
+          test "$(git -C "$RUNNER_TEMP/haos-upstream" rev-parse HEAD)" = 90fa213c3441e585d5a60387e9244d0ed38efaf8
+          python3 -m venv "$RUNNER_TEMP/haos-venv"
+          "$RUNNER_TEMP/haos-venv/bin/python" -m pip install -r "$RUNNER_TEMP/haos-upstream/tests/requirements.txt"
+          test -c /dev/kvm
+          sudo chmod 0666 /dev/kvm
+          test -r /usr/share/ovmf/OVMF.fd
+      - name: Verify immutable Home Assistant OS image
+        run: |
+          curl -fLSs --retry 3 --retry-delay 5 -o "$RUNNER_TEMP/haos_ova-18.3.qcow2.xz" https://github.com/home-assistant/operating-system/releases/download/18.3/haos_ova-18.3.qcow2.xz
+          cd "$RUNNER_TEMP"
+          echo "fae6a728768cc10aff60d4820bfcd40d64cd77fab82c8bd92af13b3d9d414090  haos_ova-18.3.qcow2.xz" | sha256sum -c
+          xz -T2 -dc haos_ova-18.3.qcow2.xz > haos-upstream/tests/haos.qcow2
+          rm haos_ova-18.3.qcow2.xz
+          qemu-img resize -f qcow2 haos-upstream/tests/haos.qcow2 64G
+          qemu-img info --output=json haos-upstream/tests/haos.qcow2 | jq -e '.[ "virtual-size" ] >= 68719476736'
+      - name: Real Mosquitto selected-App-only Supervisor backup to native Rust private stage
+        timeout-minutes: 40
+        run: |
+          set -euo pipefail
+          grep -q -- '-snapshot -accel kvm' "$RUNNER_TEMP/haos-upstream/tests/qemu-strategy.yaml"
+          sed -i 's/memory: 1G/memory: 3G/' "$RUNNER_TEMP/haos-upstream/tests/qemu-strategy.yaml"
+          cat "$GITHUB_WORKSPACE/scripts/p8do_official_mosquitto_qemu_pytest.py" >> "$RUNNER_TEMP/haos-upstream/tests/supervisor_test/test_supervisor.py"
+          mkdir -p "$RUNNER_TEMP/hars-p8cu-app-only"
+          python3 "$GITHUB_WORKSPACE/scripts/p8p_cross_vm_backup_relay.py" --output-dir "$RUNNER_TEMP/hars-p8cu-app-only" > "$RUNNER_TEMP/p8cu-relay.log" 2>&1 &
+          RELAY_PID=$!
+          trap 'kill "$RELAY_PID" 2>/dev/null || true' EXIT
+          source "$RUNNER_TEMP/haos-venv/bin/activate"
+          cd "$RUNNER_TEMP/haos-upstream/tests"
+          ./run_tests.sh supervisor_test/test_supervisor.py::test_start_supervisor supervisor_test/test_supervisor.py::test_check_supervisor supervisor_test/test_supervisor.py::test_hars_official_mosquitto_app_only_partial_export
+          python3 "$GITHUB_WORKSPACE/scripts/test_p8do_mosquitto_scope_contract.py" --junit junit_reports/tests.xml
+          test -s "$RUNNER_TEMP/hars-p8cu-app-only/archive.tar"
+          test -s "$RUNNER_TEMP/hars-p8cu-app-only/manifest.json"
+          cd "$GITHUB_WORKSPACE"
+          python3 scripts/test_p8do_real_mosquitto_native_import.py --archive "$RUNNER_TEMP/hars-p8cu-app-only/archive.tar" --manifest "$RUNNER_TEMP/hars-p8cu-app-only/manifest.json" --native target/debug/ha_registry_stager
+          echo P8DO_GENUINE_SECOND_OFFICIAL_SUPERVISOR_APP_MOSQUITTO_NATIVE_RUST_LAB_PASS
+          python3 scripts/test_p8dy_real_supervisor_mosquitto_saved_options.py --archive "$RUNNER_TEMP/hars-p8cu-app-only/archive.tar" --manifest "$RUNNER_TEMP/hars-p8cu-app-only/manifest.json" --native target/debug/ha_registry_stager
+          echo P8DY_REAL_HAOS_SUPERVISOR_NATIVE_PERSISTED_MQTT_AUTH_OPTIONS_REFUSED_NO_BYPASS_PASS
+      - name: Refuse artifact or backup exposure
+        if: always()
+        run: |
+          test ! -e "$GITHUB_WORKSPACE/archive.tar"
+          test ! -e "$GITHUB_WORKSPACE/registry-shadow.redb"
