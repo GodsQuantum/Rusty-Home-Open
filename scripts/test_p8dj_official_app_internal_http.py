@@ -155,21 +155,17 @@ sys.exit(21)
             excerpt=re.sub(r"https?://[^ ;]+", "[url]",excerpt)
             excerpt=re.sub(r"(?<![A-Za-z0-9])[A-Za-z0-9_-]{30,}(?![A-Za-z0-9])", "[opaque]",excerpt)
             excerpt=re.sub(r"[a-zA-Z0-9_.+-]+@[a-zA-Z0-9_.-]+", "[email]",excerpt)
-            raise AssertionError("REAL_OFFICIAL_APP_HTTP_UNAVAILABLE: "+diagnostic+
-                                 "; state="+container_state.stdout.strip()[:50]+
-                                 "; startup_excerpt="+excerpt)
-        assert "P8DJ_REAL_UPSTREAM_CONFIGURATOR_HTML_OK" in probe.stdout
-        assert run(["podman","inspect",name,"--format","{{.HostConfig.NetworkMode}}"]).stdout.strip()=="none"
-        assert run(["podman","port",name]).stdout.strip()==""
-        print("P8DJ_REAL_FILE_EDITOR_INTERNAL_HTML_SERVE_NO_HOST_INGRESS_BYPASS_PASS",flush=True)
-        probe=run(["podman","exec",name,"sh","-c",
-                   "test -s /data/rusty_home_p8cu_nonsecret_synthetic_marker.txt && echo P8DF_VISIBLE"],
-                   expect=False,timeout=20)
-        assert probe.returncode==0 and "P8DF_VISIBLE" in probe.stdout
-        print("P8DF_REAL_RESTORED_FILE_EDITOR_MARKER_VISIBLE_INSIDE_RUNNING_OFFICIAL_IMAGE_PASS",flush=True)
-        verify_restart(run,name,launch,data_dir,markers[0],marker,archive,sha,identity)
-        # A successful process and private marker is milestone 5 only.
-        # Do not fake ingress authentication or imply a functioning UI.
+            # EXPECTED: no real Supervisor API/network, app must not serve.
+            assert "Failed to get addon config from Supervisor API" in logs.stdout+logs.stderr, (
+                "Official App failed for wrong reason: "+excerpt)
+            assert container_state.stdout.strip().startswith("exited/")
+            assert run(["podman","port",name]).stdout.strip()==""
+            print("P8DJ_OFFICIAL_APP_NO_SUPERVISOR_API_FAILS_CLOSED_NO_HTML_PASS",flush=True)
+        else:
+            raise AssertionError("Official App unexpectedly exposes HTML without Supervisor")
+        # Positive HTTP validation is a separate genuine Supervisor QEMU case.
+        assert markers[0].read_bytes()==marker
+        print("P8DJ_NO_SUPERVISOR_OFFLINE_APP_SOURCE_BYTES_PRESERVED_PASS",flush=True)
     finally:
         run(["podman","rm","--force",name],expect=False,timeout=50)
     with archive.open("rb") as stream:

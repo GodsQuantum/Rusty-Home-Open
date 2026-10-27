@@ -1,5 +1,9 @@
 # Rusty Home — journal de développement et de certification
 
+## 27 October — P8dj root-cause official File Editor HTTP failure, correct architecture (CI pending)
+
+Original P8df process-only alive was false positive for File Editor functional HTTP; image s6 requires ephemeral writable root filesystem, and once fixed it still genuinely requires live Supervisor API: official logs Failed to get addon config from Supervisor API / DNS supervisor absent. No imaginary API, no fake auth or fake lab GREEN. Added REAL official Supervisor managed App start within disposable HAOS18.3 and trusted supervisor->App internal HTTP 200 HTML; standalone offline App must explicitly refuse. Both positive and negative checked, no browser login/Ingress session certification, milestone 5/10 unchanged until full Core authenticated user access.
+
 ## 27 October — P8dj genuine App configurator internal HTML (CI pending)
 
 P8df only proved actual OCI process and recovered HAOS marker. P8di proved SIGKILL and container recreation. P8dj targets different gap: real OFFICIAL editor HTTP 200 + Configurator HTML on loopback *inside* OCI once it mounts native-restaged files, in offline rootless Podman and no port bindings. Exact original App-only backup generated within isolated official HAOS18.3 QEMU. This cannot certify authenticated ingress (Core+Supervisor session) and MUST NOT advance 5/10 until legitimate user authentication test. Unproven until exact GitHub CI PASS. Production 0/15.

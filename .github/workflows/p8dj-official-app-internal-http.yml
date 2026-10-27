@@ -4,6 +4,7 @@ on:
     paths:
       - ".github/workflows/p8dj-official-app-internal-http.yml"
       - "scripts/test_p8dj_official_app_internal_http.py"
+      - "scripts/p8dj_official_supervisor_http_pytest.py"
       - "scripts/test_p8dj_internal_http_contract.py"
       - "scripts/test_p8df_official_app_runtime.py"
       - "scripts/test_p8df_official_app_runtime_contract.py"
@@ -48,7 +49,7 @@ jobs:
           python3 scripts/test_p8cy_native_inactive_app_stage.py --binary target/debug/ha_registry_stager
           python3 scripts/test_p8df_official_app_runtime_contract.py
           python3 scripts/test_p8dj_internal_http_contract.py
-          python3 -m py_compile scripts/test_p8dj_official_app_internal_http.py
+          python3 -m py_compile scripts/test_p8dj_official_app_internal_http.py scripts/p8dj_official_supervisor_http_pytest.py
           python3 scripts/test_p8di_official_app_crash_restart_contract.py
           python3 -m py_compile scripts/test_p8df_official_app_runtime.py
           python3 scripts/test_p8cu_partial_app_preflight.py
@@ -89,15 +90,15 @@ jobs:
           set -euo pipefail
           grep -q -- '-snapshot -accel kvm' "$RUNNER_TEMP/haos-upstream/tests/qemu-strategy.yaml"
           sed -i 's/memory: 1G/memory: 3G/' "$RUNNER_TEMP/haos-upstream/tests/qemu-strategy.yaml"
-          cat "$GITHUB_WORKSPACE/scripts/p8cu_official_file_editor_partial_qemu_pytest.py" >> "$RUNNER_TEMP/haos-upstream/tests/supervisor_test/test_supervisor.py"
+          cat "$GITHUB_WORKSPACE/scripts/p8dj_official_supervisor_http_pytest.py" >> "$RUNNER_TEMP/haos-upstream/tests/supervisor_test/test_supervisor.py"
           mkdir -p "$RUNNER_TEMP/hars-p8cu-app-only"
           python3 "$GITHUB_WORKSPACE/scripts/p8p_cross_vm_backup_relay.py" --output-dir "$RUNNER_TEMP/hars-p8cu-app-only" > "$RUNNER_TEMP/p8cu-relay.log" 2>&1 &
           RELAY_PID=$!
           trap 'kill "$RELAY_PID" 2>/dev/null || true' EXIT
           source "$RUNNER_TEMP/haos-venv/bin/activate"
           cd "$RUNNER_TEMP/haos-upstream/tests"
-          ./run_tests.sh supervisor_test/test_supervisor.py::test_start_supervisor supervisor_test/test_supervisor.py::test_check_supervisor supervisor_test/test_supervisor.py::test_hars_official_file_editor_app_only_partial_export
-          python3 "$GITHUB_WORKSPACE/scripts/test_p8cu_qemu_contract.py" --junit junit_reports/tests.xml
+          ./run_tests.sh supervisor_test/test_supervisor.py::test_start_supervisor supervisor_test/test_supervisor.py::test_check_supervisor supervisor_test/test_supervisor.py::test_hars_official_file_editor_supervisor_internal_http
+          python3 "$GITHUB_WORKSPACE/scripts/test_p8dj_internal_http_contract.py" --junit junit_reports/tests.xml
           test -s "$RUNNER_TEMP/hars-p8cu-app-only/archive.tar"
           test -s "$RUNNER_TEMP/hars-p8cu-app-only/manifest.json"
           cd "$GITHUB_WORKSPACE"
