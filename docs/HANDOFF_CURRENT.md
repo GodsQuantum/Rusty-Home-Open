@@ -1,4 +1,6 @@
-## P8dd — stage SIGKILL recovery: PR #217 still UNVERIFIED; original CI 40535003627 failed downloading HAOS image (HTTP 500), not a test assertion. Merge-conflict repair only, no new laboratory claim.
+## 27 October — P8dd native inactive App stage SIGKILL recovery [VERIFIED LAB ONLY]
+
+PR #217 MERGED squash main `75db307607d85132b97e8827159dbda10c5b2d87` from exact original HEAD `ee6763c9d33c0f41f3654b4223957556fbdb1b6b`; **15/15 exact-head GitHub checks SUCCESS**. [Actual native SIGKILL CI 40552611012](https://github.com/GodsQuantum/Rusty-Home-Open/actions/runs/40552611012), job `122360110920` SUCCESS, 16/16 Rust library tests and five actual P8DD_*_PASS markers. A real Rust stage process was SIGKILLed after its first private fsynced fictional App file: no partial publish; retry removed only its own abandoned private stage, preserved forged/unmarked lookalikes and exact source bytes. A separate concurrent writer's active stage was not reaped; published data resisted subsequent retries. Original failed 40535003627 was GitHub HAOS asset HTTP 500 and is NOT evidence. **50 verified_lab_only claims / 46 distinct successful GitHub runs; production 0/15.** This is native *inactive* App-data crash recovery, NOT HAOS App activation, authenticated Ingress/UI, real household migration, hardware, 72h soak or independent audit. PR #220 remains open/conflicting; avoid duplicating #221 SIGKILL OCI proof.
 
 ## 27 October — P8di verified genuine official App SIGKILL and new OCI instance [LAB ONLY]
 
