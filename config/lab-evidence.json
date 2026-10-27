@@ -118,7 +118,7 @@
       "status": "verified_lab_only",
       "run_id": 40002933713,
       "head_sha": "17d3d27a64ed97650496d44453fcef74a1bfead4",
-      "workflow": "P8c2 \u2014 genuine isolated HAOS Supervisor repository catalogue",
+      "workflow": "P8c2 — genuine isolated HAOS Supervisor repository catalogue",
       "job": "Official HAOS 18.3 KVM and genuine Supervisor Store",
       "scope": "Isolated official HAOS 18.3 / genuine Supervisor lifecycle and Rust product KVM test",
       "url": "https://github.com/GodsQuantum/Rusty-Home-Open/actions/runs/40002933713",
@@ -650,6 +650,18 @@
       "scope": "Official disposable HAOS18.3 QEMU: trusted File Editor HTTP POST saved synthetic Core file, SHA256 checked, retained after App restart; unauthenticated Core ingress POST wrote nothing. QEMU 3/3. Not authenticated browser, Rust write or production.",
       "url": "https://github.com/GodsQuantum/Rusty-Home-Open/actions/runs/40574998498",
       "merged_pr": 229
+    },
+    {
+      "id": "haos_native_two_app_atomic_private_stage_sigkill",
+      "release_gate": "supervisor_apps_restore",
+      "status": "verified_lab_only",
+      "run_id": 40580113364,
+      "head_sha": "e0b7e3e9227603393352de7fc29d9e882237a039",
+      "workflow": "P8dq atomic two-App native inactive private stage SIGKILL",
+      "job": "Real Rust two-App private atomic transaction with SIGKILL",
+      "scope": "Disposable GitHub CI: native Rust atomic 2-App private stage with fictional archives; real SIGKILL after first App, safe retry, failpoints, SHA tamper and collision refusal. No real HAOS App data or runtime.",
+      "url": "https://github.com/GodsQuantum/Rusty-Home-Open/actions/runs/40580113364",
+      "merged_pr": 233
     }
   ]
 }
