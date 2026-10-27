@@ -1,5 +1,9 @@
 # Rusty Home — journal de développement et de certification
 
+## 27 October — P8ch failure-injected cross-App staged recovery [CI PENDING]
+
+New test-only GitHub workflow \`.github/workflows/p8ch-multiapp-stage-rollback.yml\` and \`scripts/test_p8ch_multiapp_stage_rollback.sh\` exercise real Redis + Meilisearch together using the unchanged native Rust rootless OCI manager, unlike the nine already proven *single-App* snapshots. Batch stopped at same checkpoint: genuine Redis RDB and Meilisearch index tar + 0600/SHA checks, both originals advance afterwards, second archive deliberately corrupted after first restored App is running, first stage is removed and original pair verified; valid retry restores independent earlier versions, preserves both originals across staged restart/removal. The lab must fail unless ALL observed real service results and cleanup guards pass. Stage is network none: no atomic user-visible production cutover, independent audit, cross-host persistence, VM100, 72h soak or household data; 0/15 production gates.
+
 ## 2026-10-27 — P8cf Qdrant eighth real App [EXACT GH CI SUCCESS]
 
 PR #180 original source SHA `c7a6aa43dbab4cae25fda54a329374d5240c6ece`, merged `4c48a76d39ecded1790b2719d4c4ebe62ed43ee5`. Disposable GitHub Actions run `40433087623`, job `121955234319` SUCCESS, exact source, successful real Qdrant API checkpoint/independent restore with separate writable storage/snapshots mounted under native read-only OCI rootfs; archives private 0600 SHA verified and tamper denied. Restored instance has pre-snapshot vector id1 but not source's new id2, source retains both after other instance removal. Preserve red runs in earlier P8cf journal as debugging only; do not redo successfully proven seven earlier services. Eight distinct realistic OCI restore categories, no complete HAOS add-on lifecycle or home migration. Production remains 0/15.
