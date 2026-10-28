@@ -1,3 +1,7 @@
+## 28 October 2026 — P8ec new genuine Core/HACS version pairing, isolated only
+
+Read canonical certification first, skipped prior pinned Core2026.10.4 generic P8bd and Watchman Core2026.10.2 P6d. CT700 independent worktree, changed only opt-in Watchman Core image selection and runtime version proof, added distinct exact-shape report, forged-evidence negative tests and one CI workflow. Local source guard PASS. Original test HEAD cd21259bebe76e4000ebd4e0a5bda0673a30885a / merged #248 f2cc08798066e2ba3962931cc112cb65e1f88b45: GitHub run40606133014 job122545964891 SUCCESS; actual Core2026.10.4+Watchman0.8.4 flow/service/unload/reload/remove PASS, no residual OCI sandbox. New machine claim official_core_2026_10_4_watchman_0_8_4_real_lifecycle lab-only; 64 claims/60 unique runs. No full HACS29 parity, no production gates/signoff, no VM100, hardware, secrets, radio, host reboot or services changed.
+
 ## 28 October — P8eb exact-head CI and merge (VERIFIED LAB ONLY)
 
 PR #246 original HEAD b25348d9365ebb0333680281fdfb8cdf8eba3836, squash main 2ca7804293072e0a866fa878148cb8f1223a00aa; all 10 exact-head checks SUCCESS. Native CI 40604609092 job 122540871430 actually ran 11/11 fixtures: prior RED 1500-deep JSON now refused by 64-level structural limit; same-size concurrent write and FIFO denied, quoted literal brackets accepted. Original P8dy contract green; QEMU CI on same SHA was regression only, not a new claim. 63 lab-only jobs / 59 distinct successful GitHub run IDs, 0/15 independent production gates. No real HAOS user or VM100 touched.

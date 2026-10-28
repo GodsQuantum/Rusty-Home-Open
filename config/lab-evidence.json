@@ -746,6 +746,18 @@
       "scope": "GitHub runner: 11 Python fixtures, 1500-deep valid JSON denied by depth-64 bound; same-size concurrent metadata rewrite and FIFO denied; literal brackets accepted. QEMU jobs are regressions. No production, real user auth or external audit.",
       "url": "https://github.com/GodsQuantum/Rusty-Home-Open/actions/runs/40604609092",
       "merged_pr": 246
+    },
+    {
+      "id": "official_core_2026_10_4_watchman_0_8_4_real_lifecycle",
+      "release_gate": "ha_core_hacs_29_runtime",
+      "status": "verified_lab_only",
+      "run_id": 40606133014,
+      "head_sha": "cd21259bebe76e4000ebd4e0a5bda0673a30885a",
+      "workflow": "P8ec Actual Watchman HACS on official Core 2026.10.4",
+      "job": "Genuine Watchman 0.8.4 service, config flow and unload on Core 2026.10.4",
+      "scope": "Pinned Core2026.10.4 OCI/version + upstream Watchman0.8.4 config-flow, setup, service report, unload/reload/remove on isolated no-network CI. Previous Core2026.10.2 not manually retested. No OAuth, 29 integrations, users, hardware or production.",
+      "url": "https://github.com/GodsQuantum/Rusty-Home-Open/actions/runs/40606133014",
+      "merged_pr": 248
     }
   ]
 }

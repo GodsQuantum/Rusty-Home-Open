@@ -1,3 +1,9 @@
+## P8ec — Genuine Watchman HACS 0.8.4 on latest pinned official Core 2026.10.4 (28 October 2026)
+
+- Feature PR [#248](https://github.com/GodsQuantum/Rusty-Home-Open/pull/248) merged into main `f2cc08798066e2ba3962931cc112cb65e1f88b45`, original tested HEAD `cd21259bebe76e4000ebd4e0a5bda0673a30885a`; **10/10 exact-HEAD GitHub checks SUCCESS**.
+- Independent candidate-only [GitHub run 40606133014](https://github.com/GodsQuantum/Rusty-Home-Open/actions/runs/40606133014), job `122545964891`, SUCCESS. Original signed/pinned Core OCI 2026.10.4 version asserted during execution and upstream Watchman 0.8.4 commit `2eab21b7aeb4d4e20c71c3e2b3e449c42c4a3b35`. Real isolated app config-flow creates entry, loads integration, invokes `watchman.report` without writing file, unloads, reloads and removes. Markers `P8EC_CORE_CURRENT_EXACT_PIN_LAB_SCOPE_AND_FORGED_PROOF_REFUSAL_PASS` and `P8EC_REAL_WATCHMAN_0_8_4_CORE_2026_10_4_LIFECYCLE_PASS` observed in exact logs.
+- The already qualified generic Core 2026.10.4 P8bd test and Watchman on Core 2026.10.2 P6d remain prior proof, not new claims. No user accounts, OAuth, live network/device, full 29-HACS runtime, field rollback or production. **64 laboratory claims / 60 distinct verified CI runs; all 15 production gates remain uncertified.**
+
 ## P8eb — bounded Supervisor JSON metadata depth and in-place rewrite denial (28 October 2026)
 
 - PR #246 merged squash main `2ca7804293072e0a866fa878148cb8f1223a00aa`, exact original HEAD `b25348d9365ebb0333680281fdfb8cdf8eba3836`; **10/10 GitHub checks SUCCESS**.
