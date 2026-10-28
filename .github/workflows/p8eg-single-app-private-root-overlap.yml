@@ -1,0 +1,33 @@
+name: P8eg native single-App escrow-output path alias and ancestor refusal
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/p8eg-single-app-private-root-overlap.yml"
+      - "crates/interop-moli/src/app_backup_stage.rs"
+      - "scripts/test_p8eg_single_app_overlap.py"
+      - "scripts/test_p8eg_single_app_overlap_contract.py"
+      - "Cargo.lock"
+permissions:
+  contents: read
+jobs:
+  single-app-root-isolation:
+    name: Rust single App stage rejects equivalent, nested and ancestor source directories
+    runs-on: ubuntu-24.04
+    timeout-minutes: 18
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy, rustfmt
+      - name: Fail closed single source/output path contract and native Rust build
+        run: |
+          python3 scripts/test_p8eg_single_app_overlap_contract.py
+          python3 scripts/test_public_redaction.py
+          python3 -m py_compile scripts/test_p8eg_single_app_overlap.py
+          cargo fmt --all -- --check
+          cargo clippy --locked -p hars-interop-moli --all-targets -- -D warnings
+          cargo build --locked -p hars-interop-moli --bin ha_registry_stager
+      - name: Native Rust single App actual synthetic SHA source and alias refusal
+        run: python3 scripts/test_p8eg_single_app_overlap.py target/debug/ha_registry_stager

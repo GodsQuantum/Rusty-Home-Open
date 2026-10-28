@@ -206,6 +206,17 @@ pub fn stage_inactive_app(
         bail!("invalid selected App identifier")
     }
     private_owned_directory(target_root).context("output root")?;
+    // Never stage a single App into its immutable source archive directory,
+    // nor into any ancestor or descendant of it. Lexical Path equality is
+    // insufficient for dot-dot aliases and symlinked ancestors. Check
+    // before orphan cleanup, private extraction or atomic publication.
+    // This is a static ancestry check, NOT a concurrent path-swap proof.
+    let source_parent = source.parent().context("App source directory missing")?;
+    let source_root = fs::canonicalize(source_parent).context("canonical App source directory")?;
+    let output_root = fs::canonicalize(target_root).context("canonical App stage destination")?;
+    if source_root.starts_with(&output_root) || output_root.starts_with(&source_root) {
+        bail!("refuse aliased or overlapping App source and stage roots")
+    }
     let info = inspect_unprotected_app_only(source)?;
     if info.app_count != 1 || info.archive_sha256 != digest {
         bail!("only one SHA-exact official App-only source supported")
