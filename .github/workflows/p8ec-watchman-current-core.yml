@@ -1,0 +1,40 @@
+name: P8ec Actual Watchman HACS on official Core 2026.10.4
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/p8ec-watchman-current-core.yml"
+      - "scripts/run_p6d_real_watchman_core.sh"
+      - "scripts/test_p6d_real_watchman_core.py"
+      - "scripts/check_p8ec_watchman_current_core.py"
+      - "scripts/test_p8ec_watchman_current_core_contract.py"
+      - "scripts/check_p6d_real_watchman_report.py"
+      - "config/ha-core-pins.json"
+permissions:
+  contents: read
+jobs:
+  genuine-current-core-watchman:
+    name: Genuine Watchman 0.8.4 service, config flow and unload on Core 2026.10.4
+    runs-on: ubuntu-24.04
+    timeout-minutes: 28
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - name: Strict opt-in candidate provenance and forged proof rejection
+        run: |
+          python3 scripts/test_ha_core_pins.py
+          python3 scripts/test_p8ec_watchman_current_core_contract.py
+          python3 scripts/test_public_redaction.py
+          bash -n scripts/run_p6d_real_watchman_core.sh
+          python3 -m py_compile scripts/test_p6d_real_watchman_core.py scripts/check_p8ec_watchman_current_core.py
+      - name: Genuine isolated official Core 2026.10.4 and upstream Watchman 0.8.4 lifecycle
+        timeout-minutes: 23
+        env:
+          HARS_CURRENT_CORE_HACS_LAB: "2026.10.4"
+        run: bash scripts/run_p6d_real_watchman_core.sh
+      - name: No leaked isolated Watchman OCI containers
+        if: always()
+        run: |
+          if docker ps -a --format '{{.Names}}' | grep '^hars-watchman-'; then
+            echo "Leaked disposable Watchman sandbox"; exit 1
+          fi

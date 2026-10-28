@@ -2,6 +2,8 @@
 """Real upstream Watchman 0.8.4 in official isolated Home Assistant Core."""
 import asyncio
 import json
+import os
+from homeassistant.const import __version__ as ha_core_version
 from pathlib import Path
 from importlib.metadata import version
 
@@ -15,6 +17,9 @@ DOMAIN = "watchman"
 
 async def main():
     assert version("prettytable") == "3.12.0", "not original manifest dependency"
+    expected_core=os.environ.get("HARS_EXPECTED_CORE_VERSION","2026.10.2")
+    assert expected_core in {"2026.10.2","2026.10.4"}
+    assert ha_core_version == expected_core, "unexpected Core OCI version"
     routes = Path("/proc/net/route").read_text().splitlines()[1:]
     assert not routes and [x.split(":",1)[0].strip() for x in
         Path("/proc/self/net/dev").read_text().splitlines()[2:] if ":" in x] == ["lo"]
@@ -97,6 +102,10 @@ async def main():
             "real_user_config_or_devices_tested":False,
             "production_ready":False,
         }
+        # Keep original 2026.10.2 proof shape byte-compatible with its
+        # independently verified strict P6d contract.
+        if expected_core == "2026.10.4":
+            proof["core_version"] = ha_core_version
         Path("/config/watchman-proof.json").write_text(
             json.dumps(proof,sort_keys=True),encoding="utf-8"
         )

@@ -50,12 +50,32 @@ homeassistant:
   time_zone: Europe/Paris
 YAML
 IMAGE="ghcr.io/home-assistant/home-assistant@sha256:33afb0659d786213264c2211f8d91c5fe87461c56eba6a3a546eb05fc71e89f4"
+EXPECTED_CORE_VERSION="2026.10.2"
+# Distinct opt-in matrix cell only. Keep the already certified 2026.10.2
+# default unchanged and use the existing immutable candidate pin.
+if [[ "${HARS_CURRENT_CORE_HACS_LAB:-}" == "2026.10.4" ]]; then
+  IMAGE="$(python3 - <<'P8EC_PIN'
+import json
+from pathlib import Path
+pins=json.loads(Path("config/ha-core-pins.json").read_text())
+candidate=pins["stable_candidate"]
+assert candidate["version"]=="2026.10.4"
+assert candidate["oci_index"]=="sha256:23f4dfbb69ce76315dbc4de7915504f1c2dcecd7ca2648113a493a385972e133"
+print("ghcr.io/home-assistant/home-assistant@"+candidate["oci_index"])
+P8EC_PIN
+  )"
+  EXPECTED_CORE_VERSION="2026.10.4"
+elif [[ -n "${HARS_CURRENT_CORE_HACS_LAB:-}" ]]; then
+  echo "Unknown unsupported Core HACS version requested" >&2
+  exit 2
+fi
 if ! docker image inspect "$IMAGE" >/dev/null 2>&1; then docker pull "$IMAGE" >/dev/null; fi
 docker run --rm --network none --user "$(id -u):$(id -g)" --read-only \
   --cap-drop ALL --security-opt no-new-privileges --pids-limit 256 \
   --memory 2200m --cpus 2 --tmpfs /tmp:rw,nosuid,nodev,size=128m \
   --tmpfs /run:rw,nosuid,nodev,size=64m \
   --env PYTHONDONTWRITEBYTECODE=1 --env TZ=Europe/Paris \
+  --env "HARS_EXPECTED_CORE_VERSION=$EXPECTED_CORE_VERSION" \
   --env PYTHONPATH=/config/vendor/prettytable-3.12.0-py3-none-any.whl \
   --mount "type=bind,src=$TMP/config,dst=/config" \
   --mount "type=bind,src=$ROOT/scripts/test_p6d_real_watchman_core.py,dst=/watchman-proof.py,readonly" \
@@ -66,4 +86,8 @@ docker run --rm --network none --user "$(id -u):$(id -g)" --read-only \
     exit 1
   }
 test -s "$TMP/config/watchman-proof.json" || { echo "Watchman full proof missing" >&2; exit 1; }
-python3 scripts/check_p6d_real_watchman_report.py "$TMP/config/watchman-proof.json"
+if [[ "$EXPECTED_CORE_VERSION" == "2026.10.4" ]]; then
+  python3 scripts/check_p8ec_watchman_current_core.py "$TMP/config/watchman-proof.json"
+else
+  python3 scripts/check_p6d_real_watchman_report.py "$TMP/config/watchman-proof.json"
+fi
