@@ -528,6 +528,192 @@ mod tests {
         );
     }
     #[test]
+    fn synthetic_multiuser_rbac_cross_user_and_revocation_denial() {
+        let dir = tempfile::tempdir().unwrap();
+        fs::set_permissions(dir.path(), fs::Permissions::from_mode(0o700)).unwrap();
+        let mut sessions = DurableFixtureSessions::open(&dir.path().join("sessions.redb")).unwrap();
+        let mut audit = FileAuditJournal::open(&dir.path().join("audit.jsonl")).unwrap();
+        let app_a = AppSlug::parse("app_user_a").unwrap();
+        let app_b = AppSlug::parse("app_user_b").unwrap();
+        let req_a = prepare(&app_a, Operation::Install).unwrap();
+        let _req_b = prepare(&app_b, Operation::Install).unwrap();
+        let mut policy = Policy::default();
+        policy.grant("user_a", &app_a, &[Action::Install]);
+        policy.grant("user_b", &app_b, &[Action::Install]);
+
+        let session_a = sessions
+            .issue_fixture(
+                Actor::new("user_a", Role::Administrator).unwrap(),
+                100,
+                300,
+                120,
+            )
+            .unwrap();
+        let session_b = sessions
+            .issue_fixture(
+                Actor::new("user_b", Role::Administrator).unwrap(),
+                100,
+                300,
+                120,
+            )
+            .unwrap();
+
+        // 1. User A may write own fixture: consent issued and permit granted
+        let consent_a = sessions
+            .issue_confirmation(&policy, session_a.as_str(), &req_a, 100)
+            .unwrap()
+            .unwrap();
+        let permit_a = grant_checked_fixture_status(
+            CoreAccountStatus::ActiveAdmin,
+            &claim("user_a"),
+            &policy,
+            &mut sessions,
+            session_a.as_str(),
+            &req_a,
+            Some(consent_a.as_str()),
+            &mut audit,
+            100,
+        )
+        .unwrap();
+        assert!(
+            permit_a.is_some(),
+            "user A must be granted permit on own fixture"
+        );
+
+        // 2. User B must be denied on User A resource
+        // 2a. User B cannot issue confirmation for User A app (unscoped app)
+        assert!(
+            issue_checked_fixture_confirmation(
+                CoreAccountStatus::ActiveAdmin,
+                &claim("user_b"),
+                &policy,
+                &mut sessions,
+                session_b.as_str(),
+                &req_a,
+                101,
+            )
+            .unwrap()
+            .is_none(),
+            "user B must not issue confirmation for user A resource"
+        );
+        // 2b. User B cannot execute on User A resource with own session
+        assert!(
+            grant_checked_fixture_status(
+                CoreAccountStatus::ActiveAdmin,
+                &claim("user_b"),
+                &policy,
+                &mut sessions,
+                session_b.as_str(),
+                &req_a,
+                None,
+                &mut audit,
+                101,
+            )
+            .unwrap()
+            .is_none(),
+            "user B must be denied on user A resource"
+        );
+        // 2c. User B cannot hijack User A session or claim
+        assert!(
+            grant_checked_fixture_status(
+                CoreAccountStatus::ActiveAdmin,
+                &claim("user_b"),
+                &policy,
+                &mut sessions,
+                session_a.as_str(),
+                &req_a,
+                None,
+                &mut audit,
+                101,
+            )
+            .unwrap()
+            .is_none(),
+            "cross-user claim and session token mismatch must be rejected"
+        );
+
+        // 3. Expired / Revoked user A must be denied
+        // 3a. Issue fresh confirmation for user A
+        let consent_a2 = sessions
+            .issue_confirmation(&policy, session_a.as_str(), &req_a, 102)
+            .unwrap()
+            .unwrap();
+        // 3b. Expired session: now = 405 > 100 + 300 (ttl=300)
+        assert!(
+            grant_checked_fixture_status(
+                CoreAccountStatus::ActiveAdmin,
+                &claim("user_a"),
+                &policy,
+                &mut sessions,
+                session_a.as_str(),
+                &req_a,
+                Some(consent_a2.as_str()),
+                &mut audit,
+                405,
+            )
+            .unwrap()
+            .is_none(),
+            "expired session must be denied"
+        );
+        // 3c. Revoked Core status: user A active session but Core account revoked/denied
+        let session_a_fresh = sessions
+            .issue_fixture(
+                Actor::new("user_a", Role::Administrator).unwrap(),
+                105,
+                300,
+                120,
+            )
+            .unwrap();
+        let consent_a3 = sessions
+            .issue_confirmation(&policy, session_a_fresh.as_str(), &req_a, 105)
+            .unwrap()
+            .unwrap();
+        assert!(
+            grant_checked_fixture_status(
+                CoreAccountStatus::Denied,
+                &claim("user_a"),
+                &policy,
+                &mut sessions,
+                session_a_fresh.as_str(),
+                &req_a,
+                Some(consent_a3.as_str()),
+                &mut audit,
+                105,
+            )
+            .unwrap()
+            .is_none(),
+            "revoked Core user must be denied even with active session"
+        );
+        // 3d. Revoked session: explicit revocation of session
+        sessions.revoke(session_a_fresh.as_str()).unwrap();
+        assert!(
+            grant_checked_fixture_status(
+                CoreAccountStatus::ActiveAdmin,
+                &claim("user_a"),
+                &policy,
+                &mut sessions,
+                session_a_fresh.as_str(),
+                &req_a,
+                None,
+                &mut audit,
+                106,
+            )
+            .unwrap()
+            .is_none(),
+            "revoked session must be denied"
+        );
+
+        // 4. Verify no host side effect and auditable rejection
+        assert!(dir.path().join("audit.jsonl").exists());
+        let audit_content = fs::read_to_string(dir.path().join("audit.jsonl")).unwrap();
+        assert!(audit_content.lines().count() >= 2);
+        for line in audit_content.lines() {
+            let entry: serde_json::Value = serde_json::from_str(line).unwrap();
+            assert!(entry.get("hash").is_some());
+            assert!(entry.get("prev_hash").is_some());
+            assert!(entry.get("event").is_some());
+        }
+    }
+    #[test]
     fn core_status_checked_both_before_issuing_and_before_consuming_one_use_consent() {
         let dir = tempfile::tempdir().unwrap();
         fs::set_permissions(dir.path(), fs::Permissions::from_mode(0o700)).unwrap();
