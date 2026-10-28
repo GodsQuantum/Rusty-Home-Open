@@ -62,7 +62,7 @@ def wait_probe(marker,args,attempts=25):
 def main(binary):
     binary=binary.resolve(strict=True)
     assert binary.is_file() and os.access(binary,os.X_OK)
-    assert sys.platform=="linux"
+    assert sys.platform=="linux" and os.geteuid()!=0, "refuse privileged CI/local Docker run"
     with tempfile.TemporaryDirectory(prefix="p8ei-official-mqtt-") as dirname:
         lab=Path(dirname)
         lab.chmod(0o700)
@@ -80,7 +80,8 @@ def main(binary):
             run(["docker","pull",OFFICIAL],timeout=160)
             run(["docker","run","--rm","-d","--name",name,
                  "--network","none","--read-only","--cap-drop","ALL",
-                 "--security-opt","no-new-privileges","--user","1000:1000",
+                 "--security-opt","no-new-privileges",
+                 "--user",f"{os.geteuid()}:{os.getegid()}",
                  "--tmpfs","/tmp:rw,nosuid,nodev,mode=1777",
                  "--mount",f"type=bind,src={lab},dst=/lab,readonly",
                  "--entrypoint","/bin/sh",OFFICIAL,"-c","sleep 360"],timeout=35)
@@ -91,6 +92,7 @@ def main(binary):
             assert host["ReadonlyRootfs"] is True
             assert "ALL" in host["CapDrop"]
             assert host["Privileged"] is False
+            assert info["Config"]["User"]==f"{os.geteuid()}:{os.getegid()}"
             assert host["PortBindings"] in (None, {})
             print("P8EI_PINNED_OFFICIAL_IMAGE_NETWORK_NONE_READONLY_NO_HOST_PORT_PASS",flush=True)
             run(["docker","exec",name,"/bin/sh","-c",
@@ -122,7 +124,10 @@ def main(binary):
             if created:
                 detail=run(["docker","exec",name,"/bin/sh","-c",
                             "tail -25 /tmp/broker.log 2>/dev/null || true"],check=False)
-                print("P8EI_BROKER_FIXTURE_LOG:",detail.stdout[-1800:],file=sys.stderr)
+                print("P8EI_BROKER_FIXTURE_LOG:",detail.stdout[-1200:],file=sys.stderr)
+                bridge=run(["docker","exec",name,"/bin/sh","-c",
+                            "tail -25 /tmp/bridge.log 2>/dev/null || true"],check=False)
+                print("P8EI_RUST_FIXTURE_STARTUP_LOG:",bridge.stdout[-900:],file=sys.stderr)
             raise
         finally:
             if created:
