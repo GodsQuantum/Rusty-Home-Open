@@ -167,3 +167,7 @@ jobs:
           python3 scripts/test_development_progress.py
       - name: Assert no deployment authorization
         run: python3 scripts/check_release_gate.py --expect-blocked
+      - name: Verify 9-app and 29-integration coverage registry
+        run: |
+          python3 scripts/check_coverage_registry.py
+          python3 scripts/test_coverage_registry.py
