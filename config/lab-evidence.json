@@ -770,6 +770,30 @@
       "scope": "Real two official HAOS App archives atomic Rust staged; concurrent File Editor and upstream Mosquitto OCI. MQTT good/bad/anonymous and retained; Editor SIGKILL, broker survives, Editor reattaches. Lab only.",
       "url": "https://github.com/GodsQuantum/Rusty-Home-Open/actions/runs/40608961200",
       "merged_pr": 250
+    },
+    {
+      "id": "haos_pair_escrow_output_root_overlap_refusal",
+      "release_gate": "supervisor_apps_restore",
+      "status": "verified_lab_only",
+      "run_id": 40644887804,
+      "head_sha": "ad46a4f24262ffff47951fef30d20a87fadf7b97",
+      "workflow": "P8ef native Rust private App pair source-output path overlap refusal",
+      "job": "Genuine native Rust rejects alias, ancestor, descendant App escrow/output paths",
+      "scope": "SHA-exact synthetic two-App archives: native pair output rejects escrow alias, source ancestor/descendant and symlinked parent paths. Valid disjoint stage preserves original SHA bytes. Static check; no concurrent swap, HAOS or production.",
+      "url": "https://github.com/GodsQuantum/Rusty-Home-Open/actions/runs/40644887804",
+      "merged_pr": 252
+    },
+    {
+      "id": "haos_single_app_source_output_overlap_denial",
+      "release_gate": "supervisor_apps_restore",
+      "status": "verified_lab_only",
+      "run_id": 40645746946,
+      "head_sha": "3f2edd9a20ecaf7384c0864831f8db9585abfb21",
+      "workflow": "P8eg native single-App escrow-output path alias and ancestor refusal",
+      "job": "Rust single App stage rejects equivalent, nested and ancestor source directories",
+      "scope": "Single App native stage rejected dotdot alias, source ancestor/descendant and symlink-parent paths; valid disjoint stage kept source SHA intact. Synthetic 5/5. Static ancestry check, not concurrent race, HAOS or production.",
+      "url": "https://github.com/GodsQuantum/Rusty-Home-Open/actions/runs/40645746946",
+      "merged_pr": 253
     }
   ]
 }
