@@ -1,7 +1,4 @@
-#![cfg(feature = "mqtt-supervisor-auth-lab")]
-use hars_supervisor_apps::mqtt_supervisor_auth_lab::{
-    AuthDecision, LabAuthApiPermission, MqttSupervisorAuthLab,
-};
+use hars_mqtt_supervisor_auth_lab::{AuthDecision, LabAuthApiPermission, MqttSupervisorAuthLab};
 use serde_json::json;
 use std::{
     io::{Read, Write},

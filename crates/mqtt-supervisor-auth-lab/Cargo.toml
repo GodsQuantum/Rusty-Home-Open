@@ -1,0 +1,11 @@
+[package]
+name = "hars-mqtt-supervisor-auth-lab"
+version = "0.1.0"
+edition = "2024"
+license = "MIT"
+publish = false
+description = "Non-production, no-daemon lab-only MQTT go-auth to mock Supervisor auth protocol"
+
+[dependencies]
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"

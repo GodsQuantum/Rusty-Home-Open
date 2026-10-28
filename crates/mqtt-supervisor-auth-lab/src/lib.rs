@@ -1,4 +1,4 @@
-//! Experimental Rust MQTT HTTP authentication -> Supervisor /auth bridge.
+//! Experimental standalone Rust MQTT HTTP -> Supervisor /auth lab boundary.
 //! Entirely lab-only: not a daemon, not a broker auth plugin, not real HAOS
 //! privileges; verifies real loopback TCP protocol against a disposable mock.
 //! No HTTP listener, no production token, no ACL/administrator authorization.

@@ -2,14 +2,16 @@
 """P8eh experimental guard: even true loopback TCP auth is NOT HAOS auth migration."""
 from pathlib import Path
 root=Path(__file__).resolve().parents[1]
-src=(root/"crates/supervisor-apps/src/mqtt_supervisor_auth_lab.rs").read_text()
-test=(root/"crates/supervisor-apps/tests/p8eh_mqtt_supervisor_auth.rs").read_text()
-manifest=(root/"crates/supervisor-apps/Cargo.toml").read_text()
-lib=(root/"crates/supervisor-apps/src/lib.rs").read_text()
+src=(root/"crates/mqtt-supervisor-auth-lab/src/lib.rs").read_text()
+test=(root/"crates/mqtt-supervisor-auth-lab/tests/p8eh_mqtt_supervisor_auth.rs").read_text()
+manifest=(root/"crates/mqtt-supervisor-auth-lab/Cargo.toml").read_text()
+workspace=(root/"Cargo.toml").read_text()
+supervisor=(root/"crates/supervisor-apps/src/lib.rs").read_text()
 workflow=(root/".github/workflows/p8eh-mqtt-supervisor-delegated-auth-lab.yml").read_text()
-assert "mqtt-supervisor-auth-lab = []" in manifest
-assert '#[cfg(feature = "mqtt-supervisor-auth-lab")]' in lib
-assert '#![cfg(feature = "mqtt-supervisor-auth-lab")]' in test
+assert 'name = "hars-mqtt-supervisor-auth-lab"' in manifest
+assert '"crates/mqtt-supervisor-auth-lab"' in workspace
+assert "mqtt_supervisor_auth_lab" not in supervisor
+assert "mqtt-supervisor-auth-lab" not in (root/"crates/supervisor-apps/Cargo.toml").read_text()
 for marker in (
     "POST /auth HTTP/1.1", "X-Supervisor-Token:",
     'path != "/authentication"', 'method != "POST"',

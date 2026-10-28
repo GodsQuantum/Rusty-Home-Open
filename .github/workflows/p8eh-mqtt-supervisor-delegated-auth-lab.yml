@@ -3,10 +3,10 @@ on:
   pull_request:
     paths:
       - ".github/workflows/p8eh-mqtt-supervisor-delegated-auth-lab.yml"
-      - "crates/supervisor-apps/src/mqtt_supervisor_auth_lab.rs"
-      - "crates/supervisor-apps/tests/p8eh_mqtt_supervisor_auth.rs"
-      - "crates/supervisor-apps/src/lib.rs"
-      - "crates/supervisor-apps/Cargo.toml"
+      - "crates/mqtt-supervisor-auth-lab/src/lib.rs"
+      - "crates/mqtt-supervisor-auth-lab/tests/p8eh_mqtt_supervisor_auth.rs"
+      - "crates/mqtt-supervisor-auth-lab/Cargo.toml"
+      - "Cargo.toml"
       - "scripts/test_p8eh_mqtt_supervisor_auth_contract.py"
       - "Cargo.lock"
 permissions:
@@ -23,14 +23,15 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
         with:
           components: rustfmt, clippy
-      - name: Ensure feature-gated, no daemon, no real HAOS token or network egress
+      - name: Ensure isolated non-product crate, no daemon, no real HAOS token or network egress
         run: |
           python3 scripts/test_p8eh_mqtt_supervisor_auth_contract.py
           cargo fmt --all -- --check
-          cargo clippy --locked -p hars-supervisor-apps --features mqtt-supervisor-auth-lab --all-targets -- -D warnings
+          cargo clippy --locked -p hars-mqtt-supervisor-auth-lab --all-targets -- -D warnings
       - name: Actually POST over local TCP to mock Supervisor and check deny on outage
         run: |
-          cargo test --locked -p hars-supervisor-apps --features mqtt-supervisor-auth-lab --test p8eh_mqtt_supervisor_auth -- --nocapture
+          cargo test --locked -p hars-mqtt-supervisor-auth-lab --test p8eh_mqtt_supervisor_auth -- --nocapture
       - name: Confirm normal default supervisor-app crate remains optional-feature-free
         run: |
           cargo check --locked -p hars-supervisor-apps --no-default-features --quiet
+          cargo check --locked -p hars-mqtt-supervisor-auth-lab --quiet
