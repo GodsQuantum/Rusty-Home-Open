@@ -1,3 +1,11 @@
+## 28 October P8eg — single App source/destination overlap denied, exact native CI certified
+
+Distinct from paired-App P8ef #252, native single App staging accepted a dotdot alias, publishing data into immutable source escrow in TDD RED. Library check now refuses canonical equivalent and ancestor/descendant roots before any cleanup/extraction. PR #253 HEAD 3f2edd9, merged main c5448ce6fe58c16ab945cdfc473e1e5f2b2c65be, 27/27 CI; unique focused native run40645746946 job122674031979 SUCCESS 5/5. Separate disjoint target remains supported, source archive SHA unchanged. No concurrent path swap proof, no real users, no production. Combined lab 67/63 claims/runs, release 0/15.
+
+## 28 October P8ef — native two-App escrow source/output overlap fixed, GitHub certified as lab-only
+
+Originally blocked due missing GitHub auth; LXC700 gh now authenticated. Existing branch ad46a4f pushed without repeating targeted local tests, PR #252 exact-head 16/16 CI PASS, focus native run40644887804 job122671271604. TDD RED earlier proved two-App staging into aliased immutable escrow; library fixed canonical equal/ancestor/descendant paths before extraction. Five synthetic actual native denial/disjoint cases passed; no concurrent path-swap proof. Merged main 2886a17. Historical lab count 66/62; release remains 0/15. P8eg independent single-App case pending exact full CI, not counted yet.
+
 ## 28 October — P8ed two real HAOS Apps, concurrent OCI runtime, one-App crash isolation
 
 Isolated CT700 feature #250 merged f722026, exact tested d5e4c1622634566915038277f32a867ed74130db; GitHub run 40608961200 job 122555471077 SUCCESS; 10/10 checks. Genuine same-HAOS guest Editor+Mosquitto archives Rust private atomic pair -> concurrent official File Editor OCI and upstream Eclipse Mosquitto with only fictional local login. Editor writes, broker authenticated retained MQTT good/bad/anonymous, Editor SIGKILL leaves broker running; replacement Editor reads durable file, archives unaffected and OCI cleaned. New machine lab claim haos_dual_apps_concurrent_editor_crash_mqtt_survival. **65 claims / 61 runs**, release still 0/15, no household, VM100, delegated Core auth or production.

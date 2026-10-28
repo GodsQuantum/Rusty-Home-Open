@@ -1,3 +1,17 @@
+## P8eg — single App private archive source/output overlap refusal (28 October 2026)
+
+[PR #253](https://github.com/GodsQuantum/Rusty-Home-Open/pull/253), original tested HEAD 3f2edd9a20ecaf7384c0864831f8db9585abfb21, merged main c5448ce6fe58c16ab945cdfc473e1e5f2b2c65be; **27/27 exact-head GitHub checks SUCCESS**. Distinct NEW native [GitHub run 40645746946](https://github.com/GodsQuantum/Rusty-Home-Open/actions/runs/40645746946), job 122674031979, SUCCESS. The many other QEMU/Core runs automatically triggered by source changes are PREVIOUS regressions, not new proof receipts.
+
+Before the fix, single App staging accepted escrow/../escrow as output and wrote synthetic staged files inside immutable source escrow. Rust now canonicalizes the source archive parent and destination and refuses equal, ancestor, descendant and symlinked parent alias paths BEFORE extracting or cleaning any stage. All five new native SHA fixture checks PASS: P8EG_SINGLE_DOTDOT_EQUIVALENT_OVERLAP_REJECTED_PASS, P8EG_SINGLE_NESTED_OUTPUT_OVERLAP_REJECTED_PASS, P8EG_SINGLE_ANCESTOR_OUTPUT_OVERLAP_REJECTED_PASS, P8EG_SINGLE_SYMLINKED_PARENT_ALIAS_REJECTED_PASS, P8EG_SINGLE_DISJOINT_REAL_NATIVE_APP_STAGE_ORIGINAL_SHA_UNCHANGED_PASS.
+
+New lab-only machine claim haos_single_app_source_output_overlap_denial; together with verified P8ef: **67 lab-only claims / 63 unique successful CI runs, 0/15 production gates**. This guards STATIC ancestry, not concurrent adversarial path replacement; no actual household data, deployed service, or independent audit.
+
+## P8ef — native Rust two-App source/output overlapping directory denial (28 October 2026)
+
+[PR #252](https://github.com/GodsQuantum/Rusty-Home-Open/pull/252) original exact tested head ad46a4f24262ffff47951fef30d20a87fadf7b97, merged main 2886a17625d00d8e3c1519dca270dd24049b3cd5; 16/16 GitHub checks PASS. Distinct new focused native runner [40644887804](https://github.com/GodsQuantum/Rusty-Home-Open/actions/runs/40644887804), job 122671271604 SUCCESS.
+
+Before fix, native two-App atomic staging accepted escrow/../escrow and published private output inside the immutable source escrow despite lexical path inequality. New canonical ancestry guard fails closed before cleanup or output for equivalent, nested, ancestor or symlink-parent source/destination aliases. Five actual native synthetic SHA-exact scenario markers PASS, valid disjoint pair continues, both backup source archives unchanged. It is a STATIC ancestry check only, not a concurrent malicious rename/path-swap mitigation, nor genuine user/HAOS data or product release. One unique lab claim haos_pair_escrow_output_root_overlap_refusal; historical **66 lab-only claims / 62 independent successful CI runs, production 0/15**. The many already certified QEMU regressions also triggered on the same PR are NOT counted as new evidence.
+
 ## P8ed — Genuine two-App simultaneous runtime and isolated Editor crash (28 October 2026)
 
 Feature [PR #250](https://github.com/GodsQuantum/Rusty-Home-Open/pull/250) merged main f722026bbc6819e593b79b24b26d75ea3f5850e8, tested original HEAD d5e4c1622634566915038277f32a867ed74130db; **10/10 exact-head CI checks SUCCESS**. Independent new [GitHub run 40608961200](https://github.com/GodsQuantum/Rusty-Home-Open/actions/runs/40608961200), job 122555471077, SUCCESS.
