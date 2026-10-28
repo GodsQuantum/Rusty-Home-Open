@@ -1,0 +1,41 @@
+name: P8ei real official HA Mosquitto go-auth MQTT connect, revoke and outage
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/p8ei-official-mosquitto-actual-goauth.yml"
+      - "scripts/test_p8ei_official_go_auth_real_mqtt.py"
+      - "scripts/test_p8ei_official_goauth_contract.py"
+      - "crates/mqtt-supervisor-auth-lab/src/bin/p8ei_actual_mqtt_lab.rs"
+      - "crates/mqtt-supervisor-auth-lab/src/lib.rs"
+      - "crates/mqtt-supervisor-auth-lab/Cargo.toml"
+      - "crates/mqtt-supervisor-auth-lab/Cargo.lock"
+permissions:
+  contents: read
+jobs:
+  actual-official-mosquitto-goauth:
+    name: Genuine official Mosquitto 7.1.1 go-auth plugin real MQTT identity revoke and fail-close
+    runs-on: ubuntu-24.04
+    timeout-minutes: 18
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-unknown-linux-musl
+          components: clippy, rustfmt
+      - name: Install static Rust linker for isolated official App image
+        run: sudo apt-get update -qq && sudo apt-get install -y --no-install-recommends musl-tools
+      - name: Verify official image digest, isolated scope and genuine MQTT probe contract
+        run: |
+          python3 scripts/test_p8ei_official_goauth_contract.py
+          python3 -m py_compile scripts/test_p8ei_official_go_auth_real_mqtt.py
+          cargo fmt --manifest-path crates/mqtt-supervisor-auth-lab/Cargo.toml --all -- --check
+          cargo clippy --locked --manifest-path crates/mqtt-supervisor-auth-lab/Cargo.toml --all-targets -- -D warnings
+      - name: Compile no-libc static Rust gateway and actual MQTT CONNECT client
+        run: |
+          cargo build --locked --release --manifest-path crates/mqtt-supervisor-auth-lab/Cargo.toml --target x86_64-unknown-linux-musl --bin p8ei_actual_mqtt_lab
+          file crates/mqtt-supervisor-auth-lab/target/x86_64-unknown-linux-musl/release/p8ei_actual_mqtt_lab | grep -Ei 'statically linked|static-pie linked'
+      - name: Actual official go-auth.so MQTT allow, wrong, anon, reserved, revoke, 503 and recover
+        run: |
+          python3 scripts/test_p8ei_official_go_auth_real_mqtt.py crates/mqtt-supervisor-auth-lab/target/x86_64-unknown-linux-musl/release/p8ei_actual_mqtt_lab
