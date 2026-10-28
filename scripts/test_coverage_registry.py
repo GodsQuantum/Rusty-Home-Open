@@ -88,6 +88,26 @@ class TestCoverageRegistry(unittest.TestCase):
         mutated["apps"][0]["receipt"]["absent_reason"] = "Requires physical Zigbee coordinator radio."
         validate_registry(mutated)
 
+    def test_wave2_integrations_present_and_valid(self):
+        wave2_expected = {
+            "card_builder": "P6G_REAL_HACS_CARD_BUILDER_RELEASE_CORE_LIFECYCLE_PASS",
+            "smart_announcements": "P6F_REAL_SMART_ANNOUNCEMENTS_PINNED_CORE_PASS",
+            "adaptive_lighting": "P6F_REAL_ADAPTIVE_LIGHTING_V1_32_0_CORE_LIFECYCLE_PASS",
+            "custom_universal_media_player": "P6H_REAL_PUBLIC_UNIVERSAL_MEDIA_PLAYER_1_9_0_LIFECYCLE_PASS",
+            "epson_snmp": "P6J_GENUINE_EPSON_CONFIG_ENTRY_OFFLINE_DENIAL_PASS",
+        }
+        integrations_by_domain = {item["domain"]: item for item in self.data["integrations"]}
+        for domain, expected_marker in wave2_expected.items():
+            self.assertIn(domain, integrations_by_domain, f"Wave 2 domain {domain} missing")
+            item = integrations_by_domain[domain]
+            self.assertEqual(item["status"], "lab_partial")
+            self.assertEqual(item["category"], "hacs_integration")
+            receipt = item["receipt"]
+            self.assertTrue(receipt["present"])
+            self.assertEqual(receipt["run_id"], 40004128595)
+            self.assertEqual(receipt["head_sha"], "7234873317765b4dc2ea87c82611b4dd061ba14a")
+            self.assertEqual(receipt["marker"], expected_marker)
+
 
 if __name__ == "__main__":
     unittest.main()
