@@ -30,6 +30,8 @@ pub mod app_stats;
 pub mod catalog_filter;
 #[cfg(feature = "durable-job-watch")]
 pub mod durable_job_watch;
+#[cfg(feature = "mqtt-supervisor-auth-lab")]
+pub mod mqtt_supervisor_auth_lab;
 pub mod official_store;
 pub mod official_transport;
 pub mod operation_preflight;

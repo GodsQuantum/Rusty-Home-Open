@@ -35,6 +35,8 @@ core-corroborated-preview-lab = ["core-user-live-readonly", "persistent-session-
 durable-dispatch-fence-lab = ["managed-apps-preview", "dep:redb"]
 # Still QEMU/lab-only: bind corroborated current Core admin to durable App intent.
 core-durable-dispatch-lab = ["core-corroborated-preview-lab", "durable-dispatch-fence-lab"]
+# Experimental Supervisor MQTT auth client for isolated loopback lab only.
+mqtt-supervisor-auth-lab = []
 
 [dependencies]
 serde = { version = "1", features = ["derive"] }
