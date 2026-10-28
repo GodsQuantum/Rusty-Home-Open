@@ -1,0 +1,107 @@
+name: P8ed two actual concurrently running restored official HAOS App services
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/p8ed-two-genuine-apps-concurrent.yml"
+      - "scripts/p8du_two_real_apps_qemu_pytest.py"
+      - "scripts/test_p8du_two_real_apps_native_pair.py"
+      - "scripts/test_p8du_scope_contract.py"
+      - "scripts/test_p8ed_genuine_two_apps_concurrent.py"
+      - "scripts/test_p8ed_concurrent_app_contract.py"
+      - "scripts/haos_mosquitto_local_auth_lab.py"
+      - "scripts/p8p_cross_vm_backup_relay.py"
+      - "scripts/p8do_official_mosquitto_qemu_pytest.py"
+      - "scripts/inspect_ha_backup.py"
+      - "crates/interop-moli/src/app_backup_pair_stage.rs"
+      - "crates/interop-moli/src/app_backup_stage.rs"
+      - "crates/interop-moli/src/app_backup_import.rs"
+      - "crates/interop-moli/src/bin/ha_registry_stager.rs"
+      - "Cargo.lock"
+permissions:
+  contents: read
+jobs:
+  real-two-apps-concurrent-oci:
+    name: Both genuine restored apps alive in real OCI, File Editor SIGKILL while authenticated MQTT survives
+    runs-on: ubuntu-24.04
+    timeout-minutes: 85
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Verify isolated scope, native Rust and real archive parser
+        run: |
+          python3 scripts/test_p8du_scope_contract.py
+          python3 scripts/test_p8ed_concurrent_app_contract.py
+          python3 -m py_compile scripts/p8du_two_real_apps_qemu_pytest.py scripts/test_p8ed_genuine_two_apps_concurrent.py
+          cargo fmt --all -- --check
+          cargo test --locked -p hars-interop-moli --lib --quiet
+          cargo clippy --locked -p hars-interop-moli --all-targets -- -D warnings
+          cargo build --locked -p hars-interop-moli --bin ha_registry_stager
+      - name: Prepare ephemeral rootless Podman App runtimes
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends podman uidmap slirp4netns fuse-overlayfs
+          test "$(podman info --format '{{.Host.Security.Rootless}}')" = true
+      - name: Prepare immutable official HAOS18.3 KVM test harness
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends qemu-system-x86 qemu-utils ovmf xz-utils jq
+          git clone -q --depth 1 --filter=blob:none --sparse https://github.com/home-assistant/operating-system.git "$RUNNER_TEMP/haos-upstream"
+          git -C "$RUNNER_TEMP/haos-upstream" fetch -q --depth 1 origin 90fa213c3441e585d5a60387e9244d0ed38efaf8
+          git -C "$RUNNER_TEMP/haos-upstream" checkout -q 90fa213c3441e585d5a60387e9244d0ed38efaf8
+          git -C "$RUNNER_TEMP/haos-upstream" sparse-checkout set tests
+          test "$(git -C "$RUNNER_TEMP/haos-upstream" rev-parse HEAD)" = 90fa213c3441e585d5a60387e9244d0ed38efaf8
+          python3 -m venv "$RUNNER_TEMP/haos-venv"
+          "$RUNNER_TEMP/haos-venv/bin/python" -m pip install -r "$RUNNER_TEMP/haos-upstream/tests/requirements.txt"
+          "$RUNNER_TEMP/haos-venv/bin/python" -m pip install "pexpect==4.9.0"
+          test -c /dev/kvm
+          sudo chmod 0666 /dev/kvm
+          test -r /usr/share/ovmf/OVMF.fd
+      - name: Verify exact official HAOS image SHA
+        run: |
+          curl -fLSs --retry 3 --retry-delay 5 -o "$RUNNER_TEMP/haos_ova-18.3.qcow2.xz" https://github.com/home-assistant/operating-system/releases/download/18.3/haos_ova-18.3.qcow2.xz
+          cd "$RUNNER_TEMP"
+          echo "fae6a728768cc10aff60d4820bfcd40d64cd77fab82c8bd92af13b3d9d414090  haos_ova-18.3.qcow2.xz" | sha256sum -c
+          xz -T2 -dc haos_ova-18.3.qcow2.xz > haos-upstream/tests/haos.qcow2
+          rm haos_ova-18.3.qcow2.xz
+          qemu-img resize -f qcow2 haos-upstream/tests/haos.qcow2 64G
+          qemu-img info --output=json haos-upstream/tests/haos.qcow2 | jq -e '.[ "virtual-size" ] >= 68719476736'
+      - name: Two actual official HAOS app archives, native Rust atomic pair, concurrent real OCI and one-app SIGKILL
+        timeout-minutes: 59
+        run: |
+          set -euo pipefail
+          grep -q -- '-snapshot -accel kvm' "$RUNNER_TEMP/haos-upstream/tests/qemu-strategy.yaml"
+          sed -i 's/memory: 1G/memory: 3G/' "$RUNNER_TEMP/haos-upstream/tests/qemu-strategy.yaml"
+          cat "$GITHUB_WORKSPACE/scripts/p8du_two_real_apps_qemu_pytest.py" >> "$RUNNER_TEMP/haos-upstream/tests/supervisor_test/test_supervisor.py"
+          mkdir -p "$RUNNER_TEMP/p8ed-editor" "$RUNNER_TEMP/p8ed-mosquitto"
+          python3 "$GITHUB_WORKSPACE/scripts/p8p_cross_vm_backup_relay.py" --output-dir "$RUNNER_TEMP/p8ed-editor" --port 18674 > "$RUNNER_TEMP/p8ed-relay-editor.log" 2>&1 &
+          RELAY_EDITOR=$!
+          python3 "$GITHUB_WORKSPACE/scripts/p8p_cross_vm_backup_relay.py" --output-dir "$RUNNER_TEMP/p8ed-mosquitto" --port 18675 > "$RUNNER_TEMP/p8ed-relay-mosquitto.log" 2>&1 &
+          RELAY_MQTT=$!
+          trap 'kill "$RELAY_EDITOR" "$RELAY_MQTT" 2>/dev/null || true' EXIT
+          sleep 1
+          kill -0 "$RELAY_EDITOR"
+          kill -0 "$RELAY_MQTT"
+          source "$RUNNER_TEMP/haos-venv/bin/activate"
+          export PYTHONPATH="$GITHUB_WORKSPACE/scripts${PYTHONPATH:+:$PYTHONPATH}"
+          cd "$RUNNER_TEMP/haos-upstream/tests"
+          ./run_tests.sh supervisor_test/test_supervisor.py::test_start_supervisor supervisor_test/test_supervisor.py::test_check_supervisor supervisor_test/test_supervisor.py::test_hars_real_two_simultaneous_app_only_partial_exports
+          cd "$GITHUB_WORKSPACE"
+          python3 scripts/test_p8du_scope_contract.py --junit "$RUNNER_TEMP/haos-upstream/tests/junit_reports/tests.xml"
+          test -s "$RUNNER_TEMP/p8ed-editor/archive.tar"
+          test -s "$RUNNER_TEMP/p8ed-mosquitto/archive.tar"
+          python3 scripts/test_p8ed_genuine_two_apps_concurrent.py \
+            --editor "$RUNNER_TEMP/p8ed-editor/archive.tar" \
+            --editor-manifest "$RUNNER_TEMP/p8ed-editor/manifest.json" \
+            --mosquitto "$RUNNER_TEMP/p8ed-mosquitto/archive.tar" \
+            --mosquitto-manifest "$RUNNER_TEMP/p8ed-mosquitto/manifest.json" \
+            --native target/debug/ha_registry_stager
+      - name: Refuse private source archive leakage
+        if: always()
+        run: |
+          test ! -e "$GITHUB_WORKSPACE/archive.tar"
+          test ! -e "$GITHUB_WORKSPACE/registry-shadow.redb"
+          if podman ps -a --format '{{.Names}}' | grep '^p8ed-real-'; then
+            echo "Rootless dual App process leaked"; exit 1
+          fi
