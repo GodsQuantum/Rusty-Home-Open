@@ -1,3 +1,9 @@
+## P8ec — exact verified external Core+HACS receipt [LOCAL EVIDENCE VALIDATED; DOC CI PENDING]
+- CT700 dedicated worktree docs/p8ec-exact-core-watchman-20261028, base production-repository main f2cc08798066e2ba3962931cc112cb65e1f88b45. No household/cloud prod mutation.
+- DONE exact PR #248 merged at f2cc08798066e2ba3962931cc112cb65e1f88b45, original HEAD cd21259bebe76e4000ebd4e0a5bda0673a30885a. GitHub 10/10 checks SUCCESS; unique new Core2026.10.4+Watchman0.8.4 functional job run40606133014 job122545964891 SUCCESS, both P8EC machine PASS markers present. Previous Core2026.10.4 generic config-entry and Watchman Core2026.10.2 remain historical.
+- DONE: appended one verified_lab_only claim + existing registry/worklog, now 64 lab claims / 60 distinct successful run IDs. Targeted tests test_certification_evidence_registry, test_release_gate_evidence_truth 3/3, and check_release_gate --expect-blocked PASS. Initial evidence scope 366 chars rejected by canonical <=256 contract; corrected 245 chars, then all targeted QA PASS. No release gate changed, production 0/15. Next: docs-only PR, exact-head CI, merge if green.
+- No 15 gate certified; release NOT_PRODUCTION_READY; no independent human signoff, no 29 HACS runtime parity, no VM100, radios, secrets or hardware. Rollback this docs-only branch if evidence consistency fails.
+
 ## P8ec — Core 2026.10.4 actual Watchman 0.8.4 lifecycle [IN PROGRESS — LAB ONLY] — 2026-10-28 00:58 CET
 - Owner current session, isolated CT700 worktree `Applications/Rusty-Home-CoreHACS-P8ec-20261028`, branch `test/p8ec-watchman-core-2026-10-4-20261028`, base main 4166784 plus previously validated #246.
 - Important NON-REPEAT: already independently certified P8bd real Core2026.10.4 config-entry fixture GH40319204128 and original P6d Watchman0.8.4 on Core2026.10.2. Neither demonstrates Watchman on Core2026.10.4. New exact version+integration functional matrix cell only.
