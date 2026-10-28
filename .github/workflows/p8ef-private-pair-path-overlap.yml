@@ -1,0 +1,32 @@
+name: P8ef native Rust private App pair source-output path overlap refusal
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/p8ef-private-pair-path-overlap.yml"
+      - "crates/interop-moli/src/app_backup_pair_stage.rs"
+      - "scripts/test_p8ef_pair_overlap.py"
+      - "Cargo.lock"
+permissions:
+  contents: read
+jobs:
+  private-pair-path-isolation:
+    name: Genuine native Rust rejects alias, ancestor, descendant App escrow/output paths
+    runs-on: ubuntu-24.04
+    timeout-minutes: 18
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy, rustfmt
+      - name: Rust code, existing library regression, native binary and Clippy
+        run: |
+          python3 -m py_compile scripts/test_p8ef_pair_overlap.py
+          cargo fmt --all -- --check
+          cargo test --locked -p hars-interop-moli --lib --quiet
+          cargo clippy --locked -p hars-interop-moli --all-targets -- -D warnings
+          cargo build --locked -p hars-interop-moli --bin ha_registry_stager
+      - name: Genuine native Rust disjoint/overlap refusal on disposable fictional App archives
+        run: |
+          python3 scripts/test_p8ef_pair_overlap.py target/debug/ha_registry_stager
