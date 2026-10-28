@@ -1,0 +1,104 @@
+{
+  "schema_version": 1,
+  "updated_date": "2026-10-28",
+  "scope": "Atomic initial verifiable coverage registry: 2 representative HAOS Apps and 3 representative Core/HACS integrations with machine-checkable receipts. No synthetic passes.",
+  "production_status": "NOT_PRODUCTION_READY",
+  "apps_summary": {
+    "total_target": 9,
+    "registered": 2,
+    "proven": 0,
+    "lab_partial": 2,
+    "blocked": 0
+  },
+  "integrations_summary": {
+    "total_target": 29,
+    "registered": 3,
+    "proven": 0,
+    "lab_partial": 3,
+    "blocked": 0
+  },
+  "apps": [
+    {
+      "slug": "core_configurator",
+      "name": "File Editor",
+      "category": "official_core_app",
+      "status": "lab_partial",
+      "scope_notes": "Official File Editor App lifecycle and partial backup export verified in disposable QEMU HAOS 18.3 guest; native private ingest and unauthenticated ingress denial validated. No production runtime migration or VM100 modification.",
+      "receipt": {
+        "present": true,
+        "run_id": 40574998498,
+        "job_id": 122438928805,
+        "head_sha": "198966e6a36a6d7fc989160c9cdff05a4b160a9f",
+        "run_url": "https://github.com/GodsQuantum/Rusty-Home-Open/actions/runs/40574998498",
+        "marker": "P8DN_FILE_EDITOR_HTTP_SAVE_AND_DENIED_INGRESS_PASS",
+        "verified_environment": "Official disposable HAOS 18.3 Core+Supervisor+File Editor QEMU runner"
+      }
+    },
+    {
+      "slug": "core_mosquitto",
+      "name": "Mosquitto broker",
+      "category": "official_core_app",
+      "status": "lab_partial",
+      "scope_notes": "Official Mosquitto broker App-only partial backup exported from disposable HAOS 18.3 guest; atomic staged escrow and dual-app atomic sigkill recovery verified in native Rust coordinator. Broker not migrated to production runtime.",
+      "receipt": {
+        "present": true,
+        "run_id": 40597441250,
+        "job_id": 122516828609,
+        "head_sha": "51456cc8d4201b57bba7421005a82dea3a8e36ce",
+        "run_url": "https://github.com/GodsQuantum/Rusty-Home-Open/actions/runs/40597441250",
+        "marker": "P8DU_TWO_GENUINE_OFFICIAL_APP_BACKUPS_SAME_GUEST_SHA_VERIFIED_PASS",
+        "verified_environment": "Official disposable HAOS 18.3 QEMU guest + native Rust atomic escrow"
+      }
+    }
+  ],
+  "integrations": [
+    {
+      "domain": "watchman",
+      "name": "Watchman",
+      "category": "hacs_integration",
+      "status": "lab_partial",
+      "scope_notes": "Pinned genuine Watchman 0.8.4 upstream integration executed inside official Core 2026.10.4 isolated container; config flow and missing action/entity report verified. Household devices not touched.",
+      "receipt": {
+        "present": true,
+        "run_id": 40004128648,
+        "job_id": 120531238411,
+        "head_sha": "7234873317765b4dc2ea87c82611b4dd061ba14a",
+        "run_url": "https://github.com/GodsQuantum/Rusty-Home-Open/actions/runs/40004128648",
+        "marker": "P6D_REAL_WATCHMAN_CORE_PASS",
+        "verified_environment": "Official isolated Core 2026.10.4 Docker container"
+      }
+    },
+    {
+      "domain": "blueprint_studio",
+      "name": "Blueprint Studio",
+      "category": "hacs_integration",
+      "status": "lab_partial",
+      "scope_notes": "Pinned Blueprint Studio 2.5.2 real Core admin vs user API policy enforced in isolated disposable runner. Offline flow only.",
+      "receipt": {
+        "present": true,
+        "run_id": 40004128648,
+        "job_id": 120531238411,
+        "head_sha": "7234873317765b4dc2ea87c82611b4dd061ba14a",
+        "run_url": "https://github.com/GodsQuantum/Rusty-Home-Open/actions/runs/40004128648",
+        "marker": "P6K_REAL_BLUEPRINT_CORE_PASS",
+        "verified_environment": "Official isolated Core Docker container"
+      }
+    },
+    {
+      "domain": "cup",
+      "name": "CUP Component",
+      "category": "hacs_integration",
+      "status": "lab_partial",
+      "scope_notes": "Pinned CUP Component 1.5.0 genuine released asset executed inside official isolated Core container; entity updates verified without household network access.",
+      "receipt": {
+        "present": true,
+        "run_id": 40004128648,
+        "job_id": 120531238411,
+        "head_sha": "7234873317765b4dc2ea87c82611b4dd061ba14a",
+        "run_url": "https://github.com/GodsQuantum/Rusty-Home-Open/actions/runs/40004128648",
+        "marker": "P6L_REAL_CUP_CORE_PASS",
+        "verified_environment": "Official isolated Core Docker container"
+      }
+    }
+  ]
+}

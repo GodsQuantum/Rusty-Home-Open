@@ -1,0 +1,136 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "RustyHomeCoverageRegistry",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "updated_date",
+    "scope",
+    "production_status",
+    "apps_summary",
+    "integrations_summary",
+    "apps",
+    "integrations"
+  ],
+  "properties": {
+    "schema_version": {
+      "type": "integer",
+      "const": 1
+    },
+    "updated_date": {
+      "type": "string",
+      "format": "date"
+    },
+    "scope": {
+      "type": "string",
+      "minLength": 10
+    },
+    "production_status": {
+      "type": "string",
+      "const": "NOT_PRODUCTION_READY"
+    },
+    "apps_summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["total_target", "registered", "proven", "lab_partial", "blocked"],
+      "properties": {
+        "total_target": { "type": "integer", "const": 9 },
+        "registered": { "type": "integer", "minimum": 2, "maximum": 9 },
+        "proven": { "type": "integer", "minimum": 0 },
+        "lab_partial": { "type": "integer", "minimum": 0 },
+        "blocked": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "integrations_summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["total_target", "registered", "proven", "lab_partial", "blocked"],
+      "properties": {
+        "total_target": { "type": "integer", "const": 29 },
+        "registered": { "type": "integer", "minimum": 3, "maximum": 29 },
+        "proven": { "type": "integer", "minimum": 0 },
+        "lab_partial": { "type": "integer", "minimum": 0 },
+        "blocked": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "apps": {
+      "type": "array",
+      "minItems": 2,
+      "maxItems": 9,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "slug",
+          "name",
+          "category",
+          "status",
+          "scope_notes",
+          "receipt"
+        ],
+        "properties": {
+          "slug": { "type": "string", "pattern": "^[a-z0-9_]+$" },
+          "name": { "type": "string", "minLength": 2 },
+          "category": { "type": "string", "enum": ["official_core_app", "community_app", "third_party_app"] },
+          "status": { "type": "string", "enum": ["proven", "lab_partial", "blocked"] },
+          "scope_notes": { "type": "string", "minLength": 10 },
+          "receipt": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["present"],
+            "properties": {
+              "present": { "type": "boolean" },
+              "run_id": { "type": "integer", "minimum": 1 },
+              "job_id": { "type": "integer", "minimum": 1 },
+              "head_sha": { "type": "string", "pattern": "^[0-9a-f]{40}$" },
+              "run_url": { "type": "string", "format": "uri" },
+              "marker": { "type": "string" },
+              "verified_environment": { "type": "string" },
+              "absent_reason": { "type": "string" }
+            }
+          }
+        }
+      }
+    },
+    "integrations": {
+      "type": "array",
+      "minItems": 3,
+      "maxItems": 29,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "domain",
+          "name",
+          "category",
+          "status",
+          "scope_notes",
+          "receipt"
+        ],
+        "properties": {
+          "domain": { "type": "string", "pattern": "^[a-z0-9_]+$" },
+          "name": { "type": "string", "minLength": 2 },
+          "category": { "type": "string", "enum": ["core_integration", "hacs_integration"] },
+          "status": { "type": "string", "enum": ["proven", "lab_partial", "blocked"] },
+          "scope_notes": { "type": "string", "minLength": 10 },
+          "receipt": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["present"],
+            "properties": {
+              "present": { "type": "boolean" },
+              "run_id": { "type": "integer", "minimum": 1 },
+              "job_id": { "type": "integer", "minimum": 1 },
+              "head_sha": { "type": "string", "pattern": "^[0-9a-f]{40}$" },
+              "run_url": { "type": "string", "format": "uri" },
+              "marker": { "type": "string" },
+              "verified_environment": { "type": "string" },
+              "absent_reason": { "type": "string" }
+            }
+          }
+        }
+      }
+    }
+  }
+}
