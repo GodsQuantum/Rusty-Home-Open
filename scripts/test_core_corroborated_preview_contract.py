@@ -24,4 +24,6 @@ for forbidden in ("preview_execute(", "TcpListener::bind(", "POST /",
 assert 'pub fn preview_execute(' in transport
 assert '#[cfg(feature = "managed-apps-preview")]' in transport
 assert "cargo test --locked -p hars-supervisor-apps --features core-corroborated-preview-lab --lib core_corroborated_permit_lab" in ci
+assert "fn synthetic_multiuser_rbac_cross_user_and_revocation_denial()" in source
+assert "user B must be denied on user A resource" in source
 print("CORE_CORROBORATED_PREVIEW_FAIL_CLOSED_CONTRACT_PASS")
