@@ -758,6 +758,18 @@
       "scope": "Pinned Core2026.10.4 OCI/version + upstream Watchman0.8.4 config-flow, setup, service report, unload/reload/remove on isolated no-network CI. Previous Core2026.10.2 not manually retested. No OAuth, 29 integrations, users, hardware or production.",
       "url": "https://github.com/GodsQuantum/Rusty-Home-Open/actions/runs/40606133014",
       "merged_pr": 248
+    },
+    {
+      "id": "haos_dual_apps_concurrent_editor_crash_mqtt_survival",
+      "release_gate": "apps_9_lifecycle",
+      "status": "verified_lab_only",
+      "run_id": 40608961200,
+      "head_sha": "d5e4c1622634566915038277f32a867ed74130db",
+      "workflow": "P8ed two actual concurrently running restored official HAOS App services",
+      "job": "Both genuine restored apps alive in real OCI, File Editor SIGKILL while authenticated MQTT survives",
+      "scope": "Real two official HAOS App archives atomic Rust staged; concurrent File Editor and upstream Mosquitto OCI. MQTT good/bad/anonymous and retained; Editor SIGKILL, broker survives, Editor reattaches. Lab only.",
+      "url": "https://github.com/GodsQuantum/Rusty-Home-Open/actions/runs/40608961200",
+      "merged_pr": 250
     }
   ]
 }
