@@ -806,6 +806,18 @@
       "scope": "Independent Rust lab: five actual mock Supervisor /auth TCP cases allow/401 deny, forged/oversized, ACL/superuser, missing token grant and timeout denial. No real HAOS Supervisor token or grant, MQTT plugin, field identity, network egress or production.",
       "url": "https://github.com/GodsQuantum/Rusty-Home-Open/actions/runs/40660045891",
       "merged_pr": 255
+    },
+    {
+      "id": "ha_mosquitto_official_goauth_mqtt_revoke_ci",
+      "release_gate": "authenticated_host_transport",
+      "status": "verified_lab_only",
+      "run_id": 40664390147,
+      "head_sha": "922d2fc94b5296ae6a93cbe77adc308ee1d7a34c",
+      "workflow": "P8ei real official HA Mosquitto go-auth MQTT connect, revoke and outage",
+      "job": "Genuine official Mosquitto 7.1.1 go-auth plugin real MQTT identity revoke and fail-close",
+      "scope": "Official HA Mosquitto 7.1.1 go-auth.so real MQTT CONNECT: synthetic valid accepted; wrong/anonymous/reserved/revoked and mock HTTP503 denied; recovery accepted, no egress/ports. Fake Supervisor only; NOT HAOS Core grant, ACL or production.",
+      "url": "https://github.com/GodsQuantum/Rusty-Home-Open/actions/runs/40664390147",
+      "merged_pr": 257
     }
   ]
 }
