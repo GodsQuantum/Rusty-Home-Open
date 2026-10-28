@@ -146,7 +146,13 @@ pub fn stage_inactive_pair(
 ) -> Result<PairReceipt> {
     private_directory(escrow)?;
     private_directory(target)?;
-    if escrow == target
+    // Lexical inequality is not enough: `escrow/../escrow`, a symlinked
+    // ancestor, or a nested output can alias the immutable source directory.
+    // Refuse either ancestry direction before any orphan reaping or staging.
+    let source_root = fs::canonicalize(escrow).context("canonical source escrow")?;
+    let output_root = fs::canonicalize(target).context("canonical pair output")?;
+    if source_root.starts_with(&output_root)
+        || output_root.starts_with(&source_root)
         || !safe_slug(pair_id)
         || !safe_slug(first.0)
         || !safe_slug(second.0)
