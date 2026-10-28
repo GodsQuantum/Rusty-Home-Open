@@ -9,7 +9,8 @@ workspace=(root/"Cargo.toml").read_text()
 supervisor=(root/"crates/supervisor-apps/src/lib.rs").read_text()
 workflow=(root/".github/workflows/p8eh-mqtt-supervisor-delegated-auth-lab.yml").read_text()
 assert 'name = "hars-mqtt-supervisor-auth-lab"' in manifest
-assert '"crates/mqtt-supervisor-auth-lab"' in workspace
+assert '"crates/mqtt-supervisor-auth-lab"' not in workspace
+assert "[workspace]" in manifest
 assert "mqtt_supervisor_auth_lab" not in supervisor
 assert "mqtt-supervisor-auth-lab" not in (root/"crates/supervisor-apps/Cargo.toml").read_text()
 for marker in (

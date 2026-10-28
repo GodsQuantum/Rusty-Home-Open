@@ -583,14 +583,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "hars-mqtt-supervisor-auth-lab"
-version = "0.1.0"
-dependencies = [
- "serde",
- "serde_json",
-]
-
-[[package]]
 name = "hars-native-hub"
 version = "0.1.0"
 dependencies = [
