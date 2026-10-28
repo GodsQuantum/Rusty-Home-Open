@@ -34,6 +34,7 @@ jobs:
         run: |
           python3 scripts/test_core_corroborated_preview_contract.py
           python3 scripts/test_core_corroborated_consent_contract.py
+          python3 scripts/test_p8i_synthetic_core_multiuser_rbac.py
           cargo test --locked -p hars-supervisor-apps --features core-corroborated-preview-lab --lib core_corroborated_permit_lab
           cargo clippy --locked -p hars-supervisor-apps --all-targets --features core-corroborated-preview-lab -- -D warnings
       - name: Live Core-corroborated admin and one-use consent to durable App fence lab
