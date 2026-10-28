@@ -794,6 +794,18 @@
       "scope": "Single App native stage rejected dotdot alias, source ancestor/descendant and symlink-parent paths; valid disjoint stage kept source SHA intact. Synthetic 5/5. Static ancestry check, not concurrent race, HAOS or production.",
       "url": "https://github.com/GodsQuantum/Rusty-Home-Open/actions/runs/40645746946",
       "merged_pr": 253
+    },
+    {
+      "id": "mqtt_supervisor_delegated_auth_loopback_mock_lab",
+      "release_gate": "authenticated_host_transport",
+      "status": "verified_lab_only",
+      "run_id": 40660045891,
+      "head_sha": "ceb7951bb4ba0510386c94cc124ae9d83c480761",
+      "workflow": "P8eh native Rust Supervisor delegated MQTT auth boundary (offline lab)",
+      "job": "Real Rust loopback Supervisor POST auth, good/bad/forged/timeouts deny",
+      "scope": "Independent Rust lab: five actual mock Supervisor /auth TCP cases allow/401 deny, forged/oversized, ACL/superuser, missing token grant and timeout denial. No real HAOS Supervisor token or grant, MQTT plugin, field identity, network egress or production.",
+      "url": "https://github.com/GodsQuantum/Rusty-Home-Open/actions/runs/40660045891",
+      "merged_pr": 255
     }
   ]
 }
