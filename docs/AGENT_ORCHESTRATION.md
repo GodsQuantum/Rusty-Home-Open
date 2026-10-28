@@ -29,7 +29,7 @@
 
 ## 4. Architecture et états
 Source canonique : CT700 /home/arezki/Projets/Applications/Rusty-Home-Open = Cloud9 /srv/storage/nvme/DEV/Projets/Applications/Rusty-Home-Open.
-Paperclip live : CT400 /srv/lxc/ia-studio/appdata/paperclip/runtime, base DB sous .../data, API privée http://192.168.1.218:3110.
+Paperclip live : CT400 /srv/lxc/ia-studio/appdata/paperclip/runtime, base DB sous .../data, API privée URL privée Paperclip configurée dans CT400 (port 3110), jamais publiée dans Git.
 Git remote : https://github.com/GodsQuantum/Rusty-Home-Open.git ; main = seule version intégrée.
 Miroir HDD : /srv/storage/cloud/arezki/Projets : sauvegarde SyncBridge 02:00, INTERDIT de développer directement ici.
 Paperclip workspace : CT400 data/instances/default/projects/<company>/... ; clone éphémère séparé du source canon et nettoyé après clôture ; ne pas diriger les agents vers le clone sans credentials git fonctionnels et tests de branche réussis.
