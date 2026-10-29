@@ -1,7 +1,5 @@
 name: P8c2 — genuine isolated HAOS Supervisor repository catalogue
 on:
-  schedule:
-    - cron: "57 2 * * 1"
   workflow_dispatch:
   # Run independent real HAOS KVM only when the App lifecycle proof changes.
   # GitHub token is read-only; never use pull_request_target for test execution.

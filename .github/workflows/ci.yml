@@ -1,7 +1,5 @@
 name: Rusty Home public CI
 on:
-  schedule:
-    - cron: "07 2 * * 1"
   push:
     branches: [main]
   pull_request:

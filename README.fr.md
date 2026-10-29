@@ -1,3 +1,6 @@
+> [!CAUTION]
+> **DÉVELOPPEMENT ARRÊTÉ — PROTOTYPE EXPÉRIMENTAL — NON UTILISABLE EN PRODUCTION.** Le mainteneur a suspendu le développement, sans assistance ni date de sortie. **Contributions, forks et PR bienvenus**, sans garantie de réponse ou de fusion. Ne branchez aucun appareil réel et n’importez aucune sauvegarde personnelle HAOS. **0/15 critères de production certifiés.** Voir [l’état du projet](docs/PROJECT_STATUS.md) et les [contributions](CONTRIBUTING.md).
+
 <p align="center"><img src="branding/logo.svg" width="820" alt="Logo Rusty Home" /></p>
 <h1 align="center">Rusty Home</h1>
 <p align="center"><strong>La domotique réinventée en Rust.</strong><br>Un moteur domotique local et natif, pensé pour coexister avec l'écosystème Home Assistant.</p>

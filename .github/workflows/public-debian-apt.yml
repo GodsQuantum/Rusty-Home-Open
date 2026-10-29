@@ -1,7 +1,5 @@
 name: Real isolated Debian and signed APT package lifecycle
 on:
-  schedule:
-    - cron: "37 2 * * 1"
   pull_request:
   push:
     branches: [main]

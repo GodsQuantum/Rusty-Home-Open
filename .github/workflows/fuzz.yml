@@ -1,8 +1,6 @@
 name: Rusty Home - instrumented Core, ingress and Supervisor Store fuzz
 
 on:
-  schedule:
-    - cron: "47 2 * * 1"
   workflow_dispatch:
   pull_request:
     paths:

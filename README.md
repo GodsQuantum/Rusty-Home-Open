@@ -1,3 +1,6 @@
+> [!CAUTION]
+> **DEVELOPMENT PAUSED — EXPERIMENTAL SOURCE ONLY — NOT PRODUCTION READY.** Rusty Home is not a usable home automation system. The original maintainer has paused active development and offers no installation support or release ETA. **Community forks and pull requests are welcome**, but review and merge are not guaranteed. Do not connect real devices or import personal HAOS backups. **0/15 production gates certified.** See [project status](docs/PROJECT_STATUS.md) and [contributing](CONTRIBUTING.md).
+
 <p align="center"><img src="branding/logo.svg" width="820" alt="Rusty Home logo" /></p>
 <h1 align="center">Rusty Home</h1>
 <p align="center"><strong>Home automation, reimagined in Rust.</strong><br>A native, local-first home automation engine designed with the Home Assistant ecosystem in mind.</p>

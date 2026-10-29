@@ -1,5 +1,12 @@
 # Contributing to Rusty Home
 
+## Development paused — community contributions welcome
+
+Rusty Home has no active maintainer-sponsored development, support commitment or release date. It is **not installable or production-ready** (0/15 mandatory production gates). You may fork, open issues or propose PRs, but **responses, reviews and merges are not guaranteed**. Never request installation in a live household or submit real home backups, credentials, device identifiers or residential addresses.
+
+Start with a small reproducible issue tied to an unmet gate in [project status](docs/PROJECT_STATUS.md). Preserve any existing independent work: [PR #264](https://github.com/GodsQuantum/Rusty-Home-Open/pull/264), [#266](https://github.com/GodsQuantum/Rusty-Home-Open/pull/266), [#268](https://github.com/GodsQuantum/Rusty-Home-Open/pull/268) and [#269](https://github.com/GodsQuantum/Rusty-Home-Open/pull/269) remain unmerged and are not a ready release. A volunteer can continue development independently in a fork.
+
+
 Rusty Home is experimental, not a production smart-home controller.
 
 1. Open an issue with a synthetic, reproducible example; **never upload

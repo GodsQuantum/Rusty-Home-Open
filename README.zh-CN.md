@@ -1,3 +1,6 @@
+> [!CAUTION]
+> **开发暂停 — 实验性源代码 — 尚不可用于生产环境。** 原维护者已暂停开发，不提供安装支持或发布日期。欢迎社区 Fork 和 Pull Request，但不保证审查或合并。请勿连接真实设备或导入个人 HAOS 备份。**15 项生产认证均未通过（0/15）。** 参见[项目状态](docs/PROJECT_STATUS.md)和[贡献指南](CONTRIBUTING.md)。
+
 <p align="center"><img src="branding/logo.svg" width="820" alt="Rusty Home 标志" /></p>
 <h1 align="center">Rusty Home</h1>
 <p align="center"><strong>用 Rust 重新构想家庭自动化。</strong><br>探索原生、以本地为中心的自动化引擎，并逐步兼容 Home Assistant 生态。</p>
