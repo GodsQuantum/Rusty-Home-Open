@@ -18,6 +18,7 @@ MAX_MEMBERS = 25_000
 MAX_ARCHIVE_SIZE = 1024**4
 MAX_MEMBER_SIZE = 1024**4
 MAX_HEADER = 32
+BANNED_MANIFEST_KEYS = frozenset({"password", "api_password", "access_token", "refresh_token", "secret"})
 
 class InvalidBackup(ValueError):
     pass
@@ -44,6 +45,8 @@ def parse_backup_manifest(raw: bytes) -> dict:
         raise InvalidBackup("invalid backup.json") from exc
     if not isinstance(metadata, dict):
         raise InvalidBackup("backup metadata must be object")
+    if any(k in metadata for k in BANNED_MANIFEST_KEYS):
+        raise InvalidBackup("prohibited secret key exposed in unencrypted manifest")
     return metadata
 
 def normalized_archive_name(s: str) -> str:
@@ -108,6 +111,8 @@ def inspect_backup(path: Path, expected: set[str] | None = None) -> dict:
                     raise InvalidBackup("unsupported archive entry type")
                 if member.size < 0 or member.size > MAX_MEMBER_SIZE:
                     raise InvalidBackup("archive member exceeds size limit")
+                if not member.isdir() and name != "backup.json" and not (name.endswith(".tar.gz") or name.endswith(".tar")):
+                    raise InvalidBackup("loose non-archive file prohibited in backup root")
                 entries[name] = member
             manifest = entries.get("backup.json")
             if manifest is None or not manifest.isfile() or manifest.size > MAX_MANIFEST:

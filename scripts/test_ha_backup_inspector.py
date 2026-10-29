@@ -17,7 +17,11 @@ def archive(path:Path, entries:list[tuple[str,bytes,str]]) -> None:
                 info.type=tarfile.SYMTYPE
                 info.linkname="/etc/passwd"
                 info.size=0
-            tar.addfile(info,BytesIO(data) if kind!="symlink" else None)
+            elif kind=="hardlink":
+                info.type=tarfile.LNKTYPE
+                info.linkname="backup.json"
+                info.size=0
+            tar.addfile(info,BytesIO(data) if kind not in ("symlink", "hardlink") else None)
 
 def manifest(protected=True, addons=None)->bytes:
     return json.dumps({
@@ -61,7 +65,12 @@ with tempfile.TemporaryDirectory(prefix="hars-backup-test-") as temp:
     expect_error(path,[("backup.json",b"BAD-JSON","regular")])
     expect_error(path,[("backup.json",manifest(addons=["a","a"]),"regular")])
     expect_error(path,[("homeassistant.tar.gz",b"\x1f\x8b","regular")])
-    print("PASS: traversal/absolute/symlink/duplicates/invalid-metadata/missing-manifest rejected")
+    expect_error(path,[("backup.json",manifest(),"regular"),("hardlink_entry",b"","hardlink")])
+    expect_error(path,[("backup.json",manifest(),"regular"),("secrets.yaml",b"api_password: 123","regular")])
+    expect_error(path,[("backup.json",manifest(),"regular"),(".env",b"SECRET_KEY=leak","regular")])
+    expect_error(path,[("backup.json",json.dumps({"name":"leak","slug":"leak","password":"bad"}).encode(),"regular")])
+    expect_error(path,[("backup.json",json.dumps({"name":"leak","slug":"leak","secret":"bad"}).encode(),"regular")])
+    print("PASS: traversal/absolute/symlink/hardlink/secrets-exclusion/duplicates/invalid-metadata/missing-manifest rejected")
     archive(path,[("backup.json",manifest(protected=False),"regular"),
                   ("homeassistant.tar.gz",b"SecureTar-SYNTHETIC","regular")])
     report=inspect_backup(path)
