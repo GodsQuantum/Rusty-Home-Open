@@ -2,6 +2,42 @@
 # APPENDED TO: upstream home-assistant/operating-system/tests/supervisor_test/test_supervisor.py
 # Upstream setup/fixtures come from official pinned HAOS integration test harness.
 # Only runs in an ephemeral hosted QEMU guest; never against sample lab host synthetic VM.
+
+def _hars_emit_safe_install_failure(shell, result, slug):
+    """Bounded and redacted diagnostics from disposable HAOS QEMU only."""
+    import re as _re
+
+    if result.get("result") == "ok":
+        return
+
+    def scrub(value):
+        raw = str(value or "")[:1800]
+        raw = _re.sub(r"(?i)(bearer\s+)[A-Za-z0-9._~+/=-]+", r"\1[REDACTED]", raw)
+        raw = _re.sub(
+            r"(?i)((?:access_?token|refresh_?token|api_?token|password|secret|authorization|credential|apikey|api_key)\s*[:=]\s*)[^\s,;]+",
+            r"\1[REDACTED]", raw,
+        )
+        return raw[:260]
+
+    print("QEMU_SUPERVISOR_INSTALL_FAILURE", slug)
+    print("QEMU_SUPERVISOR_RESULT", scrub(result.get("result")))
+    print("QEMU_SUPERVISOR_MESSAGE", scrub(result.get("message")))
+    try:
+        rows = shell.run_check(
+            "ha supervisor logs --no-progress 2>&1 | tail -n 120",
+            timeout=40,
+        )
+        tail = rows if isinstance(rows, list) else str(rows).splitlines()
+        selected = [
+            scrub(line) for line in tail
+            if _re.search(r"(?i)error|fail|denied|timeout|image|docker|storage|no.space|out.of.space|network|OCI|certificate|unavailable", str(line))
+        ]
+        for line in selected[-10:]:
+            print("QEMU_SUPERVISOR_LOG", line)
+        print("QEMU_SUPERVISOR_LOG_MATCHES", len(selected))
+    except Exception as exc:
+        print("QEMU_SUPERVISOR_LOG_UNAVAILABLE", scrub(type(exc).__name__))
+
 @pytest.mark.dependency(depends=["test_start_supervisor"])
 @pytest.mark.timeout(720)
 def test_hars_real_product_app_install_boot(shell, shell_json):
@@ -48,6 +84,7 @@ def test_hars_real_product_app_install_boot(shell, shell_json):
         result = shell_json(
             "ha apps install " + app + " --no-progress --raw-json", timeout=300
         )
+        _hars_emit_safe_install_failure(shell, result, app)
         assert result.get("result") == "ok", "Real Rusty Home App install failed"
         installed = True
         result = shell_json(
@@ -411,6 +448,7 @@ def test_hars_manager_role_app(shell, shell_json):
         result=shell_json(
             "ha apps install "+app+" --no-progress --raw-json",timeout=180
         )
+        _hars_emit_safe_install_failure(shell, result, app)
         assert result.get("result")=="ok", "Real Supervisor App Docker build/install failed"
         installed=shell_json("ha apps info "+app+" --no-progress --raw-json", timeout=90).get("data") or {}
         assert installed.get("protected") is True, "Installed App lost protected security setting"
@@ -1360,6 +1398,7 @@ def test_hars_real_official_file_editor_app_lifecycle_qemu(shell, shell_json):
         result = shell_json(
             "ha apps install " + slug + " --no-progress --raw-json", timeout=420
         )
+        _hars_emit_safe_install_failure(shell, result, slug)
         assert result.get("result") == "ok", (
             "Official Supervisor File Editor installation failed"
         )
