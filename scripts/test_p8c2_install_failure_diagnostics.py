@@ -8,7 +8,7 @@ src = Path(__file__).with_name("p8c2_real_haos_supervisor_pytest.py").read_text(
 tree = ast.parse(src)
 func = next(x for x in tree.body if isinstance(x, ast.FunctionDef) and x.name == "_hars_emit_safe_install_failure")
 scope = {}
-exec(compile(ast.Module(body=[func],type_ignores=[]), "helper", "exec"), scope)
+exec(compile(ast.Module(body=[func], type_ignores=[]), "helper", "exec"), scope)
 diag = scope["_hars_emit_safe_install_failure"]
 
 class FakeDisposableGuest:
