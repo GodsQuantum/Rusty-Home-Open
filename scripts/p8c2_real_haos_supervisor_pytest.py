@@ -1,3 +1,33 @@
+def _dump_haos_supervisor_diagnostics(shell, context_label, extra_info=None):
+    print("\n--- [DIAGNOSTIC DUMP: " + str(context_label) + "] ---")
+    if extra_info is not None:
+        print("EXTRA: " + str(extra_info))
+    commands = [
+        ("Supervisor Logs (last 100 lines)", "ha supervisor logs --lines 100"),
+        ("Docker Containers State", "docker ps -a --no-trunc"),
+        ("HAOS Disk / Mount State", "df -h /mnt/data"),
+        ("HAOS DNS / Egress Check", "ping -c 2 -W 3 ghcr.io || ping -c 2 -W 3 1.1.1.1"),
+        ("Docker Daemon Journal (last 40 lines)", "journalctl -u docker.service -n 40 --no-pager"),
+    ]
+    for title, cmd in commands:
+        try:
+            res = shell.run(cmd, timeout=30)
+            if isinstance(res, tuple):
+                stdout, stderr, code = res
+                out = "\n".join(stdout) if isinstance(stdout, list) else str(stdout)
+                err = "\n".join(stderr) if isinstance(stderr, list) else str(stderr)
+                content = "exit=" + str(code) + "\nstdout:\n" + out + "\nstderr:\n" + err
+            else:
+                content = str(res)
+            lines = content.splitlines()
+            if len(lines) > 80:
+                content = "\n".join(lines[-80:])
+            print("\n>> " + title + " (" + cmd + "):\n" + content)
+        except Exception as exc:
+            print(">> Failed to execute " + cmd + ": " + str(exc))
+    print("--- [END DIAGNOSTIC DUMP: " + str(context_label) + "] ---\n")
+
+
 
 # APPENDED TO: upstream home-assistant/operating-system/tests/supervisor_test/test_supervisor.py
 # Upstream setup/fixtures come from official pinned HAOS integration test harness.
@@ -690,11 +720,15 @@ def test_hars_manager_role_app(shell, shell_json):
                 shell.run_check("rm -rf " + core_dir)
         # P8g: only the core_ssh writable fixture is allowed, running on
         # the disposable QEMU snapshot. Rust rather than CLI stops/starts it.
-        installed_by_rust = shell.run_check(
-            "docker exec app_local_hars_rust_probe "
-            "/hars-manager --acknowledge-disposable-qemu install core_ssh",
-            timeout=180,
-        )
+        try:
+            installed_by_rust = shell.run_check(
+                "docker exec app_local_hars_rust_probe "
+                "/hars-manager --acknowledge-disposable-qemu install core_ssh",
+                timeout=180,
+            )
+        except Exception as exc:
+            _dump_haos_supervisor_diagnostics(shell, "core_ssh_rust_install_failed", exc)
+            raise
         assert any("P8I_QEMU_FIXTURE_SESSION_GATE_PASS" in m for m in installed_by_rust), (
             "Disposable HAOS Rust guest did not pass session registry and one-time confirmation"
         )
@@ -1360,6 +1394,8 @@ def test_hars_real_official_file_editor_app_lifecycle_qemu(shell, shell_json):
         result = shell_json(
             "ha apps install " + slug + " --no-progress --raw-json", timeout=420
         )
+        if not isinstance(result, dict) or result.get("result") != "ok":
+            _dump_haos_supervisor_diagnostics(shell, "file_editor_install_failed", result)
         assert result.get("result") == "ok", (
             "Official Supervisor File Editor installation failed"
         )
@@ -1606,3 +1642,11 @@ def test_hars_real_official_file_editor_partial_restore_bytes_qemu(shell, shell_
             assert removed.get("result") == "ok", (
                 "Synthetic File Editor partial backup cleanup failed"
             )
+
+
+@pytest.mark.dependency(depends=["test_supervisor_is_updated"])
+def test_app_install(shell, shell_json):
+    res = shell_json("ha apps install core_ssh --no-progress --raw-json")
+    if not isinstance(res, dict) or res.get("result") != "ok":
+        _dump_haos_supervisor_diagnostics(shell, "core_ssh_stock_install_failed", res)
+    assert res.get("result") == "ok", f"Core SSH app install failed: {res}"
