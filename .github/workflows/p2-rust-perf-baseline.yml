@@ -1,0 +1,165 @@
+name: P2 Rust performance baseline and regression budget
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/p2-rust-perf-baseline.yml"
+      - "crates/native-hub/**"
+      - "scripts/*bench*"
+      - "Cargo.lock"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: perf-baseline-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  rust-perf-baseline-regression-budget:
+    name: Native Rust state read benchmark and regression budget
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+
+      - name: Setup Rust stable toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy
+
+      - name: Clippy check on benchmark harness
+        run: cargo clippy --locked -p hars-native-hub --example bench_hot_state -- -D warnings
+
+      - name: Build release benchmark binary
+        run: |
+          cargo build --locked --release -p hars-native-hub --example bench_hot_state
+          ls -lh target/release/examples/bench_hot_state
+
+      - name: Execute reproducible native Rust benchmark
+        run: |
+          # Bounded 1232 synthetic entity hot state read (5 warmup rounds, 30 measured rounds)
+          target/release/examples/bench_hot_state > raw_bench_output.json
+          cat raw_bench_output.json
+
+      - name: Evaluate machine regression budget and unmeasured metrics
+        run: |
+          sed 's/^          //' <<'EOF' | python3 -
+          import json
+          import os
+          from pathlib import Path
+          import statistics
+          import sys
+
+          raw_path = Path("raw_bench_output.json")
+          if not raw_path.exists():
+              raise SystemExit("Missing benchmark output file: raw_bench_output.json")
+
+          try:
+              raw = json.loads(raw_path.read_text(encoding="utf-8"))
+          except Exception as e:
+              raise SystemExit(f"Malformed benchmark JSON: {e}")
+
+          # Machine regression budget thresholds
+          # Based on 1232 synthetic in-memory state entities
+          BUDGET = {
+              "p50_batch_ns_max": 5_000_000,       # 5.0 ms ceiling for 1232 entities (~4.0 µs / read)
+              "p95_batch_ns_max": 12_000_000,      # 12.0 ms ceiling (~9.7 µs / read)
+              "p99_batch_ns_max": 25_000_000,      # 25.0 ms ceiling (~20.3 µs / read)
+              "rss_kb_max": 65536,                 # 64 MB resident memory ceiling
+              "binary_size_bytes_max": 26214400,   # 25 MB release binary ceiling
+          }
+
+          # Schema and invariant validation
+          assert raw.get("schema_version") == 1, "invalid schema_version"
+          assert raw.get("backend") == "moli_native_rust", f"invalid backend: {raw.get('backend')}"
+          assert raw.get("scope") == "hot_in_memory_state_read", f"invalid scope: {raw.get('scope')}"
+          assert raw.get("entities") == 1232, f"expected 1232 entities, got {raw.get('entities')}"
+          assert raw.get("warmup_rounds") == 5, f"expected 5 warmup rounds, got {raw.get('warmup_rounds')}"
+          assert raw.get("durable") is False, "benchmark must be in-memory (durable=False)"
+
+          rounds = raw.get("round_ns", [])
+          assert isinstance(rounds, list) and len(rounds) == 30, f"require exactly 30 measured rounds, got {len(rounds)}"
+          assert all(isinstance(v, int) and 0 < v < 120_000_000_000 for v in rounds), "implausible round duration"
+
+          sorted_rounds = sorted(rounds)
+          p50 = float(statistics.median(rounds))
+          p95 = float(sorted_rounds[28])
+          p99 = float(sorted_rounds[29])
+          rss = int(raw.get("rss_kb", 0))
+          pss = int(raw.get("pss_kb", 0))
+
+          bin_path = Path("target/release/examples/bench_hot_state")
+          bin_size = bin_path.stat().st_size if bin_path.exists() else 0
+
+          # Enforce machine regression budget
+          violations = []
+          if p50 > BUDGET["p50_batch_ns_max"]:
+              violations.append(f"p50 {p50} ns exceeded budget {BUDGET['p50_batch_ns_max']} ns")
+          if p95 > BUDGET["p95_batch_ns_max"]:
+              violations.append(f"p95 {p95} ns exceeded budget {BUDGET['p95_batch_ns_max']} ns")
+          if p99 > BUDGET["p99_batch_ns_max"]:
+              violations.append(f"p99 {p99} ns exceeded budget {BUDGET['p99_batch_ns_max']} ns")
+          if rss > BUDGET["rss_kb_max"]:
+              violations.append(f"RSS {rss} KiB exceeded budget {BUDGET['rss_kb_max']} KiB")
+          if bin_size > BUDGET["binary_size_bytes_max"]:
+              violations.append(f"Binary size {bin_size} bytes exceeded budget {BUDGET['binary_size_bytes_max']} bytes")
+
+          report = {
+              "schema_version": 1,
+              "classification": "LIMITED_MICROBENCHMARK_NOT_FULL_STACK",
+              "production_ready": False,
+              "claim_full_haos_speedup": False,
+              "backend": "moli_native_rust",
+              "scope": "hot_in_memory_state_read",
+              "entities": 1232,
+              "rounds": 30,
+              "warmup_rounds": 5,
+              "hardware": {
+                  "os": sys.platform,
+                  "runner": os.getenv("RUNNER_NAME", "unknown"),
+                  "arch": os.uname().machine if hasattr(os, "uname") else "unknown"
+              },
+              "measured_metrics": {
+                  "p50_batch_ns": p50,
+                  "p95_batch_ns": p95,
+                  "p99_batch_ns": p99,
+                  "median_ns_per_read": round(p50 / 1232, 2),
+                  "rss_kb": rss,
+                  "pss_kb": pss,
+                  "binary_size_bytes": bin_size
+              },
+              "regression_budget": BUDGET,
+              "violations": violations,
+              "budget_status": "FAIL" if violations else "PASS",
+              "unmeasured_metrics": {
+                  "websocket_mqtt_end_to_end_latency": "NOT_MEASURED",
+                  "sustained_throughput": "NOT_MEASURED",
+                  "startup_time": "NOT_MEASURED",
+                  "cpu_under_idle_load": "NOT_MEASURED",
+                  "load_shedding_backpressure": "NOT_MEASURED"
+              },
+              "note": "P2 baseline regression budget; heavy CT700 profiling deferred while P1 QEMU in progress."
+          }
+
+          out_file = Path("perf_regression_budget_report.json")
+          out_file.write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8")
+          print(json.dumps(report, indent=2))
+
+          if violations:
+              print(f"Regression budget violated: {violations}", file=sys.stderr)
+              sys.exit(1)
+
+          print("Machine regression budget PASSED cleanly.")
+          EOF
+
+      - name: Upload performance report artifact
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: perf-regression-budget-report
+          path: perf_regression_budget_report.json
+          if-no-files-found: warn
