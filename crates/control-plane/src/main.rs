@@ -4,6 +4,7 @@ mod attestation;
 mod ingress;
 use hars_supervisor_apps::installed_inventory::RunningInventory;
 use hars_supervisor_apps::official_store::ApiVersion;
+use hars_supervisor_apps::app_detail::valid_slug;
 use hars_supervisor_apps::official_transport::AppSupervisorClient;
 use serde_json::{json, Value};
 use std::env;
@@ -178,6 +179,7 @@ fn supervisor_live_rows(inventory: &RunningInventory, host: &str) -> Vec<Value> 
                 "id": format!("{host}:supervisor:{}", app.slug),
                 "host": host,
                 "display_name": bounded(&app.name),
+                "slug": app.slug,
                 "image": Value::Null,
                 "state": app.state.as_deref().unwrap_or("unknown"),
                 "version": app.version,
@@ -299,6 +301,18 @@ fn report(adapters: &[Adapter], verified: Option<&attestation::Verified>) -> Val
         None => json!({"status":"unsigned","warning":"No signed source attestation requested"}),
     };
     data
+}
+
+/// The official App info path is selected only from a configured live source.
+/// Hostnames, App IDs and HTTP verbs cannot inject paths or change services.
+fn parse_supervisor_detail_route(line: &str) -> Option<(&str,&str)> {
+    let path=line.strip_prefix("GET ")?
+        .strip_suffix(" HTTP/1.1")
+        .or_else(||line.strip_prefix("GET ")?.strip_suffix(" HTTP/1.0"))?;
+    let remainder=path.strip_prefix("/api/supervisor/")?;
+    let (host,slug)=remainder.split_once("/apps/")?;
+    if !valid_host(host) || !valid_slug(slug) { return None }
+    Some((host,slug))
 }
 
 /// Static, audited planning-only status, deliberately no production action.
@@ -578,6 +592,22 @@ fn handle(
                 "404 Not Found",
                 json!({"status":"not_configured","read_only":true}).to_string(),
             ),
+        }
+    } else if let Some((host,slug)) = parse_supervisor_detail_route(&line) {
+        match adapters.iter().find(|a|a.host==host) {
+            Some(Adapter {kind:AdapterKind::SupervisorLive(version), ..}) => {
+                match AppSupervisorClient::from_environment() {
+                    Err(_) => ("503 Service Unavailable",
+                        json!({"error":"Supervisor authentication unavailable","read_only":true}).to_string()),
+                    Ok(client) => match client.fetch_app_detail(*version,slug) {
+                        Ok(detail) => ("200 OK",
+                            json!({"source":host,"detail":detail,"read_only":true}).to_string()),
+                        Err(_) => ("503 Service Unavailable",
+                            json!({"error":"App detail unavailable","read_only":true}).to_string())
+                    }
+                }
+            },
+            _ => ("404 Not Found",json!({"error":"unknown live Supervisor source"}).to_string())
         }
     } else if line == "GET /api/sources HTTP/1.1" || line == "GET /api/sources HTTP/1.0" {
         let a = report(adapters, verified);
@@ -1006,6 +1036,34 @@ mod tests {
             "test-host",
         );
         assert!(source.is_empty());
+    }
+
+    #[test]
+    fn arbitrary_app_detail_route_uses_only_valid_live_supervisor_slugs() {
+        assert_eq!(parse_supervisor_detail_route(
+            "GET /api/supervisor/future-host/apps/any_vendor_2028 HTTP/1.1"),
+            Some(("future-host","any_vendor_2028")));
+        for bad in [
+            "POST /api/supervisor/future-host/apps/app HTTP/1.1",
+            "GET /api/supervisor/future-host/apps/../../secret HTTP/1.1",
+            "GET /api/supervisor/future-host/apps/abc?token=secret HTTP/1.1",
+            "GET /api/supervisor/host:80/apps/app HTTP/1.1",
+            "GET /api/supervisor/future-host/apps/ HTTP/1.1",
+            "GET /api/supervisor/future-host/apps/abc/extra HTTP/1.1",
+        ] {
+            assert!(parse_supervisor_detail_route(bad).is_none(),"{bad}");
+        }
+        let installed=hars_supervisor_apps::installed_inventory::RunningInventory {
+            api_version:ApiVersion::V1,read_only:true,
+            apps:vec![hars_supervisor_apps::installed_inventory::RunningApp {
+                slug:"future_vendor".into(),name:"Unknown provider".into(),
+                repository:Some("any_repo".into()),state:Some("started".into()),
+                version:Some("1".into()),update_available:Some(false),
+            }],
+        };
+        let items=supervisor_live_rows(&installed,"future-host");
+        assert_eq!(items[0]["slug"],"future_vendor");
+        assert_eq!(items[0]["capabilities"],json!(["view_status"]));
     }
 
     #[test]
